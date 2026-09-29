@@ -11,8 +11,10 @@ import { LevelSelectOverlay } from "./scenes/LevelSelectScene3D";
 import { useGameState } from "./hooks/useGameState";
 import { TouchControls3D } from "./systems/TouchControls3D";
 import { useControls } from "./hooks/useControls";
+import { playTrack, toggleMute, isMuted } from "./systems/AudioManager3D";
 import { LeaderboardView } from "../components/LeaderboardView";
 import type { BackgroundTheme } from "@super-mel/shared";
+import { useEffect, useState } from "react";
 
 const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
 
@@ -39,6 +41,16 @@ export function Game3D() {
   const setTheme = useGameState((s) => s.setTheme);
   const resetGame = useGameState((s) => s.resetGame);
   const controlsRef = useControls();
+  const [muted, setMuted] = useState(isMuted());
+
+  // Audio: maintheme on menu, comeco on playing
+  useEffect(() => {
+    if (scene === "menu" || scene === "gameover") {
+      playTrack("maintheme", true);
+    } else if (scene === "playing") {
+      playTrack("comeco", true);
+    }
+  }, [scene]);
 
   const handleLogout = () => {
     localStorage.removeItem("supermel_token");
@@ -74,6 +86,14 @@ export function Game3D() {
 
       {/* HUD */}
       <HUD3D lives={lives} score={score} scene={scene} />
+
+      {/* Mute button */}
+      <button
+        style={styles.muteBtn}
+        onClick={() => setMuted(toggleMute())}
+      >
+        {muted ? "MUDO" : "SOM"}
+      </button>
 
       {/* Overlays */}
       <div style={styles.overlayContainer}>
@@ -188,5 +208,19 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 4,
     cursor: "pointer",
     fontFamily: "monospace",
+  },
+  muteBtn: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    padding: "6px 12px",
+    fontSize: "12px",
+    background: "rgba(0,0,0,0.5)",
+    color: "#aaa",
+    border: "1px solid #555",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontFamily: "monospace",
+    zIndex: 15,
   },
 };
