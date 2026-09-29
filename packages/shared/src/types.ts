@@ -92,12 +92,26 @@ export const BLOCK_PROPERTIES: Record<
 };
 
 export const GAME_CONFIG = {
-  tileSize: 32,
-  gravity: 800,
-  flapForce: -350,
-  scrollSpeed: 120,
+  // Physics (platformer)
+  gravity: 30,
+  moveSpeed: 6,
+  moveAccel: 25,
+  friction: 12,
+  jumpForce: 10,
+  jumpHoldForce: 6,
+  maxJumpHoldTime: 0.25,
+  coyoteTime: 0.1,
+
+  // Combat
+  projectileSpeed: 15,
+  projectileCooldownMs: 300,
+
+  // Life
   maxHearts: 3,
   startHearts: 3,
-  projectileSpeed: 400,
   invincibilityMs: 1500,
+
+  // Chunks
+  chunkWidth: 16,
+  viewDistance: 4,
 } as const;

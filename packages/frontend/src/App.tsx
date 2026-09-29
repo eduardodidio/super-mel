@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GameView } from "./components/GameView";
+import { Game3D } from "./game/Game3D";
 import { AuthScreen } from "./components/AuthScreen";
 
 export function App() {
@@ -11,5 +11,5 @@ export function App() {
     return <AuthScreen onAuth={() => setAuthenticated(true)} />;
   }
 
-  return <GameView />;
+  return <Game3D />;
 }
