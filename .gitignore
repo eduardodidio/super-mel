@@ -6,11 +6,29 @@ logs/agents/state.json
 # Node
 node_modules/
 dist/
+.turbo/
+*.tsbuildinfo
 
 # Environment
 .env
-.env.*
+.env.local
+.env.production
+.env.development
+!.env.example
+
+# Prisma
+packages/backend/prisma/*.db
 
 # OS
 .DS_Store
 Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build
+coverage/
+*.log

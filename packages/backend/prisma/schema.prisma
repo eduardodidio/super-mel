@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(50)
+  password  String?  @db.VarChar(255)
+  isGuest   Boolean  @default(true) @map("is_guest")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  scores Score[]
+  levels Level[]
+
+  @@map("players")
+}
+
+model Score {
+  id        String   @id @default(uuid()) @db.Uuid
+  playerId  String   @map("player_id") @db.Uuid
+  distance  Int
+  levelId   String?  @map("level_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  player Player @relation(fields: [playerId], references: [id])
+  level  Level? @relation(fields: [levelId], references: [id])
+
+  @@map("scores")
+}
+
+model Level {
+  id         String   @id @default(uuid()) @db.Uuid
+  creatorId  String   @map("creator_id") @db.Uuid
+  name       String   @db.VarChar(100)
+  data       Json
+  background String   @default("forest") @db.VarChar(50)
+  published  Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  creator Player  @relation(fields: [creatorId], references: [id])
+  scores  Score[]
+
+  @@map("levels")
+}

@@ -1,0 +1,65 @@
+graph TB
+    subgraph "Render.com (render.yaml Blueprint)"
+        subgraph "Frontend - Static Site (Vite build)"
+            REACT["React 18 + TypeScript"]
+            PHASER["Phaser 3 Engine"]
+            EDITOR["Level Editor (DnD Grid)"]
+            HUD["HUD (Hearts, Score, Controls)"]
+            REACT --> PHASER
+            REACT --> EDITOR
+            REACT --> HUD
+        end
+
+        subgraph "Backend - Web Service (Fastify)"
+            API["Fastify + TypeScript"]
+            AUTH["Auth Service (Guest + Login)"]
+            SCORES["Score Service"]
+            LEVELS["Level Service"]
+            JWT["JWT Middleware"]
+            API --> JWT
+            JWT --> AUTH
+            JWT --> SCORES
+            JWT --> LEVELS
+        end
+
+        subgraph "PostgreSQL (Managed)"
+            PG_PLAYERS["players (id, name, password?, is_guest)"]
+            PG_SCORES["scores (id, player_id, distance, level_id)"]
+            PG_LEVELS["levels (id, creator_id, name, data JSONB, bg)"]
+        end
+    end
+
+    REACT -->|"REST API + JWT"| API
+    AUTH -->|"Prisma ORM"| PG_PLAYERS
+    SCORES -->|"Prisma ORM"| PG_SCORES
+    LEVELS -->|"Prisma ORM"| PG_LEVELS
+
+    subgraph "Phaser 3 Game Systems"
+        PHYSICS["Arcade Physics + Collision"]
+        SPRITES["Sprite System (Mel placeholder)"]
+        TILEMAP["Tilemap (10 blocos MC)"]
+        POWERS["Power System (Bola do Infinito)"]
+        AUDIO["Audio Manager (Music + SFX slots)"]
+        HP["Health System (3 Hearts)"]
+        SCORE_SYS["Distance Tracker"]
+        PARALLAX["Parallax BG (2-3 layers, 5 themes)"]
+        TOUCH["Virtual Joystick (mobile)"]
+    end
+
+    PHASER --> PHYSICS
+    PHASER --> SPRITES
+    PHASER --> TILEMAP
+    PHASER --> POWERS
+    PHASER --> AUDIO
+    PHASER --> HP
+    PHASER --> SCORE_SYS
+    PHASER --> PARALLAX
+    PHASER --> TOUCH
+
+    subgraph "Monorepo (pnpm workspaces)"
+        PKG_FRONT["packages/frontend"]
+        PKG_BACK["packages/backend"]
+        PKG_SHARED["packages/shared (types, config)"]
+        PKG_FRONT -.->|"imports"| PKG_SHARED
+        PKG_BACK -.->|"imports"| PKG_SHARED
+    end

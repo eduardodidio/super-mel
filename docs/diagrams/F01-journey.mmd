@@ -1,0 +1,53 @@
+graph LR
+    START((Inicio)) --> AUTH_SCREEN["Tela de Auth"]
+
+    AUTH_SCREEN -->|"Guest"| GUEST["Digitar Nome"]
+    AUTH_SCREEN -->|"Login"| LOGIN["User + Senha"]
+    AUTH_SCREEN -->|"Registrar"| REGISTER["Criar Conta"]
+
+    GUEST --> MENU
+    LOGIN --> MENU
+    REGISTER --> MENU
+
+    MENU["Menu Principal"]
+    MENU -->|"Jogar"| SELECT_LEVEL["Selecionar Fase"]
+    MENU -->|"Criar Fase"| EDITOR["Editor de Fases"]
+    MENU -->|"Leaderboard"| LEADERBOARD["Ver Rankings"]
+    MENU -->|"Config"| CONFIG["Volume, Controles"]
+
+    SELECT_LEVEL -->|"Fase predefinida"| GAMEPLAY
+    SELECT_LEVEL -->|"Fase do editor"| GAMEPLAY
+
+    subgraph "Gameplay Loop"
+        GAMEPLAY["Inicio da Fase"] --> FLY["Voar (tap esquerda)"]
+        FLY --> SCROLL["Scroll Horizontal Auto"]
+        SCROLL --> OBSTACLES{"Encontrou Obstaculo?"}
+        OBSTACLES -->|"Bloco destruivel"| SHOOT["Atirar Bola do Infinito"]
+        SHOOT --> DESTROY["Bloco Destruido"]
+        DESTROY --> SCROLL
+        OBSTACLES -->|"Bloco solido"| DODGE["Desviar"]
+        DODGE --> SCROLL
+        OBSTACLES -->|"Perigoso (lava/spike)"| DAMAGE["Toma Dano (-1 HP)"]
+        OBSTACLES -->|"Item"| COLLECT["Coletar Coracao (+1 HP)"]
+        COLLECT --> SCROLL
+        DAMAGE --> HEARTS{"HP > 0?"}
+        HEARTS -->|"Sim"| SCROLL
+        HEARTS -->|"Nao"| GAMEOVER["Game Over"]
+    end
+
+    GAMEOVER --> SAVE_SCORE["Salvar Score (distancia)"]
+    SAVE_SCORE --> LEADERBOARD
+    LEADERBOARD --> MENU
+
+    subgraph "Editor de Fases (Mario Maker)"
+        EDITOR --> PALETTE["Paleta: Pedra, Madeira, Ferro..."]
+        PALETTE --> DRAG["Arrastar Bloco"]
+        DRAG --> GRID["Posicionar no Grid"]
+        GRID --> MORE{"Mais blocos?"}
+        MORE -->|"Sim"| PALETTE
+        MORE -->|"Nao"| BG_SELECT["Escolher Background"]
+        BG_SELECT --> PLAYTEST["Testar Fase"]
+        PLAYTEST -->|"OK"| SAVE_LEVEL["Salvar/Publicar"]
+        PLAYTEST -->|"Ajustar"| PALETTE
+        SAVE_LEVEL --> MENU
+    end

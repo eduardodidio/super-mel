@@ -1,0 +1,23 @@
+{
+  "name": "super-mel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Super Mel - Jogo web flappy bird + mario maker com uma yorkshire micro",
+  "scripts": {
+    "dev": "pnpm --parallel -r run dev",
+    "dev:frontend": "pnpm --filter @super-mel/frontend dev",
+    "dev:backend": "pnpm --filter @super-mel/backend dev",
+    "build": "pnpm -r run build",
+    "build:frontend": "pnpm --filter @super-mel/frontend build",
+    "build:backend": "pnpm --filter @super-mel/backend build",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "db:migrate": "pnpm --filter @super-mel/backend db:migrate",
+    "db:generate": "pnpm --filter @super-mel/backend db:generate",
+    "db:push": "pnpm --filter @super-mel/backend db:push"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}
