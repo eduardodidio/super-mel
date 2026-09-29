@@ -1,0 +1,16 @@
+# Agent logs
+logs/agents/*.jsonl
+logs/agents/*.meta.json
+logs/agents/state.json
+
+# Node
+node_modules/
+dist/
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
