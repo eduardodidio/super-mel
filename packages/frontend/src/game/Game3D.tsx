@@ -6,6 +6,8 @@ import { HUD3D } from "./systems/HUD3D";
 import { MenuScene3D } from "./scenes/MenuScene3D";
 import { GameScene3D } from "./scenes/GameScene3D";
 import { GameOverOverlay } from "./scenes/GameOverScene3D";
+import { EditorWrapper } from "./scenes/EditorWrapper";
+import { LevelSelectOverlay } from "./scenes/LevelSelectScene3D";
 import { useGameState } from "./hooks/useGameState";
 import { LeaderboardView } from "../components/LeaderboardView";
 import type { BackgroundTheme } from "@super-mel/shared";
@@ -49,6 +51,10 @@ export function Game3D() {
 
   if (scene === "leaderboard") {
     return <LeaderboardView onBack={() => setScene("menu")} />;
+  }
+
+  if (scene === "editor") {
+    return <EditorWrapper />;
   }
 
   return (
@@ -96,6 +102,7 @@ export function Game3D() {
         )}
 
         {scene === "gameover" && <GameOverOverlay />}
+        {scene === "levelselect" && <LevelSelectOverlay />}
       </div>
     </div>
   );
