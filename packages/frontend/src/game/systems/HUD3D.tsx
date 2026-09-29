@@ -4,7 +4,6 @@ interface HUD3DProps {
   lives: number;
   score: number;
   scene: GameScene;
-  onMute?: () => void;
 }
 
 export function HUD3D({ lives, score, scene }: HUD3DProps) {
@@ -19,6 +18,11 @@ export function HUD3D({ lives, score, scene }: HUD3DProps) {
               &#9829;
             </span>
           ))}
+        </span>
+      </div>
+      <div style={styles.center}>
+        <span style={styles.controls}>
+          A/D = andar &nbsp; Space = pular &nbsp; Z = atirar
         </span>
       </div>
       <div style={styles.right}>
@@ -51,6 +55,11 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 4,
     color: "#ff4444",
     filter: "drop-shadow(1px 1px 1px rgba(0,0,0,0.5))",
+  },
+  center: {},
+  controls: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: "11px",
   },
   right: {},
   score: {

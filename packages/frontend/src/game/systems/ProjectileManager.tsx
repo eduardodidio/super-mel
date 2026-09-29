@@ -2,21 +2,22 @@ import { useRef, useCallback, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Projectile } from "../entities/Projectile";
 import type { Controls } from "../hooks/useControls";
-import { GAME_CONFIG } from "@super-mel/shared";
-
-interface ProjectileData {
-  id: string;
-  position: [number, number, number];
-}
 
 interface ProjectileManagerProps {
   controlsRef: React.RefObject<Controls>;
   playerX: number;
   playerY: number;
+  facingRight: boolean;
   onBlockHit?: (blockName: string) => void;
 }
 
-export function ProjectileManager({ controlsRef, playerX, playerY, onBlockHit }: ProjectileManagerProps) {
+interface ProjectileData {
+  id: string;
+  position: [number, number, number];
+  direction: number;
+}
+
+export function ProjectileManager({ controlsRef, playerX, playerY, facingRight, onBlockHit }: ProjectileManagerProps) {
   const [projectiles, setProjectiles] = useState<ProjectileData[]>([]);
   const cooldownRef = useRef(0);
   const lastShootRef = useRef(false);
@@ -31,9 +32,11 @@ export function ProjectileManager({ controlsRef, playerX, playerY, onBlockHit }:
 
     if (wantsShoot && !lastShootRef.current && cooldownRef.current <= 0) {
       idCounter.current++;
+      const dir = facingRight ? 1 : -1;
       const newProjectile: ProjectileData = {
         id: `proj-${idCounter.current}`,
-        position: [playerX + 0.8, playerY + 0.1, 0],
+        position: [playerX + dir * 0.8, playerY + 0.1, 0],
+        direction: dir,
       };
       setProjectiles((prev) => [...prev, newProjectile]);
       cooldownRef.current = cooldownMs;
@@ -57,6 +60,7 @@ export function ProjectileManager({ controlsRef, playerX, playerY, onBlockHit }:
           key={p.id}
           id={p.id}
           startPosition={p.position}
+          direction={p.direction}
           onHit={handleHit}
           onExpire={handleExpire}
         />

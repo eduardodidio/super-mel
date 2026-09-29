@@ -2,16 +2,18 @@ import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody, type RapierRigidBody, type CollisionPayload } from "@react-three/rapier";
 import * as THREE from "three";
-import { GAME_CONFIG } from "@super-mel/shared";
 
 interface ProjectileProps {
   id: string;
   startPosition: [number, number, number];
+  direction?: number;
   onHit: (id: string, targetName?: string) => void;
   onExpire: (id: string) => void;
 }
 
-export function Projectile({ id, startPosition, onHit, onExpire }: ProjectileProps) {
+const SPEED = 15;
+
+export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }: ProjectileProps) {
   const rbRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const lightRef = useRef<THREE.PointLight>(null);
@@ -19,8 +21,6 @@ export function Projectile({ id, startPosition, onHit, onExpire }: ProjectilePro
   const [exploding, setExploding] = useState(false);
   const explodeRef = useRef(0);
   const explodePosRef = useRef(new THREE.Vector3(...startPosition));
-
-  const speed = GAME_CONFIG.projectileSpeed / 50;
 
   useFrame((_, delta) => {
     if (exploding) {
@@ -43,22 +43,17 @@ export function Projectile({ id, startPosition, onHit, onExpire }: ProjectilePro
     if (!rbRef.current) return;
 
     lifeRef.current += delta;
+    rbRef.current.setLinvel({ x: SPEED * direction, y: 0, z: 0 }, true);
 
-    // Keep velocity constant
-    rbRef.current.setLinvel({ x: speed, y: 0, z: 0 }, true);
-
-    // Spin the projectile
     if (meshRef.current) {
       meshRef.current.rotation.x += delta * 10;
       meshRef.current.rotation.z += delta * 8;
     }
 
-    // Pulse the light
     if (lightRef.current) {
       lightRef.current.intensity = 2 + Math.sin(lifeRef.current * 15) * 1;
     }
 
-    // Expire after 3 seconds
     if (lifeRef.current > 3) {
       onExpire(id);
     }
@@ -66,9 +61,7 @@ export function Projectile({ id, startPosition, onHit, onExpire }: ProjectilePro
 
   const handleCollision = (payload: CollisionPayload) => {
     if (exploding) return;
-    const otherName = (payload.other.rigidBody?.userData as any)?.blockType
-      ? `block-${(payload.other.rigidBody?.userData as any).blockType}`
-      : payload.other.rigidBodyObject?.name || "";
+    const otherName = payload.other.rigidBodyObject?.name || "";
 
     if (otherName.startsWith("block-")) {
       const pos = rbRef.current?.translation();
@@ -108,7 +101,6 @@ export function Projectile({ id, startPosition, onHit, onExpire }: ProjectilePro
       name="projectile"
       onIntersectionEnter={handleCollision}
     >
-      {/* Core sphere */}
       <mesh ref={meshRef} castShadow>
         <sphereGeometry args={[0.18, 8, 8]} />
         <meshStandardMaterial
@@ -119,11 +111,7 @@ export function Projectile({ id, startPosition, onHit, onExpire }: ProjectilePro
           metalness={0.3}
         />
       </mesh>
-
-      {/* Glow light */}
       <pointLight ref={lightRef} color="#FFD700" intensity={2} distance={5} />
-
-      {/* Trail ring */}
       <mesh rotation={[0, Math.PI / 2, 0]}>
         <torusGeometry args={[0.25, 0.03, 6, 12]} />
         <meshStandardMaterial

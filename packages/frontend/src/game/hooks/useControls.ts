@@ -1,30 +1,58 @@
 import { useEffect, useRef } from "react";
 
 export interface Controls {
-  flap: boolean;
+  left: boolean;
+  right: boolean;
+  jump: boolean;
   shoot: boolean;
 }
 
 export function useControls(): React.MutableRefObject<Controls> {
-  const controls = useRef<Controls>({ flap: false, shoot: false });
+  const controls = useRef<Controls>({ left: false, right: false, jump: false, shoot: false });
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" || e.code === "ArrowUp") {
-        e.preventDefault();
-        controls.current.flap = true;
-      }
-      if (e.code === "KeyZ") {
-        controls.current.shoot = true;
+      switch (e.code) {
+        case "ArrowLeft":
+        case "KeyA":
+          controls.current.left = true;
+          break;
+        case "ArrowRight":
+        case "KeyD":
+          controls.current.right = true;
+          break;
+        case "Space":
+        case "ArrowUp":
+        case "KeyW":
+          e.preventDefault();
+          controls.current.jump = true;
+          break;
+        case "KeyZ":
+        case "KeyJ":
+          controls.current.shoot = true;
+          break;
       }
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.code === "Space" || e.code === "ArrowUp") {
-        controls.current.flap = false;
-      }
-      if (e.code === "KeyZ") {
-        controls.current.shoot = false;
+      switch (e.code) {
+        case "ArrowLeft":
+        case "KeyA":
+          controls.current.left = false;
+          break;
+        case "ArrowRight":
+        case "KeyD":
+          controls.current.right = false;
+          break;
+        case "Space":
+        case "ArrowUp":
+        case "KeyW":
+          controls.current.jump = false;
+          break;
+        case "KeyZ":
+        case "KeyJ":
+          controls.current.shoot = false;
+          break;
       }
     };
 
