@@ -1,8 +1,9 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody, type RapierRigidBody, useRapier } from "@react-three/rapier";
 import * as THREE from "three";
 import type { Controls } from "../hooks/useControls";
+import { loadSpritesheet, updateSpriteUV } from "../systems/SpriteAnimator";
 
 const MOVE_SPEED = 6;
 const MOVE_ACCEL = 25;
@@ -19,10 +20,14 @@ interface MelProps {
   invincible?: boolean;
 }
 
+type MelAnim = "idle" | "walk" | "run" | "jump" | "fall" | "attack" | "hurt";
+
 export function Mel({ controlsRef, onPositionUpdate, onCollisionDamage, invincible = false }: MelProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
-  const groupRef = useRef<THREE.Group>(null);
+  const spriteRef = useRef<THREE.Mesh>(null);
   const { world } = useRapier();
+
+  const texture = useMemo(() => loadSpritesheet().clone(), []);
 
   const timeRef = useRef(0);
   const facingRight = useRef(true);
@@ -31,23 +36,13 @@ export function Mel({ controlsRef, onPositionUpdate, onCollisionDamage, invincib
   const jumpHoldTimer = useRef(0);
   const jumping = useRef(false);
   const lastJumpPressed = useRef(false);
-
-  const colors = useMemo(() => ({
-    body: "#8B6914",
-    belly: "#C4A44A",
-    head: "#A0782C",
-    nose: "#2a2a2a",
-    eye: "#111111",
-    eyeWhite: "#ffffff",
-    ear: "#5C4A1E",
-    tongue: "#FF6B8A",
-    collar: "#FF4444",
-    tail: "#A0782C",
-    legDark: "#6B4F10",
-  }), []);
+  const animTime = useRef(0);
+  const [currentAnim, setCurrentAnim] = useState<MelAnim>("idle");
+  const lastAnim = useRef<MelAnim>("idle");
+  const attackTimer = useRef(0);
 
   useFrame((_, delta) => {
-    if (!rigidBodyRef.current || !groupRef.current) return;
+    if (!rigidBodyRef.current || !spriteRef.current) return;
 
     timeRef.current += delta;
     const rb = rigidBodyRef.current;
@@ -56,13 +51,11 @@ export function Mel({ controlsRef, onPositionUpdate, onCollisionDamage, invincib
     const ctrl = controlsRef.current;
     if (!ctrl) return;
 
-    // --- Ground check via raycast ---
+    // --- Ground check ---
     const rayOrigin = { x: pos.x, y: pos.y - 0.55, z: pos.z };
     const rayDir = { x: 0, y: -1, z: 0 };
-    const ray = new (world as any).raw.RawRayRay(rayOrigin, rayDir);
-    let wasGrounded = grounded.current;
+    const wasGrounded = grounded.current;
 
-    // Simple ground check: if Y velocity is ~0 and we have something below
     const hit = world.castRay(
       { origin: rayOrigin, dir: rayDir } as any,
       0.3,
@@ -74,7 +67,6 @@ export function Mel({ controlsRef, onPositionUpdate, onCollisionDamage, invincib
     );
     grounded.current = hit !== null && Math.abs(vel.y) < 1;
 
-    // Coyote time
     if (wasGrounded && !grounded.current && !jumping.current) {
       coyoteTimer.current = COYOTE_TIME;
     }
@@ -89,11 +81,9 @@ export function Mel({ controlsRef, onPositionUpdate, onCollisionDamage, invincib
 
     let newVelX = vel.x;
     if (targetVelX !== 0) {
-      // Accelerate towards target
       newVelX = THREE.MathUtils.lerp(vel.x, targetVelX, MOVE_ACCEL * delta / (Math.abs(vel.x) + 1));
       facingRight.current = targetVelX > 0;
     } else {
-      // Friction
       if (Math.abs(vel.x) > 0.1) {
         newVelX = vel.x * Math.max(0, 1 - FRICTION * delta);
       } else {
@@ -105,47 +95,66 @@ export function Mel({ controlsRef, onPositionUpdate, onCollisionDamage, invincib
     const canJump = grounded.current || coyoteTimer.current > 0;
     const jumpPressed = ctrl.jump;
 
-    // Initial jump
     if (jumpPressed && !lastJumpPressed.current && canJump) {
       jumping.current = true;
       jumpHoldTimer.current = 0;
       coyoteTimer.current = 0;
       rb.setLinvel({ x: newVelX, y: JUMP_FORCE, z: 0 }, true);
-    }
-    // Variable height: hold for higher jump
-    else if (jumpPressed && jumping.current && jumpHoldTimer.current < MAX_JUMP_HOLD) {
+    } else if (jumpPressed && jumping.current && jumpHoldTimer.current < MAX_JUMP_HOLD) {
       jumpHoldTimer.current += delta;
       const holdVel = vel.y + JUMP_HOLD_FORCE * delta;
       rb.setLinvel({ x: newVelX, y: Math.max(vel.y, holdVel), z: 0 }, true);
-    }
-    // Normal physics
-    else {
-      if (!jumpPressed) {
-        jumping.current = false;
-      }
-      if (grounded.current) {
-        jumping.current = false;
-      }
+    } else {
+      if (!jumpPressed) jumping.current = false;
+      if (grounded.current) jumping.current = false;
       rb.setLinvel({ x: newVelX, y: vel.y, z: 0 }, true);
     }
 
     lastJumpPressed.current = jumpPressed;
-
     onPositionUpdate?.(pos.x, pos.y);
 
-    // --- Visual ---
-    // Flip direction
-    groupRef.current.scale.x = facingRight.current ? 1 : -1;
+    // --- Attack timer ---
+    if (ctrl.shoot && attackTimer.current <= 0) {
+      attackTimer.current = 0.3;
+    }
+    if (attackTimer.current > 0) {
+      attackTimer.current -= delta;
+    }
 
-    // Idle breathing
-    const breathe = 1 + Math.sin(timeRef.current * 3) * 0.015;
-    groupRef.current.scale.y = breathe;
+    // --- Animation selection ---
+    let newAnim: MelAnim = "idle";
+    if (invincible && attackTimer.current <= 0) {
+      newAnim = "hurt";
+    } else if (attackTimer.current > 0) {
+      newAnim = "attack";
+    } else if (!grounded.current && vel.y > 1) {
+      newAnim = "jump";
+    } else if (!grounded.current && vel.y < -1) {
+      newAnim = "fall";
+    } else if (Math.abs(vel.x) > 4) {
+      newAnim = "run";
+    } else if (Math.abs(vel.x) > 0.5) {
+      newAnim = "walk";
+    }
+
+    if (newAnim !== lastAnim.current) {
+      animTime.current = 0;
+      lastAnim.current = newAnim;
+      setCurrentAnim(newAnim);
+    }
+
+    // --- Sprite update ---
+    animTime.current += delta;
+    updateSpriteUV(texture, currentAnim, animTime.current);
+
+    // Flip sprite
+    spriteRef.current.scale.x = facingRight.current ? 2 : -2;
 
     // Invincibility blink
     if (invincible) {
-      groupRef.current.visible = Math.sin(timeRef.current * 20) > 0;
+      spriteRef.current.visible = Math.sin(timeRef.current * 20) > 0;
     } else {
-      groupRef.current.visible = true;
+      spriteRef.current.visible = true;
     }
 
     // Fall death
@@ -168,105 +177,24 @@ export function Mel({ controlsRef, onPositionUpdate, onCollisionDamage, invincib
       name="mel"
       friction={0}
     >
-      <group ref={groupRef}>
-        {/* Body */}
-        <mesh castShadow position={[0, 0, 0]}>
-          <boxGeometry args={[0.9, 0.55, 0.55]} />
-          <meshStandardMaterial color={colors.body} roughness={0.9} />
-        </mesh>
+      {/* Sprite billboard */}
+      <mesh ref={spriteRef} position={[0, 0.3, 0]} scale={[2, 2, 1]}>
+        <planeGeometry args={[1, 1]} />
+        <meshStandardMaterial
+          map={texture}
+          transparent
+          alphaTest={0.1}
+          side={THREE.DoubleSide}
+          roughness={1}
+          metalness={0}
+        />
+      </mesh>
 
-        {/* Belly */}
-        <mesh castShadow position={[0, -0.18, 0]}>
-          <boxGeometry args={[0.7, 0.2, 0.5]} />
-          <meshStandardMaterial color={colors.belly} roughness={0.9} />
-        </mesh>
-
-        {/* Head */}
-        <mesh castShadow position={[0.45, 0.2, 0]}>
-          <boxGeometry args={[0.45, 0.45, 0.45]} />
-          <meshStandardMaterial color={colors.head} roughness={0.9} />
-        </mesh>
-
-        {/* Snout */}
-        <mesh castShadow position={[0.7, 0.12, 0]}>
-          <boxGeometry args={[0.18, 0.2, 0.3]} />
-          <meshStandardMaterial color={colors.head} roughness={0.9} />
-        </mesh>
-
-        {/* Nose */}
-        <mesh position={[0.8, 0.16, 0]}>
-          <boxGeometry args={[0.06, 0.08, 0.1]} />
-          <meshStandardMaterial color={colors.nose} roughness={0.5} />
-        </mesh>
-
-        {/* Eyes */}
-        <mesh position={[0.62, 0.28, 0.15]}>
-          <boxGeometry args={[0.08, 0.1, 0.06]} />
-          <meshStandardMaterial color={colors.eyeWhite} />
-        </mesh>
-        <mesh position={[0.66, 0.28, 0.16]}>
-          <boxGeometry args={[0.05, 0.06, 0.06]} />
-          <meshStandardMaterial color={colors.eye} />
-        </mesh>
-        <mesh position={[0.62, 0.28, -0.15]}>
-          <boxGeometry args={[0.08, 0.1, 0.06]} />
-          <meshStandardMaterial color={colors.eyeWhite} />
-        </mesh>
-        <mesh position={[0.66, 0.28, -0.16]}>
-          <boxGeometry args={[0.05, 0.06, 0.06]} />
-          <meshStandardMaterial color={colors.eye} />
-        </mesh>
-
-        {/* Ears */}
-        <mesh castShadow position={[0.42, 0.48, 0.15]}>
-          <boxGeometry args={[0.1, 0.2, 0.08]} />
-          <meshStandardMaterial color={colors.ear} roughness={0.9} />
-        </mesh>
-        <mesh castShadow position={[0.42, 0.48, -0.15]}>
-          <boxGeometry args={[0.1, 0.2, 0.08]} />
-          <meshStandardMaterial color={colors.ear} roughness={0.9} />
-        </mesh>
-
-        {/* Tongue */}
-        <mesh position={[0.78, 0.05, 0.05]}>
-          <boxGeometry args={[0.1, 0.03, 0.06]} />
-          <meshStandardMaterial color={colors.tongue} />
-        </mesh>
-
-        {/* Collar */}
-        <mesh position={[0.3, 0.02, 0]}>
-          <boxGeometry args={[0.12, 0.08, 0.58]} />
-          <meshStandardMaterial color={colors.collar} roughness={0.6} metalness={0.2} />
-        </mesh>
-
-        {/* Legs */}
-        <mesh castShadow position={[0.2, -0.4, 0.18]}>
-          <boxGeometry args={[0.14, 0.3, 0.14]} />
-          <meshStandardMaterial color={colors.legDark} roughness={0.9} />
-        </mesh>
-        <mesh castShadow position={[0.2, -0.4, -0.18]}>
-          <boxGeometry args={[0.14, 0.3, 0.14]} />
-          <meshStandardMaterial color={colors.legDark} roughness={0.9} />
-        </mesh>
-        <mesh castShadow position={[-0.25, -0.4, 0.18]}>
-          <boxGeometry args={[0.14, 0.3, 0.14]} />
-          <meshStandardMaterial color={colors.legDark} roughness={0.9} />
-        </mesh>
-        <mesh castShadow position={[-0.25, -0.4, -0.18]}>
-          <boxGeometry args={[0.14, 0.3, 0.14]} />
-          <meshStandardMaterial color={colors.legDark} roughness={0.9} />
-        </mesh>
-
-        {/* Tail */}
-        <mesh castShadow position={[-0.5, 0.2, 0]}>
-          <boxGeometry args={[0.1, 0.25, 0.1]} />
-          <meshStandardMaterial color={colors.tail} roughness={0.9} />
-        </mesh>
-        <mesh castShadow position={[-0.5, 0.35, 0]}>
-          <boxGeometry args={[0.08, 0.1, 0.08]} />
-          <meshStandardMaterial color={colors.tail} roughness={0.9} />
-        </mesh>
-      </group>
+      {/* Invisible collider box (smaller than sprite) */}
+      <mesh visible={false}>
+        <boxGeometry args={[0.6, 0.9, 0.5]} />
+        <meshBasicMaterial />
+      </mesh>
     </RigidBody>
   );
 }

@@ -9,6 +9,8 @@ import { GameOverOverlay } from "./scenes/GameOverScene3D";
 import { EditorWrapper } from "./scenes/EditorWrapper";
 import { LevelSelectOverlay } from "./scenes/LevelSelectScene3D";
 import { useGameState } from "./hooks/useGameState";
+import { TouchControls3D } from "./systems/TouchControls3D";
+import { useControls } from "./hooks/useControls";
 import { LeaderboardView } from "../components/LeaderboardView";
 import type { BackgroundTheme } from "@super-mel/shared";
 
@@ -36,6 +38,7 @@ export function Game3D() {
   const setScene = useGameState((s) => s.setScene);
   const setTheme = useGameState((s) => s.setTheme);
   const resetGame = useGameState((s) => s.resetGame);
+  const controlsRef = useControls();
 
   const handleLogout = () => {
     localStorage.removeItem("supermel_token");
@@ -104,6 +107,9 @@ export function Game3D() {
         {scene === "gameover" && <GameOverOverlay />}
         {scene === "levelselect" && <LevelSelectOverlay />}
       </div>
+
+      {/* Mobile touch controls */}
+      <TouchControls3D controlsRef={controlsRef} scene={scene} />
     </div>
   );
 }

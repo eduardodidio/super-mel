@@ -1,0 +1,327 @@
+{
+  "image": "mel_spritesheet.png",
+  "frameWidth": 64,
+  "frameHeight": 64,
+  "columns": 6,
+  "rows": 10,
+  "facing": "right",
+  "pivot": {
+    "x": 0.5,
+    "y": 0.96875,
+    "note": "pé no chão (0,0 = canto superior esquerdo)"
+  },
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frameCount": 4,
+      "fps": 6,
+      "loop": true,
+      "description": "parada (respira, abana o rabo, pisca, capa balança)",
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "gridIndex": 0,
+          "file": "frames/idle_00.png"
+        },
+        {
+          "x": 64,
+          "y": 0,
+          "gridIndex": 1,
+          "file": "frames/idle_01.png"
+        },
+        {
+          "x": 128,
+          "y": 0,
+          "gridIndex": 2,
+          "file": "frames/idle_02.png"
+        },
+        {
+          "x": 192,
+          "y": 0,
+          "gridIndex": 3,
+          "file": "frames/idle_03.png"
+        }
+      ]
+    },
+    "walk": {
+      "row": 1,
+      "frameCount": 6,
+      "fps": 10,
+      "loop": true,
+      "description": "andando (trote)",
+      "frames": [
+        {
+          "x": 0,
+          "y": 64,
+          "gridIndex": 6,
+          "file": "frames/walk_00.png"
+        },
+        {
+          "x": 64,
+          "y": 64,
+          "gridIndex": 7,
+          "file": "frames/walk_01.png"
+        },
+        {
+          "x": 128,
+          "y": 64,
+          "gridIndex": 8,
+          "file": "frames/walk_02.png"
+        },
+        {
+          "x": 192,
+          "y": 64,
+          "gridIndex": 9,
+          "file": "frames/walk_03.png"
+        },
+        {
+          "x": 256,
+          "y": 64,
+          "gridIndex": 10,
+          "file": "frames/walk_04.png"
+        },
+        {
+          "x": 320,
+          "y": 64,
+          "gridIndex": 11,
+          "file": "frames/walk_05.png"
+        }
+      ]
+    },
+    "run": {
+      "row": 2,
+      "frameCount": 6,
+      "fps": 14,
+      "loop": true,
+      "description": "correndo (galope, língua de fora)",
+      "frames": [
+        {
+          "x": 0,
+          "y": 128,
+          "gridIndex": 12,
+          "file": "frames/run_00.png"
+        },
+        {
+          "x": 64,
+          "y": 128,
+          "gridIndex": 13,
+          "file": "frames/run_01.png"
+        },
+        {
+          "x": 128,
+          "y": 128,
+          "gridIndex": 14,
+          "file": "frames/run_02.png"
+        },
+        {
+          "x": 192,
+          "y": 128,
+          "gridIndex": 15,
+          "file": "frames/run_03.png"
+        },
+        {
+          "x": 256,
+          "y": 128,
+          "gridIndex": 16,
+          "file": "frames/run_04.png"
+        },
+        {
+          "x": 320,
+          "y": 128,
+          "gridIndex": 17,
+          "file": "frames/run_05.png"
+        }
+      ]
+    },
+    "jump": {
+      "row": 3,
+      "frameCount": 3,
+      "fps": 10,
+      "loop": false,
+      "description": "pulo: agacha -> impulso -> ápice (one-shot)",
+      "frames": [
+        {
+          "x": 0,
+          "y": 192,
+          "gridIndex": 18,
+          "file": "frames/jump_00.png"
+        },
+        {
+          "x": 64,
+          "y": 192,
+          "gridIndex": 19,
+          "file": "frames/jump_01.png"
+        },
+        {
+          "x": 128,
+          "y": 192,
+          "gridIndex": 20,
+          "file": "frames/jump_02.png"
+        }
+      ]
+    },
+    "fall": {
+      "row": 4,
+      "frameCount": 3,
+      "fps": 8,
+      "loop": false,
+      "description": "queda + aterrissagem (one-shot)",
+      "frames": [
+        {
+          "x": 0,
+          "y": 256,
+          "gridIndex": 24,
+          "file": "frames/fall_00.png"
+        },
+        {
+          "x": 64,
+          "y": 256,
+          "gridIndex": 25,
+          "file": "frames/fall_01.png"
+        },
+        {
+          "x": 128,
+          "y": 256,
+          "gridIndex": 26,
+          "file": "frames/fall_02.png"
+        }
+      ]
+    },
+    "fly": {
+      "row": 5,
+      "frameCount": 4,
+      "fps": 10,
+      "loop": true,
+      "description": "voando (pose super-heroína, capa esticada)",
+      "frames": [
+        {
+          "x": 0,
+          "y": 320,
+          "gridIndex": 30,
+          "file": "frames/fly_00.png"
+        },
+        {
+          "x": 64,
+          "y": 320,
+          "gridIndex": 31,
+          "file": "frames/fly_01.png"
+        },
+        {
+          "x": 128,
+          "y": 320,
+          "gridIndex": 32,
+          "file": "frames/fly_02.png"
+        },
+        {
+          "x": 192,
+          "y": 320,
+          "gridIndex": 33,
+          "file": "frames/fly_03.png"
+        }
+      ]
+    },
+    "attack": {
+      "row": 6,
+      "frameCount": 4,
+      "fps": 12,
+      "loop": false,
+      "description": "ataque: latido sônico (one-shot)",
+      "frames": [
+        {
+          "x": 0,
+          "y": 384,
+          "gridIndex": 36,
+          "file": "frames/attack_00.png"
+        },
+        {
+          "x": 64,
+          "y": 384,
+          "gridIndex": 37,
+          "file": "frames/attack_01.png"
+        },
+        {
+          "x": 128,
+          "y": 384,
+          "gridIndex": 38,
+          "file": "frames/attack_02.png"
+        },
+        {
+          "x": 192,
+          "y": 384,
+          "gridIndex": 39,
+          "file": "frames/attack_03.png"
+        }
+      ]
+    },
+    "hurt": {
+      "row": 7,
+      "frameCount": 2,
+      "fps": 8,
+      "loop": false,
+      "description": "tomou dano (one-shot)",
+      "frames": [
+        {
+          "x": 0,
+          "y": 448,
+          "gridIndex": 42,
+          "file": "frames/hurt_00.png"
+        },
+        {
+          "x": 64,
+          "y": 448,
+          "gridIndex": 43,
+          "file": "frames/hurt_01.png"
+        }
+      ]
+    },
+    "sit": {
+      "row": 8,
+      "frameCount": 2,
+      "fps": 4,
+      "loop": true,
+      "description": "sentada, feliz",
+      "frames": [
+        {
+          "x": 0,
+          "y": 512,
+          "gridIndex": 48,
+          "file": "frames/sit_00.png"
+        },
+        {
+          "x": 64,
+          "y": 512,
+          "gridIndex": 49,
+          "file": "frames/sit_01.png"
+        }
+      ]
+    },
+    "bark_wave": {
+      "row": 9,
+      "frameCount": 3,
+      "fps": 12,
+      "loop": false,
+      "description": "projétil separado: onda do latido (one-shot)",
+      "frames": [
+        {
+          "x": 0,
+          "y": 576,
+          "gridIndex": 54,
+          "file": "frames/bark_wave_00.png"
+        },
+        {
+          "x": 64,
+          "y": 576,
+          "gridIndex": 55,
+          "file": "frames/bark_wave_01.png"
+        },
+        {
+          "x": 128,
+          "y": 576,
+          "gridIndex": 56,
+          "file": "frames/bark_wave_02.png"
+        }
+      ]
+    }
+  }
+}
