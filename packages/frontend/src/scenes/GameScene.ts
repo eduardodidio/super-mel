@@ -20,22 +20,26 @@ export class GameScene extends Phaser.Scene {
   distance = 0;
   scrollSpeed = GAME_CONFIG.scrollSpeed;
   isGameOver = false;
+  private customLevel: any = null;
+  private customBackground: string | null = null;
 
   constructor() {
     super({ key: "GameScene" });
   }
 
-  init() {
+  init(data?: { customLevel?: any; background?: string }) {
     this.distance = 0;
     this.isGameOver = false;
     this.scrollSpeed = GAME_CONFIG.scrollSpeed;
+    this.customLevel = data?.customLevel || null;
+    this.customBackground = data?.background || null;
   }
 
   create() {
     const { width, height } = this.scale;
 
     // Systems init
-    this.parallax = new ParallaxBackground(this);
+    this.parallax = new ParallaxBackground(this, this.customBackground as any);
     this.blockManager = new BlockManager(this);
     this.player = new Player(this, 150, height / 2);
     this.projectiles = new ProjectileManager(this);

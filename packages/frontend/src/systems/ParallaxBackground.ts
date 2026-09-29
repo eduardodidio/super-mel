@@ -80,10 +80,10 @@ export class ParallaxBackground {
   private farImg: Phaser.GameObjects.TileSprite;
   private midImg: Phaser.GameObjects.TileSprite;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, forcedTheme?: BackgroundTheme) {
     const { width, height } = scene.scale;
     const themes: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
-    const theme = themes[Math.floor(Math.random() * themes.length)];
+    const theme = forcedTheme || themes[Math.floor(Math.random() * themes.length)];
 
     this.skyImg = scene.add.tileSprite(0, 0, width, height, `bg-${theme}-sky`);
     this.skyImg.setOrigin(0, 0).setScrollFactor(0).setDepth(-3);
