@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody, type RapierRigidBody, type CollisionPayload } from "@react-three/rapier";
 import * as THREE from "three";
+import { getFrame, ANIMATIONS } from "../systems/SpriteAnimator";
 
 interface ProjectileProps {
   id: string;
@@ -13,6 +14,11 @@ interface ProjectileProps {
 
 const SPEED = 15;
 
+// Scale interpolation for the bark wave sprite
+const SCALE_START = 0.8;
+const SCALE_END = 1.5;
+const LIFETIME = 3; // seconds
+
 export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }: ProjectileProps) {
   const rbRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
@@ -21,6 +27,16 @@ export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }
   const [exploding, setExploding] = useState(false);
   const explodeRef = useRef(0);
   const explodePosRef = useRef(new THREE.Vector3(...startPosition));
+
+  // Check if bark_wave sprites are available
+  const hasBarkSprites = useMemo(() => {
+    const barkAnim = ANIMATIONS["bark_wave"];
+    if (!barkAnim || barkAnim.frames.length === 0) return false;
+    // Try to get the first frame texture — if its image is loaded, sprites exist
+    const tex = getFrame("bark_wave", 0);
+    const img = tex?.image as HTMLImageElement | undefined;
+    return !!(img && img.width > 0);
+  }, []);
 
   useFrame((_, delta) => {
     if (exploding) {
@@ -46,15 +62,31 @@ export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }
     rbRef.current.setLinvel({ x: SPEED * direction, y: 0, z: 0 }, true);
 
     if (meshRef.current) {
-      meshRef.current.rotation.x += delta * 10;
-      meshRef.current.rotation.z += delta * 8;
+      if (hasBarkSprites) {
+        // Animate sprite texture
+        const texture = getFrame("bark_wave", lifeRef.current);
+        const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+        if (mat.map !== texture) {
+          mat.map = texture;
+          mat.needsUpdate = true;
+        }
+
+        // Scale up over lifetime
+        const t = Math.min(lifeRef.current / LIFETIME, 1);
+        const scale = SCALE_START + (SCALE_END - SCALE_START) * t;
+        meshRef.current.scale.setScalar(scale);
+      } else {
+        // Fallback: original sphere rotation animation
+        meshRef.current.rotation.x += delta * 10;
+        meshRef.current.rotation.z += delta * 8;
+      }
     }
 
     if (lightRef.current) {
       lightRef.current.intensity = 2 + Math.sin(lifeRef.current * 15) * 1;
     }
 
-    if (lifeRef.current > 3) {
+    if (lifeRef.current > LIFETIME) {
       onExpire(id);
     }
   });
@@ -101,27 +133,46 @@ export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }
       name="projectile"
       onIntersectionEnter={handleCollision}
     >
-      <mesh ref={meshRef} castShadow>
-        <sphereGeometry args={[0.18, 8, 8]} />
-        <meshStandardMaterial
-          color="#FFD700"
-          emissive="#FFA500"
-          emissiveIntensity={1.5}
-          roughness={0.2}
-          metalness={0.3}
-        />
-      </mesh>
+      {hasBarkSprites ? (
+        /* Animated bark wave sprite on a plane */
+        <mesh ref={meshRef} castShadow>
+          <planeGeometry args={[1, 0.75]} />
+          <meshStandardMaterial
+            transparent
+            alphaTest={0.1}
+            emissive="#ffaa00"
+            emissiveIntensity={0.5}
+            side={THREE.DoubleSide}
+            roughness={0.2}
+            metalness={0.3}
+          />
+        </mesh>
+      ) : (
+        /* Fallback: original glowing sphere */
+        <>
+          <mesh ref={meshRef} castShadow>
+            <sphereGeometry args={[0.18, 8, 8]} />
+            <meshStandardMaterial
+              color="#FFD700"
+              emissive="#FFA500"
+              emissiveIntensity={1.5}
+              roughness={0.2}
+              metalness={0.3}
+            />
+          </mesh>
+          <mesh rotation={[0, Math.PI / 2, 0]}>
+            <torusGeometry args={[0.25, 0.03, 6, 12]} />
+            <meshStandardMaterial
+              color="#FFA500"
+              emissive="#FF8C00"
+              emissiveIntensity={1}
+              transparent
+              opacity={0.5}
+            />
+          </mesh>
+        </>
+      )}
       <pointLight ref={lightRef} color="#FFD700" intensity={2} distance={5} />
-      <mesh rotation={[0, Math.PI / 2, 0]}>
-        <torusGeometry args={[0.25, 0.03, 6, 12]} />
-        <meshStandardMaterial
-          color="#FFA500"
-          emissive="#FF8C00"
-          emissiveIntensity={1}
-          transparent
-          opacity={0.5}
-        />
-      </mesh>
     </RigidBody>
   );
 }

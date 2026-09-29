@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { GameScene } from "../hooks/useGameState";
 
 interface HUD3DProps {
@@ -6,12 +7,33 @@ interface HUD3DProps {
   scene: GameScene;
 }
 
+function getPortraitFilter(lives: number): string | undefined {
+  if (lives >= 3) return undefined;
+  if (lives === 2) return "sepia(0.3) saturate(1.3)";
+  return "sepia(0.5) saturate(2) hue-rotate(-20deg)";
+}
+
 export function HUD3D({ lives, score, scene }: HUD3DProps) {
+  const [portraitError, setPortraitError] = useState(false);
+
   if (scene !== "playing") return null;
+
+  const portraitFilter = getPortraitFilter(lives);
 
   return (
     <div style={styles.container}>
       <div style={styles.left}>
+        {!portraitError && (
+          <img
+            src="/sprites/mel/ui_portrait.png"
+            alt="Mel portrait"
+            style={{
+              ...styles.portrait,
+              ...(portraitFilter ? { filter: portraitFilter } : {}),
+            }}
+            onError={() => setPortraitError(true)}
+          />
+        )}
         <span style={styles.hearts}>
           {Array.from({ length: 3 }, (_, i) => (
             <span key={i} style={{ opacity: i < lives ? 1 : 0.2, fontSize: "24px" }}>
@@ -48,7 +70,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
   left: {
     display: "flex",
+    alignItems: "center",
     gap: 4,
+  },
+  portrait: {
+    width: 48,
+    height: 48,
+    border: "2px solid #ffcc00",
+    borderRadius: 4,
+    imageRendering: "pixelated" as const,
+    marginRight: 8,
   },
   hearts: {
     display: "flex",

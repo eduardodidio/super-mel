@@ -1,0 +1,327 @@
+{
+  "frameSize": [224, 168],
+  "pivot": [0.5, 0.893],
+  "groups": {
+    "idle": {
+      "type": "loop",
+      "fps": 6,
+      "directions": ["front", "back", "right", "left"],
+      "flipX": { "left": "right" },
+      "note": "Left frames exist as drawn alternatives; engine can also flipX from right"
+    },
+    "walk": {
+      "type": "loop",
+      "fps": 10,
+      "directions": ["front", "back", "right", "left"],
+      "flipX": { "left": "right" },
+      "note": "walk_right_b is the 2nd keyframe for lateral walk cycle"
+    },
+    "run": {
+      "type": "loop",
+      "fps": 14,
+      "directions": ["front", "back", "right", "left"],
+      "flipX": { "left": "right" },
+      "note": "run_right_b is the 2nd keyframe for lateral run cycle"
+    },
+    "jump": {
+      "type": "one-shot",
+      "fps": 10,
+      "directions": ["right"],
+      "flipX": { "left": "right" },
+      "sequence": ["jump_rise", "jump_air", "jump_fall", "jump_land"]
+    },
+    "attack": {
+      "type": "one-shot",
+      "fps": 12,
+      "directions": ["right"],
+      "flipX": { "left": "right" },
+      "sequence": ["attack_prep", "attack_1", "attack_2", "attack_end"],
+      "note": "Bark ring (golden) is drawn into attack_1 and attack_2; extract as separate effect"
+    },
+    "hurt": {
+      "type": "one-shot",
+      "fps": 10,
+      "directions": ["right"],
+      "flipX": { "left": "right" },
+      "variants": {
+        "light": ["hurt_light"],
+        "medium": ["hurt_medium"],
+        "heavy": ["hurt_heavy"]
+      }
+    },
+    "death": {
+      "type": "one-shot",
+      "fps": 6,
+      "directions": ["right"],
+      "flipX": { "left": "right" },
+      "sequence": ["death"]
+    },
+    "special": {
+      "type": "mixed",
+      "entries": {
+        "sit": { "type": "loop", "fps": 4 },
+        "lie_down": { "type": "loop", "fps": 4 },
+        "jump_on_owner": { "type": "one-shot", "fps": 10 },
+        "affection": { "type": "loop", "fps": 6 },
+        "wait": { "type": "loop", "fps": 4 }
+      }
+    },
+    "ui": {
+      "type": "static",
+      "entries": ["ui_portrait", "ui_icon_small", "ui_icon_ability", "ui_icon_ability_paw"]
+    }
+  },
+  "sprites": {
+    "idle_right": {
+      "file": "idle_right.png",
+      "group": "idle",
+      "direction": "right",
+      "sourceSize": [101, 138],
+      "anchor": [51, 137]
+    },
+    "idle_front": {
+      "file": "idle_front.png",
+      "group": "idle",
+      "direction": "front",
+      "sourceSize": [81, 138],
+      "anchor": [40, 137]
+    },
+    "idle_back": {
+      "file": "idle_back.png",
+      "group": "idle",
+      "direction": "back",
+      "sourceSize": [115, 136],
+      "anchor": [53, 135]
+    },
+    "idle_left": {
+      "file": "idle_left.png",
+      "group": "idle",
+      "direction": "left",
+      "sourceSize": [112, 136],
+      "anchor": [60, 135],
+      "note": "Drawn alternative; can also flipX idle_right"
+    },
+    "walk_right": {
+      "file": "walk_right.png",
+      "group": "walk",
+      "direction": "right",
+      "sourceSize": [145, 122],
+      "anchor": [77, 121],
+      "frameIndex": 1
+    },
+    "walk_right_b": {
+      "file": "walk_right_b.png",
+      "group": "walk",
+      "direction": "right",
+      "sourceSize": [128, 121],
+      "anchor": [63, 120],
+      "frameIndex": 2,
+      "note": "2nd keyframe for walk right cycle"
+    },
+    "walk_front": {
+      "file": "walk_front.png",
+      "group": "walk",
+      "direction": "front",
+      "sourceSize": [90, 126],
+      "anchor": [46, 125]
+    },
+    "walk_back": {
+      "file": "walk_back.png",
+      "group": "walk",
+      "direction": "back",
+      "sourceSize": [132, 126],
+      "anchor": [68, 125]
+    },
+    "walk_left": {
+      "file": "walk_left.png",
+      "group": "walk",
+      "direction": "left",
+      "sourceSize": [139, 115],
+      "anchor": [71, 114],
+      "note": "Drawn alternative; can also flipX walk_right"
+    },
+    "run_right": {
+      "file": "run_right.png",
+      "group": "run",
+      "direction": "right",
+      "sourceSize": [160, 113],
+      "anchor": [79, 112],
+      "frameIndex": 1
+    },
+    "run_right_b": {
+      "file": "run_right_b.png",
+      "group": "run",
+      "direction": "right",
+      "sourceSize": [105, 107],
+      "anchor": [51, 106],
+      "frameIndex": 2,
+      "note": "2nd keyframe for run right cycle"
+    },
+    "run_front": {
+      "file": "run_front.png",
+      "group": "run",
+      "direction": "front",
+      "sourceSize": [121, 116],
+      "anchor": [61, 115]
+    },
+    "run_back": {
+      "file": "run_back.png",
+      "group": "run",
+      "direction": "back",
+      "sourceSize": [88, 116],
+      "anchor": [38, 115]
+    },
+    "run_left": {
+      "file": "run_left.png",
+      "group": "run",
+      "direction": "left",
+      "sourceSize": [138, 104],
+      "anchor": [69, 103],
+      "note": "Drawn alternative; can also flipX run_right"
+    },
+    "jump_rise": {
+      "file": "jump_rise.png",
+      "group": "jump",
+      "direction": "right",
+      "sourceSize": [134, 125],
+      "anchor": [68, 124]
+    },
+    "jump_air": {
+      "file": "jump_air.png",
+      "group": "jump",
+      "direction": "right",
+      "sourceSize": [139, 118],
+      "anchor": [70, 117]
+    },
+    "jump_fall": {
+      "file": "jump_fall.png",
+      "group": "jump",
+      "direction": "right",
+      "sourceSize": [130, 114],
+      "anchor": [67, 113]
+    },
+    "jump_land": {
+      "file": "jump_land.png",
+      "group": "jump",
+      "direction": "right",
+      "sourceSize": [141, 101],
+      "anchor": [70, 100]
+    },
+    "attack_prep": {
+      "file": "attack_prep.png",
+      "group": "attack",
+      "direction": "right",
+      "sourceSize": [119, 102],
+      "anchor": [59, 101]
+    },
+    "attack_1": {
+      "file": "attack_1.png",
+      "group": "attack",
+      "direction": "right",
+      "sourceSize": [216, 113],
+      "anchor": [97, 112],
+      "note": "Contains bark ring overlay"
+    },
+    "attack_2": {
+      "file": "attack_2.png",
+      "group": "attack",
+      "direction": "right",
+      "sourceSize": [153, 119],
+      "anchor": [68, 118],
+      "note": "Contains bark ring overlay"
+    },
+    "attack_end": {
+      "file": "attack_end.png",
+      "group": "attack",
+      "direction": "right",
+      "sourceSize": [152, 122],
+      "anchor": [74, 121]
+    },
+    "hurt_light": {
+      "file": "hurt_light.png",
+      "group": "hurt",
+      "direction": "right",
+      "sourceSize": [115, 93],
+      "anchor": [60, 92]
+    },
+    "hurt_medium": {
+      "file": "hurt_medium.png",
+      "group": "hurt",
+      "direction": "right",
+      "sourceSize": [122, 118],
+      "anchor": [52, 117],
+      "note": "Contains star effect overlay"
+    },
+    "hurt_heavy": {
+      "file": "hurt_heavy.png",
+      "group": "hurt",
+      "direction": "right",
+      "sourceSize": [124, 54],
+      "anchor": [62, 53]
+    },
+    "death": {
+      "file": "death.png",
+      "group": "death",
+      "direction": "right",
+      "sourceSize": [201, 77],
+      "anchor": [107, 76]
+    },
+    "sit": {
+      "file": "sit.png",
+      "group": "special",
+      "sourceSize": [97, 115],
+      "anchor": [52, 114]
+    },
+    "lie_down": {
+      "file": "lie_down.png",
+      "group": "special",
+      "sourceSize": [130, 68],
+      "anchor": [70, 67]
+    },
+    "jump_on_owner": {
+      "file": "jump_on_owner.png",
+      "group": "special",
+      "sourceSize": [171, 154],
+      "anchor": [106, 153],
+      "note": "Contains owner figure and heart"
+    },
+    "affection": {
+      "file": "affection.png",
+      "group": "special",
+      "sourceSize": [87, 119],
+      "anchor": [44, 118]
+    },
+    "wait": {
+      "file": "wait.png",
+      "group": "special",
+      "sourceSize": [90, 128],
+      "anchor": [46, 127],
+      "note": "Contains exclamation mark overlay"
+    },
+    "ui_portrait": {
+      "file": "ui_portrait.png",
+      "group": "ui",
+      "sourceSize": [127, 122],
+      "anchor": [62, 121]
+    },
+    "ui_icon_small": {
+      "file": "ui_icon_small.png",
+      "group": "ui",
+      "sourceSize": [73, 74],
+      "anchor": [36, 73]
+    },
+    "ui_icon_ability": {
+      "file": "ui_icon_ability.png",
+      "group": "ui",
+      "sourceSize": [75, 74],
+      "anchor": [37, 73]
+    },
+    "ui_icon_ability_paw": {
+      "file": "ui_icon_ability_paw.png",
+      "group": "ui",
+      "sourceSize": [75, 74],
+      "anchor": [37, 73],
+      "note": "Paw-only variant of ability icon"
+    }
+  }
+}

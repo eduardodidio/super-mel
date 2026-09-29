@@ -65,6 +65,7 @@ export function GameScene3D() {
         onPositionUpdate={handlePositionUpdate}
         onCollisionDamage={handleDamage}
         invincible={invincibleRef.current}
+        dead={lives <= 0}
       />
 
       <ProjectileManager

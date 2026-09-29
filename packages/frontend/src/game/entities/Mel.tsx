@@ -1,9 +1,10 @@
-import { useRef, useMemo, useState } from "react";
+import { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody, type RapierRigidBody, useRapier } from "@react-three/rapier";
 import * as THREE from "three";
 import type { Controls } from "../hooks/useControls";
-import { loadSpritesheet, updateSpriteUV } from "../systems/SpriteAnimator";
+import { loadSprites, getFrame, getFrameEvent } from "../systems/SpriteAnimator";
+import { AnimationStateMachine, type AnimInput } from "../systems/AnimationStateMachine";
 
 const MOVE_SPEED = 6;
 const MOVE_ACCEL = 25;
@@ -13,22 +14,41 @@ const JUMP_HOLD_FORCE = 6;
 const MAX_JUMP_HOLD = 0.25;
 const COYOTE_TIME = 0.1;
 
+/** Sprite aspect ratio: 224 / 168 = 1.333... */
+const SPRITE_RATIO = 224 / 168;
+const SPRITE_HEIGHT = 2;
+const SPRITE_WIDTH = SPRITE_HEIGHT * SPRITE_RATIO; // ~2.67
+
 interface MelProps {
   controlsRef: React.RefObject<Controls>;
   onPositionUpdate?: (x: number, y: number) => void;
   onCollisionDamage?: () => void;
   invincible?: boolean;
+  dead?: boolean;
+  onAttackFrame?: () => void;
 }
 
-type MelAnim = "idle" | "walk" | "run" | "jump" | "fall" | "attack" | "hurt";
-
-export function Mel({ controlsRef, onPositionUpdate, onCollisionDamage, invincible = false }: MelProps) {
+export function Mel({
+  controlsRef,
+  onPositionUpdate,
+  onCollisionDamage,
+  invincible = false,
+  dead = false,
+  onAttackFrame,
+}: MelProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const spriteRef = useRef<THREE.Mesh>(null);
   const { world } = useRapier();
 
-  const texture = useMemo(() => loadSpritesheet().clone(), []);
+  // New animation system
+  const stateMachine = useRef(new AnimationStateMachine());
+  const spritesLoaded = useRef(false);
+  const lastEvent = useRef<string | undefined>(undefined);
 
+  // Damage edge-detection: true only on the frame invincible flips from false→true
+  const wasInvincible = useRef(false);
+
+  // Physics refs
   const timeRef = useRef(0);
   const facingRight = useRef(true);
   const grounded = useRef(false);
@@ -36,10 +56,15 @@ export function Mel({ controlsRef, onPositionUpdate, onCollisionDamage, invincib
   const jumpHoldTimer = useRef(0);
   const jumping = useRef(false);
   const lastJumpPressed = useRef(false);
-  const animTime = useRef(0);
-  const [currentAnim, setCurrentAnim] = useState<MelAnim>("idle");
-  const lastAnim = useRef<MelAnim>("idle");
   const attackTimer = useRef(0);
+  const idleTime = useRef(0);
+
+  // Load sprites once on mount
+  useEffect(() => {
+    loadSprites().then(() => {
+      spritesLoaded.current = true;
+    });
+  }, []);
 
   useFrame((_, delta) => {
     if (!rigidBodyRef.current || !spriteRef.current) return;
@@ -121,43 +146,63 @@ export function Mel({ controlsRef, onPositionUpdate, onCollisionDamage, invincib
       attackTimer.current -= delta;
     }
 
-    // --- Animation selection ---
-    let newAnim: MelAnim = "idle";
-    if (invincible && attackTimer.current <= 0) {
-      newAnim = "hurt";
-    } else if (attackTimer.current > 0) {
-      newAnim = "attack";
-    } else if (!grounded.current && vel.y > 1) {
-      newAnim = "jump";
-    } else if (!grounded.current && vel.y < -1) {
-      newAnim = "fall";
-    } else if (Math.abs(vel.x) > 4) {
-      newAnim = "run";
-    } else if (Math.abs(vel.x) > 0.5) {
-      newAnim = "walk";
+    // --- Idle time tracking ---
+    const hasHorizontalInput = ctrl.left || ctrl.right;
+    if (hasHorizontalInput || !grounded.current) {
+      idleTime.current = 0;
+    } else {
+      idleTime.current += delta;
     }
 
-    if (newAnim !== lastAnim.current) {
-      animTime.current = 0;
-      lastAnim.current = newAnim;
-      setCurrentAnim(newAnim);
+    // --- Damage edge detection (true only on the frame damage occurs) ---
+    const justDamaged = invincible && !wasInvincible.current;
+    wasInvincible.current = invincible;
+
+    // --- Animation state machine update ---
+    const animInput: AnimInput = {
+      velX: vel.x,
+      velY: vel.y,
+      grounded: grounded.current,
+      attackPressed: ctrl.shoot && attackTimer.current > 0.25, // only on first frame
+      damaged: justDamaged,
+      damageLevel: 1,
+      dead,
+      idleTime: idleTime.current,
+    };
+
+    stateMachine.current.update(animInput, delta);
+
+    // --- Check for attack frame event (bark_fire) ---
+    const animName = stateMachine.current.getAnimName();
+    const event = getFrameEvent(animName, stateMachine.current.stateTime);
+    if (event === "bark_fire" && lastEvent.current !== "bark_fire") {
+      onAttackFrame?.();
+    }
+    lastEvent.current = event;
+
+    // --- Sprite texture update ---
+    if (spritesLoaded.current) {
+      const texture = getFrame(animName, stateMachine.current.stateTime);
+      const mat = (spriteRef.current as THREE.Mesh).material as THREE.MeshStandardMaterial;
+      if (mat.map !== texture) {
+        mat.map = texture;
+        mat.needsUpdate = true;
+      }
     }
 
-    // --- Sprite update ---
-    animTime.current += delta;
-    updateSpriteUV(texture, currentAnim, animTime.current);
+    // --- Flip sprite based on facing ---
+    const facing = stateMachine.current.facing;
+    facingRight.current = facing === "right";
+    spriteRef.current.scale.x = facingRight.current ? SPRITE_WIDTH : -SPRITE_WIDTH;
 
-    // Flip sprite
-    spriteRef.current.scale.x = facingRight.current ? 2 : -2;
-
-    // Invincibility blink
+    // --- Invincibility blink ---
     if (invincible) {
       spriteRef.current.visible = Math.sin(timeRef.current * 20) > 0;
     } else {
       spriteRef.current.visible = true;
     }
 
-    // Fall death
+    // --- Fall death ---
     if (pos.y < -15) {
       onCollisionDamage?.();
       rb.setTranslation({ x: pos.x, y: 8, z: 0 }, true);
@@ -178,10 +223,9 @@ export function Mel({ controlsRef, onPositionUpdate, onCollisionDamage, invincib
       friction={0}
     >
       {/* Sprite billboard */}
-      <mesh ref={spriteRef} position={[0, 0.3, 0]} scale={[2, 2, 1]}>
+      <mesh ref={spriteRef} position={[0, 0.3, 0]} scale={[SPRITE_WIDTH, SPRITE_HEIGHT, 1]}>
         <planeGeometry args={[1, 1]} />
         <meshStandardMaterial
-          map={texture}
           transparent
           alphaTest={0.1}
           side={THREE.DoubleSide}
