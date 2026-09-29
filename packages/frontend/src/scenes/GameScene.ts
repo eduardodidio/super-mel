@@ -6,6 +6,7 @@ import { ParallaxBackground } from "../systems/ParallaxBackground";
 import { HUD } from "../systems/HUD";
 import { AudioManager } from "../systems/AudioManager";
 import { ProjectileManager } from "../systems/ProjectileManager";
+import { TouchControls } from "../systems/TouchControls";
 
 export class GameScene extends Phaser.Scene {
   player!: Player;
@@ -13,6 +14,7 @@ export class GameScene extends Phaser.Scene {
   parallax!: ParallaxBackground;
   hud!: HUD;
   audio!: AudioManager;
+  touch!: TouchControls;
   projectiles!: ProjectileManager;
 
   distance = 0;
@@ -39,6 +41,9 @@ export class GameScene extends Phaser.Scene {
     this.projectiles = new ProjectileManager(this);
     this.hud = new HUD(this);
     this.audio = new AudioManager(this);
+    this.touch = new TouchControls(this);
+    this.touch.onFlap = () => this.player.flap();
+    this.touch.onShoot = () => this.shootProjectile();
 
     // Generate initial terrain
     this.blockManager.generateInitialChunks();
