@@ -4,6 +4,7 @@ import { Mel } from "../entities/Mel";
 import { CameraRig } from "../systems/CameraRig";
 import { ChunkRenderer } from "../systems/ChunkRenderer";
 import { ProjectileManager } from "../systems/ProjectileManager";
+import { BackgroundDecor } from "../systems/BackgroundDecor";
 import { useControls } from "../hooks/useControls";
 import { useGameState } from "../hooks/useGameState";
 
@@ -16,6 +17,7 @@ export function GameScene3D() {
   const loseLife = useGameState((s) => s.loseLife);
   const lives = useGameState((s) => s.lives);
   const setLives = useGameState((s) => s.setLives);
+  const theme = useGameState((s) => s.theme);
   const invincibleRef = useRef(false);
   const lastX = useRef(0);
   const [playerPos, setPlayerPos] = useState({ x: 2, y: 5 });
@@ -56,6 +58,8 @@ export function GameScene3D() {
         deadzone={{ x: 2, y: 1.5 }}
       />
 
+      <BackgroundDecor theme={theme} playerX={playerPos.x} />
+
       <Mel
         controlsRef={controlsRef}
         onPositionUpdate={handlePositionUpdate}
@@ -74,8 +78,6 @@ export function GameScene3D() {
         playerX={playerPos.x}
         onHeartCollected={handleHeartCollected}
       />
-
-      <fog attach="fog" args={["#87ceeb", 30, 80]} />
     </>
   );
 }

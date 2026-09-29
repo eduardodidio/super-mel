@@ -8,6 +8,9 @@ import { GameScene3D } from "./scenes/GameScene3D";
 import { GameOverOverlay } from "./scenes/GameOverScene3D";
 import { useGameState } from "./hooks/useGameState";
 import { LeaderboardView } from "../components/LeaderboardView";
+import type { BackgroundTheme } from "@super-mel/shared";
+
+const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
 
 function SceneContent() {
   const scene = useGameState((s) => s.scene);
@@ -16,7 +19,7 @@ function SceneContent() {
   return (
     <>
       <Skybox theme={theme} />
-      <Lighting />
+      <Lighting theme={theme} />
       {scene === "menu" && <MenuScene3D />}
       {scene === "playing" && <GameScene3D />}
     </>
@@ -27,7 +30,9 @@ export function Game3D() {
   const scene = useGameState((s) => s.scene);
   const lives = useGameState((s) => s.lives);
   const score = useGameState((s) => s.score);
+  const theme = useGameState((s) => s.theme);
   const setScene = useGameState((s) => s.setScene);
+  const setTheme = useGameState((s) => s.setTheme);
   const resetGame = useGameState((s) => s.resetGame);
 
   const handleLogout = () => {
@@ -35,6 +40,11 @@ export function Game3D() {
     localStorage.removeItem("supermel_player_id");
     localStorage.removeItem("supermel_player_name");
     window.location.reload();
+  };
+
+  const cycleTheme = () => {
+    const idx = THEMES.indexOf(theme);
+    setTheme(THEMES[(idx + 1) % THEMES.length]);
   };
 
   if (scene === "leaderboard") {
@@ -74,6 +84,9 @@ export function Game3D() {
               </button>
               <button style={styles.btn} onClick={() => setScene("leaderboard")}>
                 RANKING
+              </button>
+              <button style={styles.btnTheme} onClick={cycleTheme}>
+                TEMA: {theme.toUpperCase()}
               </button>
               <button style={styles.btnSecondary} onClick={handleLogout}>
                 SAIR
@@ -135,6 +148,17 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "14px",
     fontSize: "18px",
     background: "#4a8a4a",
+    color: "#fff",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontFamily: "monospace",
+    fontWeight: "bold",
+  },
+  btnTheme: {
+    padding: "10px",
+    fontSize: "14px",
+    background: "#4a4a8a",
     color: "#fff",
     border: "none",
     borderRadius: 4,
