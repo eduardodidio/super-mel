@@ -11,6 +11,7 @@ import { LevelSelectOverlay } from "./scenes/LevelSelectScene3D";
 import { useGameState } from "./hooks/useGameState";
 import { TouchControls3D } from "./systems/TouchControls3D";
 import { useControls } from "./hooks/useControls";
+import { useProgressSync, flushProgress } from "./hooks/useProgressSync";
 import { playTrack, toggleMute, isMuted } from "./systems/AudioManager3D";
 import { LeaderboardView } from "../components/LeaderboardView";
 import { usePWAInstall } from "../hooks/usePWAInstall";
@@ -48,6 +49,7 @@ export function Game3D() {
   const testMode = useGameState((s) => s.testMode);
   const startTestMode = useGameState((s) => s.startTestMode);
   const controlsRef = useControls();
+  useProgressSync();
   const { canInstall, triggerInstall, isInstalled } = usePWAInstall();
   const [muted, setMuted] = useState(isMuted());
 
@@ -61,6 +63,7 @@ export function Game3D() {
   }, [scene]);
 
   const handleLogout = () => {
+    flushProgress(); // Sync progress to backend before clearing session
     localStorage.removeItem("supermel_token");
     localStorage.removeItem("supermel_player_id");
     localStorage.removeItem("supermel_player_name");

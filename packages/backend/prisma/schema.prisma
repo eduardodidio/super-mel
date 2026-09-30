@@ -14,10 +14,23 @@ model Player {
   isGuest   Boolean  @default(true) @map("is_guest")
   createdAt DateTime @default(now()) @map("created_at")
 
-  scores Score[]
-  levels Level[]
+  scores   Score[]
+  levels   Level[]
+  progress Progress?
 
   @@map("players")
+}
+
+model Progress {
+  id         String   @id @default(uuid()) @db.Uuid
+  playerId   String   @unique @map("player_id") @db.Uuid
+  totalCoins Int      @default(0) @map("total_coins")
+  data       Json     @default("{}")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@map("progress")
 }
 
 model Score {

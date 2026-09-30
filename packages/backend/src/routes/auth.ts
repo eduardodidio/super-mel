@@ -36,6 +36,15 @@ export async function authRoutes(app: FastifyInstance) {
     const player = await prisma.player.create({
       data: { name, password: hashed, isGuest: false },
     });
+    // Auto-create empty progress for new registered player
+    try {
+      await prisma.progress.create({
+        data: { playerId: player.id, totalCoins: 0, data: {} },
+      });
+    } catch {
+      // Non-critical: progress will be created on first GET /api/progress
+    }
+
     const token = jwt.sign({ id: player.id, name: player.name }, JWT_SECRET, {
       expiresIn: "30d",
     });

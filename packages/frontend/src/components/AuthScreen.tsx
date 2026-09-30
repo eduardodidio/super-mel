@@ -46,6 +46,27 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
       localStorage.setItem("supermel_token", data.token);
       localStorage.setItem("supermel_player_id", data.player.id);
       localStorage.setItem("supermel_player_name", data.player.name);
+
+      // Migrate guest localStorage progress to backend after registration
+      if (mode === "register") {
+        const localCoins = parseInt(
+          localStorage.getItem("supermel_total_coins") || "0",
+          10
+        );
+        if (localCoins > 0) {
+          fetch("/api/progress", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${data.token}`,
+            },
+            body: JSON.stringify({ totalCoins: localCoins, data: {} }),
+          }).catch(() => {
+            // Non-critical: progress sync will retry via useProgressSync
+          });
+        }
+      }
+
       onAuth();
     } catch {
       setError("Erro de conexao. O servidor esta rodando?");
