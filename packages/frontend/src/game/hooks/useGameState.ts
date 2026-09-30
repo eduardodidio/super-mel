@@ -12,6 +12,8 @@ interface GameState {
   coins: number;
   totalCoins: number;
   testMode: boolean;
+  dailyMode: boolean;
+  dailySeed: number;
   isFlying: boolean;
   flyTimeRemaining: number;
 
@@ -26,6 +28,7 @@ interface GameState {
   healLife: () => void;
   resetGame: () => void;
   startTestMode: () => void;
+  startDailyMode: (seed: number) => void;
   setFlyState: (isFlying: boolean, flyTimeRemaining: number) => void;
 }
 
@@ -37,6 +40,8 @@ export const useGameState = create<GameState>((set) => ({
   paused: false,
   coins: 0,
   testMode: false,
+  dailyMode: false,
+  dailySeed: 0,
   isFlying: false,
   flyTimeRemaining: 5,
   totalCoins: (() => {
@@ -71,6 +76,7 @@ export const useGameState = create<GameState>((set) => ({
       return { coins: s.coins + 1, totalCoins };
     }),
   setFlyState: (isFlying, flyTimeRemaining) => set({ isFlying, flyTimeRemaining }),
-  resetGame: () => set({ score: 0, lives: 3, coins: 0, scene: "playing", paused: false, testMode: false, isFlying: false, flyTimeRemaining: 5 }),
-  startTestMode: () => set({ score: 0, lives: 3, coins: 0, scene: "playing", paused: false, testMode: true, isFlying: false, flyTimeRemaining: 5 }),
+  resetGame: () => set({ score: 0, lives: 3, coins: 0, scene: "playing", paused: false, testMode: false, dailyMode: false, dailySeed: 0, isFlying: false, flyTimeRemaining: 5 }),
+  startTestMode: () => set({ score: 0, lives: 3, coins: 0, scene: "playing", paused: false, testMode: true, dailyMode: false, dailySeed: 0, isFlying: false, flyTimeRemaining: 5 }),
+  startDailyMode: (seed) => set({ score: 0, lives: 3, coins: 0, scene: "playing", paused: false, testMode: false, dailyMode: true, dailySeed: seed, isFlying: false, flyTimeRemaining: 5 }),
 }));

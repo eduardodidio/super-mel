@@ -37,6 +37,9 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
   const addCoin = useGameState((s) => s.addCoin);
   const healLife = useGameState((s) => s.healLife);
   const setFlyState = useGameState((s) => s.setFlyState);
+  const dailyMode = useGameState((s) => s.dailyMode);
+  const dailySeed = useGameState((s) => s.dailySeed);
+  const baseSeed = dailyMode ? dailySeed : 0;
   const invincibleRef = useRef(false);
   const lastX = useRef(0);
   const maxX = useRef(0);
@@ -163,6 +166,7 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
         onHeartCollected={healLife}
         onCoinCollected={handleCoinCollected}
         testChunks={testChunks}
+        baseSeed={baseSeed}
       />
 
       {droppedCoins.map(coin => (

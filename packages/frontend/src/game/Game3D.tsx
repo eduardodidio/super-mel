@@ -14,6 +14,7 @@ import { useControls } from "./hooks/useControls";
 import { playTrack, toggleMute, isMuted } from "./systems/AudioManager3D";
 import { LeaderboardView } from "../components/LeaderboardView";
 import { usePWAInstall } from "../hooks/usePWAInstall";
+import { getTodaySeed } from "./systems/ChunkGenerator";
 import type { BackgroundTheme } from "@super-mel/shared";
 import { useEffect, useState } from "react";
 
@@ -47,9 +48,29 @@ export function Game3D() {
   const resetGame = useGameState((s) => s.resetGame);
   const testMode = useGameState((s) => s.testMode);
   const startTestMode = useGameState((s) => s.startTestMode);
+  const startDailyMode = useGameState((s) => s.startDailyMode);
   const controlsRef = useControls();
   const { canInstall, triggerInstall, isInstalled } = usePWAInstall();
   const [muted, setMuted] = useState(isMuted());
+  const [canPlayDaily, setCanPlayDaily] = useState<boolean | null>(null);
+  const [checkingDaily, setCheckingDaily] = useState(false);
+
+  // Check daily eligibility when on menu
+  useEffect(() => {
+    if (scene === "menu") {
+      const playerId = localStorage.getItem("supermel_player_id");
+      if (playerId) {
+        setCheckingDaily(true);
+        fetch(`/api/daily/can-play?playerId=${playerId}`)
+          .then(r => r.json())
+          .then(data => setCanPlayDaily(data.canPlay))
+          .catch(() => setCanPlayDaily(true))
+          .finally(() => setCheckingDaily(false));
+      } else {
+        setCanPlayDaily(true);
+      }
+    }
+  }, [scene]);
 
   // Audio: maintheme on menu, comeco on playing
   useEffect(() => {
@@ -115,6 +136,19 @@ export function Game3D() {
             <div style={styles.buttonGroup}>
               <button style={styles.btn} onClick={() => resetGame()}>
                 JOGAR
+              </button>
+              <button
+                style={{
+                  ...styles.btnDaily,
+                  opacity: canPlayDaily === false ? 0.4 : 1,
+                }}
+                disabled={canPlayDaily === false || checkingDaily}
+                onClick={() => {
+                  const seed = getTodaySeed();
+                  startDailyMode(seed);
+                }}
+              >
+                {canPlayDaily === false ? "JA JOGOU HOJE" : checkingDaily ? "VERIFICANDO..." : "DESAFIO DO DIA"}
               </button>
               <button style={styles.btnTest} onClick={() => startTestMode()}>
                 FASE TESTE
@@ -211,6 +245,17 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#4a8a4a",
     color: "#fff",
     border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontFamily: "monospace",
+    fontWeight: "bold",
+  },
+  btnDaily: {
+    padding: "14px",
+    fontSize: "18px",
+    background: "#8a6a2a",
+    color: "#fff",
+    border: "2px solid #ffcc00",
     borderRadius: 4,
     cursor: "pointer",
     fontFamily: "monospace",

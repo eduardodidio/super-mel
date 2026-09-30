@@ -11,6 +11,7 @@ interface ChunkRendererProps {
   onHeartCollected?: () => void;
   onCoinCollected?: () => void;
   testChunks?: Chunk[];
+  baseSeed?: number;
 }
 
 export interface ChunkRendererHandle {
@@ -19,7 +20,7 @@ export interface ChunkRendererHandle {
 }
 
 export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>(
-  function ChunkRenderer({ playerPosRef, onBlockDestroyed, onHeartCollected, onCoinCollected, testChunks }, ref) {
+  function ChunkRenderer({ playerPosRef, onBlockDestroyed, onHeartCollected, onCoinCollected, testChunks, baseSeed }, ref) {
     const [chunks, setChunks] = useState<Map<number, Chunk>>(() => {
       if (testChunks) {
         const map = new Map<number, Chunk>();
@@ -67,7 +68,7 @@ export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>
 
         for (const idx of visibleIndices) {
           if (!next.has(idx)) {
-            next.set(idx, generateChunk(idx));
+            next.set(idx, generateChunk(idx, baseSeed ?? 0));
             changed = true;
           }
         }

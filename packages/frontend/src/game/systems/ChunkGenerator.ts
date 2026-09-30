@@ -35,9 +35,25 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-export function generateChunk(chunkIndex: number): Chunk {
+export function dailySeed(dateStr: string): number {
+  // dateStr format: "YYYYMMDD" e.g. "20260930"
+  // Simple numeric hash: sum of (charCode * position * prime)
+  let hash = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    hash = (hash * 31 + dateStr.charCodeAt(i)) & 0x7fffffff;
+  }
+  return hash;
+}
+
+export function getTodaySeed(): number {
+  const d = new Date();
+  const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  return dailySeed(dateStr);
+}
+
+export function generateChunk(chunkIndex: number, baseSeed: number = 0): Chunk {
   const startX = chunkIndex * CHUNK_WIDTH;
-  const rand = seededRandom(chunkIndex * 7919 + 31);
+  const rand = seededRandom(chunkIndex * 7919 + 31 + baseSeed);
   const blocks: BlockData[] = [];
   const hearts: HeartData[] = [];
   const coins: CoinData[] = [];

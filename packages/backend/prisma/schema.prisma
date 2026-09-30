@@ -24,6 +24,8 @@ model Score {
   id        String   @id @default(uuid()) @db.Uuid
   playerId  String   @map("player_id") @db.Uuid
   distance  Int
+  mode      String   @default("infinite") @db.VarChar(20)
+  seed      Int?
   levelId   String?  @map("level_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
 
