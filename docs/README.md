@@ -15,6 +15,12 @@ Um PRD por feature, escrito antes do Architect rodar.
 - [PRD-001 -- Super Mel Game (MVP)](prd/PRD-001-super-mel-game.md)
 - [3D Rewrite Plan](prd/3d-rewrite-plan.md)
 
+## Backlog
+
+Ideias e follow-ups priorizados a partir de benchmark de jogos similares de mercado (Mario Maker 2, Mario Wonder, DKC, Rayman Legends, Kirby, Crash 4, Jetpack Joyride, Celeste, LittleBigPlanet...). Itens `B-NN` com prioridade, esforco, referencias, modulos afetados e feature candidata (F33+). Promover um item: `/brainstorm` -> `/research` -> `/product-brief` -> `/create-feature`.
+
+- [BACKLOG -- Ideias e Follow-ups (benchmark de mercado)](BACKLOG.md)
+
 ## Diagramas (Mermaid)
 
 Diagramas vivos mantidos em sincronia com o codigo. Dois por feature: arquitetura (componentes/data-flow) e jornada (fluxo do usuario).
