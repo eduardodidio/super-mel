@@ -48,9 +48,6 @@ export function Block({ type, position, onDestroy, isBackground = false }: Block
       <mesh castShadow receiveShadow material={materials}>
         <boxGeometry args={[1, 1, 1]} />
       </mesh>
-      {type === "lava" && (
-        <pointLight color="#FF4500" intensity={2} distance={4} position={[0, 0.5, 0]} />
-      )}
     </RigidBody>
   );
 }
@@ -86,7 +83,9 @@ function BlockParticles({ position, type }: { position: [number, number, number]
     const children = groupRef.current.children;
     particlesRef.current.forEach((p, i) => {
       p.vel.y -= 15 * delta;
-      p.pos.add(p.vel.clone().multiplyScalar(delta));
+      p.pos.x += p.vel.x * delta;
+      p.pos.y += p.vel.y * delta;
+      p.pos.z += p.vel.z * delta;
       if (children[i]) {
         children[i].position.copy(p.pos);
         const s = p.scale * (1 - lifeRef.current);

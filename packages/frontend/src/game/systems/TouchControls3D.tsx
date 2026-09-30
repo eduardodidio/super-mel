@@ -24,22 +24,47 @@ export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
 
   return (
     <div style={styles.container}>
-      {/* D-pad left side */}
+      {/* D-pad left side — 4-direction cross */}
       <div style={styles.dpad}>
-        <button
-          style={styles.dpadBtn}
-          onTouchStart={set("left", true)}
-          onTouchEnd={set("left", false)}
-        >
-          &#9664;
-        </button>
-        <button
-          style={styles.dpadBtn}
-          onTouchStart={set("right", true)}
-          onTouchEnd={set("right", false)}
-        >
-          &#9654;
-        </button>
+        <div style={styles.dpadRow}>
+          <div style={styles.dpadSpacer} />
+          <button
+            style={styles.dpadBtn}
+            onTouchStart={set("up", true)}
+            onTouchEnd={set("up", false)}
+          >
+            &#9650;
+          </button>
+          <div style={styles.dpadSpacer} />
+        </div>
+        <div style={styles.dpadRow}>
+          <button
+            style={styles.dpadBtn}
+            onTouchStart={set("left", true)}
+            onTouchEnd={set("left", false)}
+          >
+            &#9664;
+          </button>
+          <div style={styles.dpadCenter} />
+          <button
+            style={styles.dpadBtn}
+            onTouchStart={set("right", true)}
+            onTouchEnd={set("right", false)}
+          >
+            &#9654;
+          </button>
+        </div>
+        <div style={styles.dpadRow}>
+          <div style={styles.dpadSpacer} />
+          <button
+            style={styles.dpadBtn}
+            onTouchStart={set("down", true)}
+            onTouchEnd={set("down", false)}
+          >
+            &#9660;
+          </button>
+          <div style={styles.dpadSpacer} />
+        </div>
       </div>
 
       {/* Action buttons right side */}
@@ -92,13 +117,37 @@ const styles: Record<string, React.CSSProperties> = {
   },
   dpad: {
     display: "flex",
-    gap: 10,
-    alignItems: "flex-end",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    width: 180,
+    height: 180,
+  },
+  dpadRow: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
   dpadBtn: {
     ...btnBase,
+    width: 56,
+    height: 56,
     background: "rgba(255,255,255,0.12)",
     border: "2px solid rgba(255,255,255,0.3)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dpadSpacer: {
+    width: 56,
+    height: 56,
+  },
+  dpadCenter: {
+    width: 56,
+    height: 56,
+    borderRadius: "50%",
+    background: "rgba(255,255,255,0.05)",
   },
   actions: {
     display: "flex",

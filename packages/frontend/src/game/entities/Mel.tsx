@@ -13,6 +13,10 @@ const JUMP_FORCE = 10;
 const JUMP_HOLD_FORCE = 6;
 const MAX_JUMP_HOLD = 0.25;
 const COYOTE_TIME = 0.1;
+const FLY_FORCE = 8;
+const FLY_GRAVITY_SCALE = 0.4;
+const FLY_MAX_VEL_Y = 4;
+const CROUCH_SPEED_MULT = 0.4;
 
 /** Sprite aspect ratio: 224 / 168 = 1.333... */
 const SPRITE_RATIO = 224 / 168;
@@ -26,6 +30,7 @@ interface MelProps {
   invincible?: boolean;
   dead?: boolean;
   onAttackFrame?: () => void;
+  onLookUp?: (looking: boolean) => void;
 }
 
 export function Mel({
@@ -35,6 +40,7 @@ export function Mel({
   invincible = false,
   dead = false,
   onAttackFrame,
+  onLookUp,
 }: MelProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const spriteRef = useRef<THREE.Mesh>(null);
@@ -58,6 +64,10 @@ export function Mel({
   const lastJumpPressed = useRef(false);
   const attackTimer = useRef(0);
   const idleTime = useRef(0);
+  const flying = useRef(false);
+  const crouching = useRef(false);
+  const lookingUp = useRef(false);
+  const lastLookingUp = useRef(false);
 
   // Load sprites once on mount
   useEffect(() => {
@@ -116,6 +126,12 @@ export function Mel({
       }
     }
 
+    // --- Crouch ---
+    crouching.current = ctrl.down && grounded.current;
+    if (crouching.current) {
+      newVelX *= CROUCH_SPEED_MULT;
+    }
+
     // --- Jump ---
     const canJump = grounded.current || coyoteTimer.current > 0;
     const jumpPressed = ctrl.jump;
@@ -136,6 +152,22 @@ export function Mel({
     }
 
     lastJumpPressed.current = jumpPressed;
+
+    // --- Fly ---
+    if (ctrl.jump && !grounded.current && jumping.current && jumpHoldTimer.current >= MAX_JUMP_HOLD) {
+      flying.current = true;
+    }
+    if (flying.current && ctrl.jump && !grounded.current) {
+      const flyVelY = Math.min(vel.y + FLY_FORCE * delta, FLY_MAX_VEL_Y);
+      rb.setLinvel({ x: newVelX, y: flyVelY, z: 0 }, true);
+    }
+    if (!ctrl.jump) {
+      flying.current = false;
+    }
+    if (grounded.current) {
+      flying.current = false;
+    }
+
     onPositionUpdate?.(pos.x, pos.y);
 
     // --- Attack timer ---
@@ -144,6 +176,13 @@ export function Mel({
     }
     if (attackTimer.current > 0) {
       attackTimer.current -= delta;
+    }
+
+    // --- Look up ---
+    lookingUp.current = ctrl.up && grounded.current && !ctrl.left && !ctrl.right;
+    if (lookingUp.current !== lastLookingUp.current) {
+      onLookUp?.(lookingUp.current);
+      lastLookingUp.current = lookingUp.current;
     }
 
     // --- Idle time tracking ---
@@ -168,6 +207,9 @@ export function Mel({
       damageLevel: 1,
       dead,
       idleTime: idleTime.current,
+      crouching: crouching.current,
+      lookingUp: lookingUp.current,
+      flying: flying.current,
     };
 
     stateMachine.current.update(animInput, delta);

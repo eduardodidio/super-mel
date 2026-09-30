@@ -1,0 +1,42 @@
+flowchart TB
+  subgraph Input["Input Layer"]
+    KB["Keyboard<br/>Arrow keys + Space + Z"]
+    TC["TouchControls3D<br/>4-dir D-pad + A/B"]
+  end
+
+  subgraph Controls["useControls Hook"]
+    C["Controls Ref<br/>left | right | up | down | jump | shoot"]
+  end
+
+  subgraph Player["Mel.tsx (Physics Loop)"]
+    MV["Horizontal Movement<br/>MOVE_SPEED * crouch mult"]
+    CR["Crouch<br/>down + grounded"]
+    JMP["Jump<br/>Space only"]
+    FLY["Fly<br/>hold Space in air"]
+    LU["Look Up<br/>up + grounded + stationary"]
+    ATK["Attack<br/>Z key → Bola do Infinito"]
+  end
+
+  subgraph Anim["AnimationStateMachine"]
+    AS["States: idle | walk | run | crouch<br/>look_up | fly | jump_* | attack_*<br/>hurt_* | death | sit | lie_down"]
+  end
+
+  subgraph Camera["CameraRig"]
+    CAM["Deadzone follow<br/>+ lookUp offset (5 units)"]
+  end
+
+  KB --> C
+  TC --> C
+  C --> MV
+  C --> CR
+  C --> JMP
+  C --> FLY
+  C --> LU
+  C --> ATK
+  MV --> AS
+  CR --> AS
+  JMP --> AS
+  FLY --> AS
+  LU --> AS
+  LU --> CAM
+  AS --> |sprite texture| Player

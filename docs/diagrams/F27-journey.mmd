@@ -1,0 +1,6 @@
+flowchart LR
+  A["Audit:<br/>catalog errors"] --> B["Profile:<br/>measure FPS"]
+  B --> C["Fix sprites:<br/>remove warnings"]
+  C --> D["Fix rendering:<br/>remove lights"]
+  D --> E["Fix re-renders:<br/>refs not state"]
+  E --> F["Verify:<br/>stable 55+ FPS"]

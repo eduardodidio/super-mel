@@ -1,0 +1,18 @@
+flowchart LR
+  A["Player presses<br/>ArrowDown"] --> B["Crouch state<br/>speed -60%"]
+  B --> C["Release ArrowDown"]
+  C --> D["Normal state"]
+
+  E["Player presses Space"] --> F["Jump"]
+  F --> G["Hold Space<br/>past max hold"]
+  G --> H["Fly mode<br/>gentle upward"]
+  H --> I{"Release Space<br/>or Land?"}
+  I -->|Release| J["Fall"]
+  I -->|Land| K["Fly OFF<br/>grounded"]
+
+  L["Player presses<br/>ArrowUp (grounded)"] --> M["Look Up"]
+  M --> N["Camera pans up<br/>+5 units"]
+  N --> O["Release ArrowUp"]
+  O --> P["Camera returns"]
+
+  Q["Player presses Z"] --> R["Attack<br/>Bola do Infinito"]

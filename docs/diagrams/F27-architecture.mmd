@@ -1,0 +1,21 @@
+flowchart TB
+  subgraph Before["BEFORE (60 re-renders/sec)"]
+    B1["Mel useFrame"] -->|"setPlayerPos()"| B2["GameScene3D<br/>React re-render"]
+    B2 --> B3["BackgroundDecor re-render"]
+    B2 --> B4["ProjectileManager re-render"]
+    B2 --> B5["ChunkRenderer re-render"]
+  end
+
+  subgraph After["AFTER (ref-based, 0 re-renders)"]
+    A1["Mel useFrame"] -->|"playerPosRef.current = ..."| A2["Ref update<br/>NO React re-render"]
+    A3["BackgroundDecor useFrame"] -->|reads ref| A2
+    A4["ProjectileManager useFrame"] -->|reads ref| A2
+    A5["ChunkRenderer useFrame"] -->|reads ref| A2
+  end
+
+  subgraph Fixes["Other Optimizations"]
+    F1["Remove pointLights<br/>Coin, Heart, Lava"]
+    F2["Inline vector math<br/>BlockParticles"]
+    F3["Dispose functions<br/>sprites + materials"]
+    F4["Remove deprecated<br/>SpriteAnimator dead code"]
+  end

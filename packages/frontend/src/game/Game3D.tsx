@@ -21,13 +21,14 @@ const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"
 function SceneContent() {
   const scene = useGameState((s) => s.scene);
   const theme = useGameState((s) => s.theme);
+  const testMode = useGameState((s) => s.testMode);
 
   return (
     <>
       <Skybox theme={theme} />
       <Lighting theme={theme} />
       {scene === "menu" && <MenuScene3D />}
-      {scene === "playing" && <GameScene3D />}
+      {scene === "playing" && <GameScene3D testMode={testMode} />}
     </>
   );
 }
@@ -41,6 +42,8 @@ export function Game3D() {
   const setScene = useGameState((s) => s.setScene);
   const setTheme = useGameState((s) => s.setTheme);
   const resetGame = useGameState((s) => s.resetGame);
+  const testMode = useGameState((s) => s.testMode);
+  const startTestMode = useGameState((s) => s.startTestMode);
   const controlsRef = useControls();
   const [muted, setMuted] = useState(isMuted());
 
@@ -108,6 +111,9 @@ export function Game3D() {
             <div style={styles.buttonGroup}>
               <button style={styles.btn} onClick={() => resetGame()}>
                 JOGAR
+              </button>
+              <button style={styles.btnTest} onClick={() => startTestMode()}>
+                FASE TESTE
               </button>
               <button style={styles.btn} onClick={() => setScene("editor")}>
                 CRIAR FASE
@@ -182,6 +188,17 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "14px",
     fontSize: "18px",
     background: "#4a8a4a",
+    color: "#fff",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontFamily: "monospace",
+    fontWeight: "bold",
+  },
+  btnTest: {
+    padding: "14px",
+    fontSize: "18px",
+    background: "#4a4a8a",
     color: "#fff",
     border: "none",
     borderRadius: 4,

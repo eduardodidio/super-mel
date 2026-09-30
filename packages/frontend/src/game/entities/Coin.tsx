@@ -49,13 +49,11 @@ export function Coin({ position, onCollect }: CoinProps) {
           <meshStandardMaterial
             color="#FFD700"
             emissive="#FFA500"
-            emissiveIntensity={0.4}
+            emissiveIntensity={0.6}
             roughness={0.3}
             metalness={0.8}
           />
         </mesh>
-        {/* Glow */}
-        <pointLight color="#FFD700" intensity={0.8} distance={2} />
       </group>
     </RigidBody>
   );

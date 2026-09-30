@@ -72,8 +72,6 @@ export function Heart({ position, onCollect }: HeartProps) {
             roughness={0.5}
           />
         </mesh>
-        {/* Glow */}
-        <pointLight color="#FF4444" intensity={1} distance={3} />
       </group>
     </RigidBody>
   );

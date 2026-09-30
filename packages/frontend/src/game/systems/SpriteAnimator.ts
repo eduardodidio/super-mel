@@ -104,6 +104,24 @@ const ANIMATIONS: Record<string, SpriteAnimationDef> = {
     fps: 12,
     loop: false,
   },
+  crouch: {
+    name: "crouch",
+    frames: ["sit"],
+    fps: 4,
+    loop: true,
+  },
+  look_up: {
+    name: "look_up",
+    frames: ["idle_right"],
+    fps: 4,
+    loop: true,
+  },
+  fly: {
+    name: "fly",
+    frames: ["jump_air"],
+    fps: 8,
+    loop: true,
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -142,14 +160,10 @@ function loadTexture(spriteName: string): THREE.Texture {
     (tex) => configureTexture(tex),
     undefined,
     () => {
-      // On error, replace with fallback texture if available
-      console.warn(
-        `[SpriteAnimator] Failed to load sprite "${spriteName}", using fallback "${FALLBACK_SPRITE}"`
-      );
+      // Silently use fallback — no console spam
       const fallback = textureCache.get(FALLBACK_SPRITE);
-      if (fallback && texture !== fallback) {
-        texture.image = fallback.image as typeof texture.image;
-        texture.needsUpdate = true;
+      if (fallback) {
+        textureCache.set(spriteName, fallback);
       }
     }
   );
@@ -182,6 +196,7 @@ function getAllSpriteNames(): string[] {
  */
 export function loadSprites(): Promise<void> {
   const names = getAllSpriteNames();
+  const missing: string[] = [];
 
   const promises = names.map((name) => {
     return new Promise<void>((resolve) => {
@@ -195,10 +210,7 @@ export function loadSprites(): Promise<void> {
         },
         undefined,
         () => {
-          console.warn(
-            `[SpriteAnimator] Sprite "${name}" not found, will use fallback`
-          );
-          // Store a placeholder; getFrame will return fallback texture
+          missing.push(name);
           resolve();
         }
       );
@@ -214,6 +226,9 @@ export function loadSprites(): Promise<void> {
           textureCache.set(name, fallback);
         }
       }
+    }
+    if (missing.length > 0) {
+      console.warn(`[SpriteAnimator] ${missing.length} sprites not found, using fallback: ${missing.join(", ")}`);
     }
   });
 }
@@ -339,34 +354,18 @@ export function getFrameSpriteEntry(
 }
 
 // ---------------------------------------------------------------------------
-// Backward Compatibility (DEPRECATED — will be removed in T04)
+// Memory Management
 // ---------------------------------------------------------------------------
 
-/** @deprecated Use loadSprites() instead. Kept for Mel.tsx compat until T04. */
-export function loadSpritesheet(): THREE.Texture {
-  console.warn(
-    "[SpriteAnimator] loadSpritesheet() is deprecated. Use loadSprites() and getFrame() instead."
-  );
-  // Trigger async preload (fire-and-forget)
-  loadSprites().catch(() => {});
-  // Return fallback texture so Mel.tsx has something to render
-  return loadTexture(FALLBACK_SPRITE);
-}
-
 /**
- * @deprecated Use getFrame() instead. Kept for Mel.tsx compat until T04.
- * Updates UV offsets on a spritesheet texture — this is now a no-op shim
- * that returns false (not finished) to keep existing code from breaking.
+ * Dispose all cached sprite textures and clear the cache.
+ * Call this when the game scene is unmounted to free GPU memory.
  */
-export function updateSpriteUV(
-  _texture: THREE.Texture,
-  animName: string,
-  elapsed: number
-): boolean {
-  console.warn(
-    "[SpriteAnimator] updateSpriteUV() is deprecated. Use getFrame() and isFinished() instead."
-  );
-  return isFinished(animName, elapsed);
+export function disposeSprites(): void {
+  for (const texture of textureCache.values()) {
+    texture.dispose();
+  }
+  textureCache.clear();
 }
 
 // ---------------------------------------------------------------------------

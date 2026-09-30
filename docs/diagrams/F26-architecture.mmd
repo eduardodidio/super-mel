@@ -1,0 +1,32 @@
+flowchart TB
+  subgraph Menu["Game3D Menu"]
+    BT["FASE TESTE button"]
+    BJ["JOGAR button"]
+  end
+
+  subgraph State["useGameState"]
+    TM["testMode: boolean"]
+    SM["startTestMode()"]
+    RG["resetGame()"]
+  end
+
+  subgraph Scene["GameScene3D"]
+    TC["testChunks = useMemo<br/>generateTestLevel()"]
+  end
+
+  subgraph Data["TestLevelData.ts"]
+    GL["generateTestLevel()<br/>5 chunks, 80 blocks wide"]
+  end
+
+  subgraph Renderer["ChunkRenderer"]
+    PM["Procedural mode<br/>generateChunk()"]
+    TLM["Test mode<br/>pre-built chunks"]
+  end
+
+  BT --> SM
+  SM --> TM
+  BJ --> RG
+  TM -->|true| TC
+  TC --> GL
+  GL --> TLM
+  TM -->|false| PM

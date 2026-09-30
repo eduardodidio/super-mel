@@ -18,7 +18,10 @@ export type AnimState =
   | "hurt_heavy"
   | "death"
   | "sit"
-  | "lie_down";
+  | "lie_down"
+  | "crouch"
+  | "look_up"
+  | "fly";
 
 export interface AnimInput {
   velX: number;
@@ -29,6 +32,9 @@ export interface AnimInput {
   damageLevel: 0 | 1 | 2 | 3;
   dead: boolean;
   idleTime: number;
+  crouching: boolean;
+  lookingUp: boolean;
+  flying: boolean;
 }
 
 // Duration map for one-shot states (seconds).
@@ -87,6 +93,9 @@ const ANIM_NAME_MAP: Record<AnimState, string> = {
   death: "death",
   sit: "sit",
   lie_down: "lie_down",
+  crouch: "crouch",
+  look_up: "look_up",
+  fly: "fly",
 };
 
 export class AnimationStateMachine {
@@ -144,6 +153,11 @@ export class AnimationStateMachine {
 
     // --- Priority 4: Jump states (airborne) ---
     if (!input.grounded) {
+      // If flying and airborne, stay in fly state
+      if (input.flying) {
+        this.transitionIfDifferent("fly");
+        return this.state;
+      }
       if (input.velY > 1) {
         this.transitionIfDifferent("jump_rise");
       } else if (input.velY < -1) {
@@ -169,6 +183,18 @@ export class AnimationStateMachine {
     // --- Priority 7: Walk ---
     if (Math.abs(input.velX) > 0.5) {
       this.transitionIfDifferent("walk");
+      return this.state;
+    }
+
+    // --- Priority 7.5: Crouch (grounded + holding down) ---
+    if (input.crouching && input.grounded) {
+      this.transitionIfDifferent("crouch");
+      return this.state;
+    }
+
+    // --- Priority 7.6: Look up (grounded + holding up + not moving) ---
+    if (input.lookingUp && input.grounded && Math.abs(input.velX) < 0.5) {
+      this.transitionIfDifferent("look_up");
       return this.state;
     }
 
@@ -267,6 +293,7 @@ export class AnimationStateMachine {
       this.state === "run" ||
       this.state === "sit" ||
       this.state === "lie_down" ||
+      this.state === "crouch" ||
       this.state === "jump_land"
     );
   }
