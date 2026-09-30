@@ -147,3 +147,17 @@ export function getBlockColor(type: Exclude<BlockType, "empty">): string {
 export function getBlockVisual(type: Exclude<BlockType, "empty">): BlockVisual {
   return BLOCK_VISUALS[type];
 }
+
+export function disposeBlockMaterials(): void {
+  for (const materials of materialCache.values()) {
+    for (const mat of materials) {
+      if (mat.map) mat.map.dispose();
+      mat.dispose();
+    }
+  }
+  materialCache.clear();
+  for (const texture of textureCache.values()) {
+    texture.dispose();
+  }
+  textureCache.clear();
+}

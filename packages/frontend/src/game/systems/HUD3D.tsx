@@ -1,23 +1,49 @@
+import { useState } from "react";
 import type { GameScene } from "../hooks/useGameState";
 
 interface HUD3DProps {
   lives: number;
   score: number;
+  coins: number;
   scene: GameScene;
 }
 
-export function HUD3D({ lives, score, scene }: HUD3DProps) {
+function getPortraitFilter(lives: number): string | undefined {
+  if (lives >= 3) return undefined;
+  if (lives === 2) return "sepia(0.3) saturate(1.3)";
+  return "sepia(0.5) saturate(2) hue-rotate(-20deg)";
+}
+
+export function HUD3D({ lives, score, coins, scene }: HUD3DProps) {
+  const [portraitError, setPortraitError] = useState(false);
+
   if (scene !== "playing") return null;
+
+  const portraitFilter = getPortraitFilter(lives);
 
   return (
     <div style={styles.container}>
       <div style={styles.left}>
+        {!portraitError && (
+          <img
+            src="/sprites/mel/ui_portrait.png"
+            alt="Mel portrait"
+            style={{
+              ...styles.portrait,
+              ...(portraitFilter ? { filter: portraitFilter } : {}),
+            }}
+            onError={() => setPortraitError(true)}
+          />
+        )}
         <span style={styles.hearts}>
           {Array.from({ length: 3 }, (_, i) => (
             <span key={i} style={{ opacity: i < lives ? 1 : 0.2, fontSize: "24px" }}>
               &#9829;
             </span>
           ))}
+        </span>
+        <span style={styles.coins}>
+          <span style={styles.coinIcon}>&#9679;</span> {coins}
         </span>
       </div>
       <div style={styles.center}>
@@ -48,13 +74,37 @@ const styles: Record<string, React.CSSProperties> = {
   },
   left: {
     display: "flex",
+    alignItems: "center",
     gap: 4,
+  },
+  portrait: {
+    width: 48,
+    height: 48,
+    border: "2px solid #ffcc00",
+    borderRadius: 4,
+    imageRendering: "pixelated" as const,
+    marginRight: 8,
   },
   hearts: {
     display: "flex",
     gap: 4,
     color: "#ff4444",
     filter: "drop-shadow(1px 1px 1px rgba(0,0,0,0.5))",
+  },
+  coins: {
+    color: "#FFD700",
+    fontSize: "18px",
+    fontWeight: "bold",
+    marginLeft: 12,
+    textShadow: "1px 1px 0 #000",
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+  },
+  coinIcon: {
+    fontSize: "14px",
+    color: "#FFD700",
+    filter: "drop-shadow(0 0 2px rgba(255,215,0,0.6))",
   },
   center: {},
   controls: {

@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useState, useMemo } from "react";
 import * as THREE from "three";
 import { Mel } from "../entities/Mel";
 import { CameraRig } from "../systems/CameraRig";
@@ -7,29 +7,38 @@ import { ProjectileManager } from "../systems/ProjectileManager";
 import { BackgroundDecor } from "../systems/BackgroundDecor";
 import { useControls } from "../hooks/useControls";
 import { useGameState } from "../hooks/useGameState";
+import { generateTestLevel } from "../systems/TestLevelData";
 
 const INVINCIBILITY_MS = 1500;
 
-export function GameScene3D() {
+interface GameScene3DProps {
+  testMode?: boolean;
+}
+
+export function GameScene3D({ testMode = false }: GameScene3DProps) {
   const melTracker = useRef<THREE.Object3D>(new THREE.Object3D());
   const controlsRef = useControls();
   const addScore = useGameState((s) => s.addScore);
   const loseLife = useGameState((s) => s.loseLife);
   const lives = useGameState((s) => s.lives);
-  const setLives = useGameState((s) => s.setLives);
   const theme = useGameState((s) => s.theme);
+  const addCoin = useGameState((s) => s.addCoin);
+  const healLife = useGameState((s) => s.healLife);
   const invincibleRef = useRef(false);
   const lastX = useRef(0);
-  const [playerPos, setPlayerPos] = useState({ x: 2, y: 5 });
-  const [facingRight, setFacingRight] = useState(true);
+  const playerPosRef = useRef({ x: 2, y: 5 });
+  const facingRightRef = useRef(true);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const testChunks = useMemo(() => testMode ? generateTestLevel() : undefined, [testMode]);
 
   const handlePositionUpdate = useCallback((x: number, y: number) => {
     melTracker.current.position.set(x, y, 0);
-    setPlayerPos({ x, y });
+    playerPosRef.current.x = x;
+    playerPosRef.current.y = y;
     const dx = x - lastX.current;
     if (Math.abs(dx) > 0.01) {
       addScore(Math.abs(dx));
-      setFacingRight(dx > 0);
+      facingRightRef.current = dx > 0;
     }
     lastX.current = x;
   }, [addScore]);
@@ -43,11 +52,9 @@ export function GameScene3D() {
     }, INVINCIBILITY_MS);
   }, [loseLife]);
 
-  const handleHeartCollected = useCallback(() => {
-    if (lives < 3) {
-      setLives(lives + 1);
-    }
-  }, [lives, setLives]);
+  const handleCoinCollected = useCallback(() => {
+    addCoin();
+  }, [addCoin]);
 
   return (
     <>
@@ -56,27 +63,32 @@ export function GameScene3D() {
         offset={[0, 3, 18]}
         lerpSpeed={0.08}
         deadzone={{ x: 2, y: 1.5 }}
+        isLookingUp={isLookingUp}
+        lookUpOffset={5}
       />
 
-      <BackgroundDecor theme={theme} playerX={playerPos.x} />
+      <BackgroundDecor theme={theme} playerXRef={playerPosRef} />
 
       <Mel
         controlsRef={controlsRef}
         onPositionUpdate={handlePositionUpdate}
         onCollisionDamage={handleDamage}
         invincible={invincibleRef.current}
+        dead={lives <= 0}
+        onLookUp={setIsLookingUp}
       />
 
       <ProjectileManager
         controlsRef={controlsRef}
-        playerX={playerPos.x}
-        playerY={playerPos.y}
-        facingRight={facingRight}
+        playerPosRef={playerPosRef}
+        facingRightRef={facingRightRef}
       />
 
       <ChunkRenderer
-        playerX={playerPos.x}
-        onHeartCollected={handleHeartCollected}
+        playerPosRef={playerPosRef}
+        onHeartCollected={healLife}
+        onCoinCollected={handleCoinCollected}
+        testChunks={testChunks}
       />
     </>
   );

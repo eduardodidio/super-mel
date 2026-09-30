@@ -1,0 +1,8 @@
+flowchart LR
+    A["Chunk gerado"] --> B["Moedas posicionadas"]
+    B --> C{"Mel toca moeda?"}
+    C -->|"Sim"| D["Coin desaparece"]
+    D --> E["coins++ no state"]
+    E --> F["HUD atualiza"]
+    E --> G["localStorage persiste"]
+    C -->|"Nao"| H["Moeda continua flutuando"]

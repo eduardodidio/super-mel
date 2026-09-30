@@ -36,12 +36,20 @@ pnpm dev
 
 1. Abra o jogo no browser
 2. Entre como Visitante (nome) ou crie uma conta
-3. No menu: **JOGAR** para jogar, **CRIAR FASE** para o editor
-4. **Controles Desktop:** Space/Up = voar, Z = atirar
-5. **Controles Mobile:** Toque esquerda = voar, Botao direita = atirar
-6. Destrua blocos de madeira e vidro com a Bola do Infinito
-7. Colete coracoes para recuperar vida (max 3)
-8. Desvie de lava e obstaculos solidos (pedra, ferro, tijolo)
+3. No menu: **JOGAR** para modo procedural, **FASE TESTE** para a fase de teste manual
+4. Destrua blocos de madeira e vidro com a Bola do Infinito
+5. Colete coracoes para recuperar vida (max 3)
+6. Colete moedas espalhadas pelos chunks
+7. Desvie de lava e obstaculos solidos (pedra, ferro, tijolo)
+
+### Controles
+
+- **Setas Esq/Dir** — Mover esquerda/direita
+- **Seta Baixo** — Abaixar (crouch)
+- **Seta Cima** — Olhar pra cima (camera sobe)
+- **Espaco** — Pular (segurar = voar)
+- **Z** — Atacar (Bola do Infinito)
+- **Mobile:** D-pad 4 direcoes + A (pular/voar) + B (atacar)
 
 ## Editor de Fases (Mario Maker)
 
@@ -91,6 +99,14 @@ super-mel/
 - **F12:** Responsivo + Mobile (touch controls, virtual shoot button)
 - **F13:** Deploy Render (render.yaml Blueprint automatico)
 - **F14:** Polish + Integracao (menu completo, navegacao entre telas, logout)
+- **F23:** Sprites & Animation System — Novos sprites 2D de alta qualidade substituem placeholders voxel. Maquina de estados de animacao completa (idle/walk/run/jump/attack/hurt/death/sit), efeitos visuais procedurais (poeira, estrelas, coracoes), bark wave animado, e portrait da Mel no HUD.
+- **F24:** Sistema de Moedas — Moedas coletaveis espalhadas pelos chunks, contador no HUD, persistencia via localStorage para futuros upgrades.
+
+### Features Recentes
+
+- **F25** — Controles refinados: crouch, fly, look up, remap de teclas, D-pad mobile 4 direcoes
+- **F26** — Fase basica de teste: 5 chunks manuais para testar gameplay (botao FASE TESTE no menu)
+- **F27** — Performance: removed 100+ pointLights, eliminated 60 re-renders/sec, fixed GC pressure, added resource disposal
 
 ## Poderes Futuros (pos-MVP)
 

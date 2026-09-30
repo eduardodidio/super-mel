@@ -1,0 +1,37 @@
+stateDiagram-v2
+    [*] --> idle
+
+    idle --> walk : velX > 0.5
+    idle --> sit : idleTime > 8s
+    walk --> run : velX > 4
+    walk --> idle : velX near 0
+    run --> walk : velX < 4
+    run --> idle : velX near 0
+    sit --> lie_down : idleTime > 16s
+    sit --> idle : any input
+    lie_down --> idle : any input
+
+    idle --> jump_rise : jump pressed
+    walk --> jump_rise : jump pressed
+    run --> jump_rise : jump pressed
+    jump_rise --> jump_air : velY peak
+    jump_air --> jump_fall : velY < 0
+    jump_fall --> jump_land : grounded
+    jump_land --> idle : 0.2s
+
+    idle --> attack_prep : attack pressed
+    walk --> attack_prep : attack pressed
+    attack_prep --> attack_1 : 0.17s
+    attack_1 --> attack_2 : 0.08s bark_fire
+    attack_2 --> attack_end : 0.17s
+    attack_end --> idle : 0.17s
+
+    idle --> hurt_light : damage lv1
+    idle --> hurt_medium : damage lv2
+    idle --> hurt_heavy : damage lv3
+    hurt_light --> idle : 0.25s
+    hurt_medium --> idle : 0.4s
+    hurt_heavy --> idle : 0.6s
+    hurt_heavy --> death : if dead
+
+    death --> [*]

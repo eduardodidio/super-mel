@@ -1,0 +1,30 @@
+flowchart TB
+    subgraph Assets["Assets (public/sprites/mel/)"]
+        PNGS["Individual PNGs<br/>idle_right, walk_right, etc."]
+        MANIFEST["manifest.json"]
+    end
+
+    subgraph Systems["Systems"]
+        SA["SpriteAnimator<br/>loadSprites / getFrame"]
+        ASM["AnimationStateMachine<br/>update / getAnimName"]
+        EM["EffectManager<br/>spawn dust/stars/hearts"]
+    end
+
+    subgraph Entities["Entities"]
+        MEL["Mel.tsx<br/>Physics + Rendering"]
+        PROJ["Projectile.tsx<br/>bark_wave sprite"]
+        EFF["EffectSprite.tsx<br/>Procedural effects"]
+    end
+
+    subgraph UI["UI Layer"]
+        HUD["HUD3D.tsx<br/>Portrait + Hearts + Score"]
+    end
+
+    PNGS --> SA
+    MANIFEST --> SA
+    SA --> MEL
+    ASM --> MEL
+    MEL -->|"playerState"| EM
+    EM --> EFF
+    SA --> PROJ
+    PNGS --> HUD

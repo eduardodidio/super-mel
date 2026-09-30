@@ -1,0 +1,18 @@
+flowchart TB
+    subgraph Generation["Generation"]
+        CG["ChunkGenerator<br/>generateCoins()"] -->|"CoinData[]"| CR["ChunkRenderer"]
+    end
+
+    subgraph Entities["Entities"]
+        CR -->|render| COIN["Coin.tsx<br/>Floating + Spinning"]
+    end
+
+    subgraph State["State Management"]
+        COIN -->|"onCollect"| GS["GameScene3D"]
+        GS -->|"addCoin()"| STATE["useGameState<br/>coins: number"]
+        STATE -->|"persist"| LS[("localStorage")]
+    end
+
+    subgraph UI["UI Layer"]
+        STATE -->|"coins"| HUD["HUD3D<br/>Coin Counter"]
+    end

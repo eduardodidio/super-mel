@@ -1,13 +1,12 @@
-import { useRef, useCallback, useState } from "react";
+import React, { useRef, useCallback, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Projectile } from "../entities/Projectile";
 import type { Controls } from "../hooks/useControls";
 
 interface ProjectileManagerProps {
   controlsRef: React.RefObject<Controls>;
-  playerX: number;
-  playerY: number;
-  facingRight: boolean;
+  playerPosRef: React.RefObject<{ x: number; y: number }>;
+  facingRightRef: React.RefObject<boolean>;
   onBlockHit?: (blockName: string) => void;
 }
 
@@ -17,7 +16,7 @@ interface ProjectileData {
   direction: number;
 }
 
-export function ProjectileManager({ controlsRef, playerX, playerY, facingRight, onBlockHit }: ProjectileManagerProps) {
+export function ProjectileManager({ controlsRef, playerPosRef, facingRightRef, onBlockHit }: ProjectileManagerProps) {
   const [projectiles, setProjectiles] = useState<ProjectileData[]>([]);
   const cooldownRef = useRef(0);
   const lastShootRef = useRef(false);
@@ -32,7 +31,10 @@ export function ProjectileManager({ controlsRef, playerX, playerY, facingRight, 
 
     if (wantsShoot && !lastShootRef.current && cooldownRef.current <= 0) {
       idCounter.current++;
-      const dir = facingRight ? 1 : -1;
+      const playerX = playerPosRef.current?.x ?? 0;
+      const playerY = playerPosRef.current?.y ?? 0;
+      const facing = facingRightRef.current ?? true;
+      const dir = facing ? 1 : -1;
       const newProjectile: ProjectileData = {
         id: `proj-${idCounter.current}`,
         position: [playerX + dir * 0.8, playerY + 0.1, 0],

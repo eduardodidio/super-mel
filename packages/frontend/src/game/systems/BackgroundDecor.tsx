@@ -1,11 +1,11 @@
-import { useRef, useMemo } from "react";
+import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { BackgroundTheme } from "@super-mel/shared";
 
 interface BackgroundDecorProps {
   theme: BackgroundTheme;
-  playerX: number;
+  playerXRef: React.RefObject<{ x: number; y: number }>;
 }
 
 interface CloudData {
@@ -47,7 +47,7 @@ const THEME_DECOR: Record<BackgroundTheme, {
   ocean: { cloudColor: "#c8d8f0", cloudCount: 10, mountainColor: "#1a4a6a", mountainDarkColor: "#0a3050", hasMountains: true },
 };
 
-export function BackgroundDecor({ theme, playerX }: BackgroundDecorProps) {
+export function BackgroundDecor({ theme, playerXRef }: BackgroundDecorProps) {
   const cloudsRef = useRef<THREE.Group>(null);
   const decor = THEME_DECOR[theme];
 
@@ -75,16 +75,56 @@ export function BackgroundDecor({ theme, playerX }: BackgroundDecorProps) {
     }));
   }, [decor]);
 
-  // Move clouds slowly
+  const mountainsRef = useRef<THREE.Group>(null);
+  const starsGroupRef = useRef<THREE.Group>(null);
+
+  // Star data for night/space themes (must be defined before useFrame that references it)
+  const starsData = useMemo(() => {
+    if (theme !== "night" && theme !== "space") return [];
+    const rand = seededRandom(777);
+    return Array.from({ length: 40 }, () => ({
+      x: (rand() - 0.5) * 100,
+      y: 10 + rand() * 20,
+      z: -20 - rand() * 10,
+      size: 0.05 + rand() * 0.1,
+      twinkleSpeed: 2 + rand() * 4,
+    }));
+  }, [theme]);
+
+  // Move clouds slowly + update parallax positions each frame from ref
   useFrame((_, delta) => {
-    if (!cloudsRef.current) return;
-    cloudsRef.current.children.forEach((child, i) => {
-      child.position.x += clouds[i].speed * delta;
-      // Wrap clouds around player
-      const relX = child.position.x - playerX;
-      if (relX > 70) child.position.x -= 140;
-      if (relX < -70) child.position.x += 140;
-    });
+    const playerX = playerXRef.current?.x ?? 0;
+
+    if (cloudsRef.current) {
+      cloudsRef.current.children.forEach((child, i) => {
+        const c = clouds[i];
+        child.position.x += c.speed * delta;
+        // Wrap clouds around player
+        const relX = child.position.x - playerX;
+        if (relX > 70) child.position.x -= 140;
+        if (relX < -70) child.position.x += 140;
+      });
+    }
+
+    // Update mountain parallax
+    if (mountainsRef.current) {
+      mountainsRef.current.children.forEach((child, i) => {
+        const m = mountains[i];
+        if (m) {
+          child.position.x = m.x + playerX * 0.05;
+        }
+      });
+    }
+
+    // Update star parallax
+    if (starsGroupRef.current) {
+      starsGroupRef.current.children.forEach((child, i) => {
+        const s = starsData[i];
+        if (s) {
+          child.position.x = s.x + playerX * 0.02;
+        }
+      });
+    }
   });
 
   return (
@@ -94,7 +134,7 @@ export function BackgroundDecor({ theme, playerX }: BackgroundDecorProps) {
         {clouds.map((c, i) => (
           <Cloud
             key={i}
-            position={[c.x + playerX * 0.1, c.y, c.z]}
+            position={[c.x, c.y, c.z]}
             scale={[c.scaleX, c.scaleY, 1.5]}
             color={decor.cloudColor}
           />
@@ -102,18 +142,20 @@ export function BackgroundDecor({ theme, playerX }: BackgroundDecorProps) {
       </group>
 
       {/* Mountains / distant terrain */}
-      {mountains.map((m, i) => (
-        <Mountain
-          key={i}
-          position={[m.x + playerX * 0.05, m.height / 2 - 3, m.z]}
-          size={[m.width, m.height, 3]}
-          color={m.color}
-        />
-      ))}
+      <group ref={mountainsRef}>
+        {mountains.map((m, i) => (
+          <Mountain
+            key={i}
+            position={[m.x, m.height / 2 - 3, m.z]}
+            size={[m.width, m.height, 3]}
+            color={m.color}
+          />
+        ))}
+      </group>
 
       {/* Stars for night/space themes */}
       {(theme === "night" || theme === "space") && (
-        <Stars playerX={playerX} />
+        <StarsInline starsData={starsData} groupRef={starsGroupRef} />
       )}
     </>
   );
@@ -167,34 +209,34 @@ function Mountain({ position, size, color }: {
   );
 }
 
-function Stars({ playerX }: { playerX: number }) {
-  const starsData = useMemo(() => {
-    const rand = seededRandom(777);
-    return Array.from({ length: 40 }, () => ({
-      x: (rand() - 0.5) * 100,
-      y: 10 + rand() * 20,
-      z: -20 - rand() * 10,
-      size: 0.05 + rand() * 0.1,
-      twinkleSpeed: 2 + rand() * 4,
-    }));
-  }, []);
+interface StarData {
+  x: number;
+  y: number;
+  z: number;
+  size: number;
+  twinkleSpeed: number;
+}
 
-  const groupRef = useRef<THREE.Group>(null);
-
+function StarsInline({ starsData, groupRef }: {
+  starsData: StarData[];
+  groupRef: React.RefObject<THREE.Group>;
+}) {
   useFrame((state) => {
     if (!groupRef.current) return;
     const t = state.clock.elapsedTime;
     groupRef.current.children.forEach((child, i) => {
       const star = starsData[i];
-      const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial;
-      mat.emissiveIntensity = 0.5 + Math.sin(t * star.twinkleSpeed) * 0.5;
+      if (star) {
+        const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial;
+        mat.emissiveIntensity = 0.5 + Math.sin(t * star.twinkleSpeed) * 0.5;
+      }
     });
   });
 
   return (
     <group ref={groupRef}>
       {starsData.map((s, i) => (
-        <mesh key={i} position={[s.x + playerX * 0.02, s.y, s.z]}>
+        <mesh key={i} position={[s.x, s.y, s.z]}>
           <boxGeometry args={[s.size, s.size, s.size]} />
           <meshStandardMaterial
             color="#ffffff"

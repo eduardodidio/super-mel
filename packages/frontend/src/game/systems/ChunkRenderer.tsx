@@ -1,26 +1,39 @@
-import { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Block } from "../entities/Block";
 import { Heart } from "../entities/Heart";
+import { Coin } from "../entities/Coin";
 import { generateChunk, getVisibleChunkIndices, type Chunk } from "./ChunkGenerator";
 
 interface ChunkRendererProps {
-  playerX: number;
+  playerPosRef: React.RefObject<{ x: number; y: number }>;
   onBlockDestroyed?: (x: number, y: number) => void;
   onHeartCollected?: () => void;
+  onCoinCollected?: () => void;
+  testChunks?: Chunk[];
 }
 
-export function ChunkRenderer({ playerX, onBlockDestroyed, onHeartCollected }: ChunkRendererProps) {
-  const [chunks, setChunks] = useState<Map<number, Chunk>>(new Map());
+export function ChunkRenderer({ playerPosRef, onBlockDestroyed, onHeartCollected, onCoinCollected, testChunks }: ChunkRendererProps) {
+  const [chunks, setChunks] = useState<Map<number, Chunk>>(() => {
+    if (testChunks) {
+      const map = new Map<number, Chunk>();
+      testChunks.forEach((chunk, i) => map.set(i, chunk));
+      return map;
+    }
+    return new Map();
+  });
   const lastUpdate = useRef(0);
   const destroyedBlocks = useRef(new Set<string>());
   const collectedHearts = useRef(new Set<string>());
+  const collectedCoins = useRef(new Set<string>());
 
   useFrame(() => {
+    if (testChunks) return; // Skip procedural generation in test mode
     const now = performance.now();
     if (now - lastUpdate.current < 200) return;
     lastUpdate.current = now;
 
+    const playerX = playerPosRef.current?.x ?? 0;
     const visibleIndices = getVisibleChunkIndices(playerX, 4);
     setChunks((prev) => {
       let changed = false;
@@ -54,6 +67,11 @@ export function ChunkRenderer({ playerX, onBlockDestroyed, onHeartCollected }: C
     onHeartCollected?.();
   }, [onHeartCollected]);
 
+  const handleCoinCollect = useCallback((key: string) => {
+    collectedCoins.current.add(key);
+    onCoinCollected?.();
+  }, [onCoinCollected]);
+
   return (
     <>
       {Array.from(chunks.values()).flatMap((chunk) => [
@@ -75,6 +93,15 @@ export function ChunkRenderer({ playerX, onBlockDestroyed, onHeartCollected }: C
               key={`h-${h.x},${h.y}`}
               position={[h.x, h.y, 0]}
               onCollect={() => handleHeartCollect(`h-${h.x},${h.y}`)}
+            />
+          )),
+        ...chunk.coins
+          .filter((c) => !collectedCoins.current.has(`c-${c.x},${c.y}`))
+          .map((c) => (
+            <Coin
+              key={`c-${c.x},${c.y}`}
+              position={[c.x, c.y, 0]}
+              onCollect={() => handleCoinCollect(`c-${c.x},${c.y}`)}
             />
           )),
       ])}

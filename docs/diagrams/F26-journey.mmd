@@ -1,0 +1,13 @@
+flowchart LR
+  A["Open Menu"] --> B{"Select mode"}
+  B -->|JOGAR| C["Procedural level<br/>infinite chunks"]
+  B -->|FASE TESTE| D["Test level loads<br/>5 fixed chunks"]
+
+  D --> E["Chunk 0: Spawn<br/>flat ground + coins"]
+  E --> F["Chunk 1: Platforms<br/>gaps + platforms"]
+  F --> G["Chunk 2: Combat<br/>destructible walls"]
+  G --> H["Chunk 3: Advanced<br/>lava + stepping stones"]
+  H --> I["Chunk 4: Victory<br/>coin celebration"]
+
+  I --> J["Game Over or<br/>level complete"]
+  J --> K["Return to Menu<br/>testMode=false"]
