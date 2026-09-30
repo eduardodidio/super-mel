@@ -1,0 +1,67 @@
+flowchart TD
+    subgraph CreatorJourney["Jornada do Criador"]
+        C1[Abre o Editor] --> C2[Constroi a fase com blocos + entidades]
+        C2 --> C3[Digita nome da fase]
+        C3 --> C4{Nome passa no filtro?}
+        C4 -->|Nao| C4a[Erro: palavra inadequada]
+        C4a --> C3
+        C4 -->|Sim| C5[Clica SALVAR]
+        C5 --> C6[Fase salva como rascunho]
+        C6 --> C7[Clica TESTAR]
+        C7 --> C8[Joga a fase no modo level]
+        C8 --> C9{Chegou ao Goal?}
+        C9 -->|Nao - morreu| C10[Respawn no checkpoint]
+        C10 --> C8
+        C9 -->|Sim| C11[Tela de resultado]
+        C11 --> C12[Volta ao Editor]
+        C12 --> C13["PUBLICAR habilitado!"]
+        C13 --> C14[Clica PUBLICAR]
+        C14 --> C15["Backend gera codigo 6 chars"]
+        C15 --> C16["CODIGO: ABCD12<br/>Compartilhe com amigos!"]
+        C16 --> C17["Botao COPIAR"]
+    end
+
+    subgraph PlayerJourney["Jornada do Jogador"]
+        P1[Abre FASES DA COMUNIDADE] --> P2{Modo Familia ON?}
+        P2 -->|Sim| P3[Ve apenas fases aprovadas]
+        P2 -->|Nao| P4[Ve todas as fases publicadas]
+        P3 --> P5{Tem codigo do amigo?}
+        P4 --> P5
+
+        P5 -->|Sim| P6[Digita codigo no campo]
+        P6 --> P7{Codigo valido?}
+        P7 -->|Nao| P8[Erro: codigo nao encontrado]
+        P8 --> P6
+        P7 -->|Sim| P9[Fase carrega direto]
+
+        P5 -->|Nao| P10[Navega pela lista]
+        P10 --> P11["Tabs: NOVAS / POPULARES"]
+        P11 --> P12["Ve stats: jogadas, clears, dificuldade"]
+        P12 --> P13[Clica JOGAR]
+        P13 --> P9
+
+        P9 --> P14[Tentativa registrada - plays++]
+        P14 --> P15[Joga a fase]
+        P15 --> P16{Zerou?}
+        P16 -->|Sim| P17[Clear registrado - clears++]
+        P17 --> P18[Tela de resultado]
+        P16 -->|Nao - desistiu| P19[Volta ao menu]
+
+        P18 --> P20{Reagir?}
+        P20 -->|Sim| P21["Escolhe carimbo:<br/>pata / coracao / osso / estrela"]
+        P20 -->|Nao| P22[Volta a lista]
+        P21 --> P22
+
+        P12 --> P23{Fase inadequada?}
+        P23 -->|Sim| P24["Clica [!] Denunciar"]
+        P24 --> P25["Escolhe motivo:<br/>nome / conteudo / impossivel / outro"]
+        P25 --> P26[Denuncia enviada]
+    end
+
+    style C15 fill:#4a8a4a,color:#fff
+    style C16 fill:#4a8a4a,color:#fff
+    style P21 fill:#ffcc00,color:#000
+    style P26 fill:#cc4444,color:#fff
+    style P17 fill:#4a8a4a,color:#fff
+    style C4a fill:#cc4444,color:#fff
+    style P8 fill:#cc4444,color:#fff

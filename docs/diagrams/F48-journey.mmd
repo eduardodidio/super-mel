@@ -1,0 +1,50 @@
+flowchart LR
+    START((Player starts<br/>infinite mode)) --> FOREST
+
+    subgraph FOREST["Biome 1: Forest (chunks 0-9)"]
+        F1[Chunks 0-7<br/>Forest theme<br/>Dirt + Stone blocks<br/>Trees in background]
+        F2[Chunks 8-9<br/>TRANSITION ZONE<br/>Sky blends forest->desert<br/>Lights fade warm]
+        F1 --> F2
+    end
+
+    FOREST --> DESERT
+
+    subgraph DESERT["Biome 2: Desert (chunks 10-19)"]
+        D1[Chunks 10-17<br/>Desert theme<br/>Sand blocks<br/>No trees, warm fog]
+        D2[Chunks 18-19<br/>TRANSITION ZONE<br/>Sky blends desert->night]
+        D1 --> D2
+    end
+
+    DESERT --> NIGHT
+
+    subgraph NIGHT["Biome 3: Night (chunks 20-29)"]
+        N1[Chunks 20-27<br/>Night theme<br/>Dark sky, stars appear<br/>Dim lighting, brick palette]
+        N2[Chunks 28-29<br/>TRANSITION ZONE<br/>Sky blends night->space]
+        N1 --> N2
+    end
+
+    NIGHT --> SPACE
+
+    subgraph SPACE["Biome 4: Space (chunks 30-39)"]
+        S1[Chunks 30-37<br/>Space theme<br/>Iron + Glass blocks<br/>No mountains, deep fog]
+        S2[Chunks 38-39<br/>TRANSITION ZONE<br/>Sky blends space->ocean]
+        S1 --> S2
+    end
+
+    SPACE --> OCEAN
+
+    subgraph OCEAN["Biome 5: Ocean (chunks 40-49)"]
+        O1[Chunks 40-47<br/>Ocean theme<br/>Sand + Water hazards<br/>Blue fog, tall waves]
+        O2[Chunks 48-49<br/>TRANSITION ZONE<br/>Sky blends ocean->forest]
+        O1 --> O2
+    end
+
+    OCEAN -->|"Cycle repeats"| FOREST
+
+    %% Prefab injection note
+    PREFAB["Prefab chunks injected<br/>every 5th chunk after chunk 10<br/>50% probability<br/>Selected by difficulty range"]
+
+    D1 -.- PREFAB
+    N1 -.- PREFAB
+    S1 -.- PREFAB
+    O1 -.- PREFAB

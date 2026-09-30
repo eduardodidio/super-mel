@@ -1,0 +1,81 @@
+%%{ init: { "theme": "dark" } }%%
+flowchart TB
+    subgraph Controls["Input Layer"]
+        KB["Keyboard<br/>Z=shoot, X=bark<br/>Down=crouch/sniff"]
+        GP["Gamepad<br/>X=shoot, Y=bark<br/>DPad=crouch/sniff"]
+        TC["Touch Controls<br/>B=shoot, C=bark<br/>DPad Down=crouch/sniff"]
+    end
+
+    UC["useControls.ts<br/>Controls { shoot, bark, down, ... }"]
+    KB --> UC
+    GP --> UC
+    TC --> UC
+
+    subgraph MelEntity["Mel.tsx (Entity)"]
+        ML["Movement + Physics"]
+        ASM["AnimationStateMachine<br/>States: bark, dig, sniff<br/>+ existing states"]
+        ST["stateRef<br/>{ state, grounded, velX, sniffing }"]
+    end
+
+    UC --> ML
+    ML --> ASM
+    ASM --> ST
+
+    subgraph DogAbilities["Dog Abilities (New Systems)"]
+        BS["BarkSystem.tsx<br/>Expanding golden ring<br/>1s cooldown<br/>Calls onBarkWave(x,y,r)"]
+        DS["DigSystem.ts<br/>tryDig(melX, melY, getBlockAt)<br/>Returns DigResult<br/>Spawns bone/coin drops"]
+        SH["SniffHighlight.tsx<br/>Pulsing golden rings<br/>on item_blocks + bones<br/>within 8-unit radius"]
+        PR["Projectile.tsx<br/>returnMode: boomerang<br/>Homes back to Mel<br/>Collects coins on return"]
+    end
+
+    UC -->|"bark press"| BS
+    ML -->|"crouch + attack"| DS
+    ST -->|"sniffing=true"| SH
+    UC -->|"shoot press"| PR
+
+    subgraph SceneWiring["GameScene3D.tsx (Orchestrator)"]
+        GS["handleBarkWave<br/>handleDigAttempt<br/>sniffActive state<br/>handleReturnCoinCollect"]
+    end
+
+    BS -->|"onBarkWave(x,y,r)"| GS
+    DS -->|"DigResult"| GS
+    SH -->|"renders highlights"| GS
+    PR -->|"onReturnCoinCollect"| GS
+
+    subgraph WorldEffects["World Effects"]
+        CR["ChunkRenderer<br/>destroyBlock(x,y,z)<br/>getBlockAt(x,y,z)<br/>Block shake"]
+        EM["EffectManager<br/>bark_ring, dig_dust,<br/>sniff dust"]
+        EN["Enemy System (F43)<br/>stun/flee for 1.5s<br/>on bark wave"]
+        SC["Score/Coins<br/>addCoin(), addScore()"]
+    end
+
+    GS -->|"dig removes block"| CR
+    GS -->|"getBlockAt query"| CR
+    GS -->|"bark shakes item_blocks"| CR
+    GS -->|"spawn effects"| EM
+    GS -->|"onBarkWave callback"| EN
+    GS -->|"drops + return coins"| SC
+
+    subgraph SharedTypes["@super-mel/shared"]
+        BP["BLOCK_PROPERTIES<br/>+ diggable: boolean<br/>dirt=true, sand=true"]
+        ET["EntityType<br/>'bone' for sniff targets"]
+    end
+
+    DS --> BP
+    SH --> ET
+
+    subgraph Sprites["SpriteAnimator.ts"]
+        BA["bark anim<br/>attack_prep, attack_1, attack_2<br/>event: bark_fire at frame 1"]
+        DA["dig anim<br/>crouch, crouch (placeholder)"]
+        SA["sniff anim<br/>sit (placeholder)"]
+    end
+
+    ASM --> Sprites
+
+    classDef new fill:#2d5a2d,stroke:#4a8a4a,color:#fff
+    classDef modified fill:#3a3a6a,stroke:#6a6aaa,color:#fff
+    classDef existing fill:#333,stroke:#666,color:#aaa
+
+    class BS,DS,SH,BA,DA,SA new
+    class UC,ML,ASM,ST,PR,CR,EM,GS,BP,ET modified
+    class KB,GP,TC,EN,SC existing

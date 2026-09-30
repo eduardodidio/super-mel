@@ -1,0 +1,96 @@
+flowchart TD
+    subgraph StaticAssets["Static Assets (public/levels/campaign/)"]
+        MF[manifest.json]
+        LF1[1-1.json ... 1-8.json]
+    end
+
+    subgraph LevelLoader["LevelLoader.ts"]
+        LM[loadCampaignManifest]
+        LL[loadCampaignLevel]
+        Cache[(In-memory cache)]
+    end
+
+    subgraph Scenes["Scenes"]
+        WM[WorldMapScene.tsx]
+        GS[GameScene3D.tsx]
+        LC[LevelClearOverlay.tsx]
+        Menu[Game3D.tsx Menu]
+    end
+
+    subgraph Entities["New Entities"]
+        Bone[Bone.tsx]
+        Sign[Sign.tsx]
+    end
+
+    subgraph ExistingEntities["Existing Entities (F42)"]
+        Goal[Goal.tsx]
+        CP[Checkpoint.tsx]
+        Coin[Coin.tsx]
+        Heart[Heart.tsx]
+    end
+
+    subgraph State["State (useGameState)"]
+        GMode[gameMode: level]
+        CLId[campaignLevelId]
+        CIdx[campaignIndex]
+        LBones[levelBones]
+        LCoins[levelCoins]
+        Deaths[deaths]
+    end
+
+    subgraph Converter["LevelSceneConverter.ts"]
+        L2S[levelToSceneObjects]
+        SO[SceneObjects: blocks + coins + hearts + goal + checkpoints + bones + signs]
+    end
+
+    subgraph Progress["Progress System"]
+        LS[(localStorage: campaign_progress)]
+        PS[useProgressSync.ts]
+        BE[Backend: PUT /api/progress]
+    end
+
+    subgraph HUD
+        HUD3D[HUD3D.tsx]
+        BoneCount["Bone counter X/3"]
+    end
+
+    %% Data flow
+    Menu -->|"CAMPANHA click"| WM
+    MF -->|fetch| LM
+    LM -->|manifest| WM
+    WM -->|"select level"| LL
+    LF1 -->|fetch| LL
+    LL --> Cache
+    LL -->|LevelDataV2| GMode
+    GMode -->|startCampaignLevel| GS
+
+    GS --> L2S
+    L2S --> SO
+    SO -->|bones array| Bone
+    SO -->|signs array| Sign
+    SO -->|goal| Goal
+    SO -->|checkpoints| CP
+    SO -->|coins| Coin
+    SO -->|hearts| Heart
+
+    Bone -->|onCollect| LBones
+    Goal -->|onGoalReached| LC
+    LC -->|saveCampaignProgress| LS
+    LC -->|"PROXIMA FASE"| LL
+    LC -->|"MAPA"| WM
+    LC -->|"MENU"| Menu
+
+    LBones --> HUD3D
+    HUD3D --> BoneCount
+
+    LS -->|on scene change| PS
+    PS -->|PUT data.campaign| BE
+
+    WM -->|reads progress| LS
+
+    style Bone fill:#F5F5DC,color:#333
+    style Sign fill:#A0522D,color:#fff
+    style Goal fill:#4a90d9,color:#fff
+    style CP fill:#D2691E,color:#fff
+    style WM fill:#4a8a4a,color:#fff
+    style LC fill:#FFD700,color:#333

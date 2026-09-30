@@ -1,0 +1,87 @@
+%% F43 — Inimigos v1: Architecture Diagram
+%% Enemy system: entity components, EnemyManager, collision flow, data sources
+
+graph TB
+    subgraph "Data Sources"
+        CG["ChunkGenerator.ts<br/>(infinite mode)<br/>enemies: EnemyChunkData[]"]
+        LSC["LevelSceneConverter.ts<br/>(level mode)<br/>enemies: SceneEnemyData[]"]
+        TLD["TestLevelData.ts<br/>(test mode)<br/>enemy entities in V2"]
+        ST["shared/types.ts<br/>EnemySubtype:<br/>vacuum | pigeon | bee"]
+    end
+
+    subgraph "Orchestration Layer"
+        GS["GameScene3D.tsx<br/>Wires enemy data to EnemyManager<br/>Routes stomp/damage/projectile callbacks"]
+        CR["ChunkRenderer.tsx<br/>onEnemiesUpdate callback<br/>Aggregates enemies from visible chunks"]
+    end
+
+    subgraph "Enemy System"
+        EM["EnemyManager.tsx<br/>Lifecycle: spawn, defeat, cleanup<br/>Distance culling (30 units)<br/>Coin drop orchestration<br/>Defeated enemy tracking"]
+
+        subgraph "Enemy Components"
+            EV["EnemyVacuum.tsx<br/>Patrol: walk 2u/s<br/>Turn at edge/wall<br/>Kinematic RigidBody"]
+            EP["EnemyPigeon.tsx<br/>Sine wave flight: 3u/s<br/>Amplitude 2u, period 3s<br/>Kinematic RigidBody"]
+            EB["EnemyBee.tsx<br/>Chase AI: detect 6u, lose 10u<br/>Chase speed 2.5u/s<br/>Kinematic RigidBody"]
+        end
+    end
+
+    subgraph "Interaction Layer"
+        MEL["Mel.tsx<br/>forwardRef + MelHandle<br/>stompBounce(): vel.y = 7<br/>onCollisionDamage (existing)"]
+        PM["ProjectileManager.tsx<br/>onEnemyHit callback<br/>Detects enemy- prefix"]
+        PROJ["Projectile.tsx<br/>onCollisionEnter:<br/>block- = block hit<br/>enemy- = enemy hit"]
+        DC["DroppedCoin system<br/>spawnDroppedCoins(x, y, count)"]
+    end
+
+    subgraph "Shared State"
+        UGS["useGameState<br/>lives, score, coins<br/>invincibility, damage"]
+    end
+
+    %% Data flow
+    ST --> CG
+    ST --> LSC
+    CG --> CR
+    LSC --> GS
+    TLD --> GS
+    CR -->|"onEnemiesUpdate"| GS
+    GS -->|"enemies prop"| EM
+
+    %% Enemy rendering
+    EM --> EV
+    EM --> EP
+    EM -->|"playerPosRef"| EB
+
+    %% Collision flow: Stomp
+    EV -->|"onContactMel(id, true)"| EM
+    EP -->|"onContactMel(id, true)"| EM
+    EB -->|"onContactMel(id, true)"| EM
+    EM -->|"onMelStompBounce"| GS
+    GS -->|"melRef.stompBounce()"| MEL
+
+    %% Collision flow: Lateral damage
+    EV -->|"onContactMel(id, false)"| EM
+    EP -->|"onContactMel(id, false)"| EM
+    EB -->|"onContactMel(id, false)"| EM
+    EM -->|"onMelDamage"| GS
+    GS -->|"handleDamage()"| UGS
+
+    %% Projectile flow
+    PM --> PROJ
+    PROJ -->|"enemy- detected"| PM
+    PM -->|"onEnemyHit(name)"| GS
+    GS -->|"onProjectileHitEnemy"| EM
+
+    %% Coin drops
+    EM -->|"onSpawnCoins(x, y, count)"| GS
+    GS -->|"spawnDroppedCoins"| DC
+
+    %% Defeat animation
+    EM -->|"defeated=true"| EV
+    EM -->|"defeated=true"| EP
+    EM -->|"defeated=true"| EB
+
+    classDef newFile fill:#4CAF50,stroke:#333,color:white
+    classDef modifiedFile fill:#FF9800,stroke:#333,color:white
+    classDef existingFile fill:#2196F3,stroke:#333,color:white
+
+    class EV,EP,EB,EM newFile
+    class CG,LSC,CR,GS,MEL,PM,PROJ,ST,TLD modifiedFile
+    class DC,UGS existingFile

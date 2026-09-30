@@ -1,0 +1,60 @@
+flowchart TD
+    A[Criador abre o Editor] --> B[Clica na aba CUSTOM]
+    B --> C{Tem imagens?}
+    C -->|Nao| D["Clica em + UPLOAD"]
+    C -->|Sim| E[Ve thumbnails das imagens]
+
+    D --> F[Seleciona PNG/JPG do dispositivo]
+    F --> G["Canvas redimensiona 64x64 pixelado"]
+    G --> H[Preview pixelado aparece]
+    H --> I[Digita nome max 20 chars]
+    I --> J{Confirma?}
+    J -->|Cancelar| B
+    J -->|Confirmar| K[CustomAsset criado]
+    K --> E
+
+    E --> L{Seleciona imagem}
+    L --> M{Modo?}
+    M -->|BLOCO| N[Ferramenta: custom_block]
+    M -->|PLACA| O[Ferramenta: custom_sign]
+
+    N --> P[Clica no grid do editor]
+    P --> Q["Bloco custom + entity custom_block_asset colocados"]
+    Q --> R[Bloco renderiza com textura personalizada]
+
+    O --> S[Clica no grid do editor]
+    S --> T["Entity sign com customAssetId colocada"]
+    T --> U[Placa renderiza com imagem no billboard]
+
+    R --> V{Quer salvar?}
+    U --> V
+    V -->|TESTAR| W[Testa a fase no modo level]
+    V -->|SALVAR| X{Logado?}
+
+    X -->|Visitante| Y["403: Crie uma conta para usar imagens"]
+    X -->|Conta logada| Z[POST /api/levels]
+    Z --> AA{Backend valida}
+    AA -->|"customAssets > 10"| AB[400: Limite de assets]
+    AA -->|"dataUri > 15KB"| AC[400: Imagem grande demais]
+    AA -->|Valido| AD[Salvo no PostgreSQL como JSONB]
+    AD --> AE[Fase salva com sucesso!]
+
+    %% Play flow
+    AE --> AF[Outro jogador carrega a fase]
+    AF --> AG[GET /api/levels/:id]
+    AG --> AH[customAssets extraidos do JSON]
+    AH --> AI[preloadCustomTextures]
+    AI --> AJ[Blocos custom renderizam com arte do criador]
+    AI --> AK[Placas custom mostram desenho do criador]
+
+    %% Delete flow
+    E --> AL{Deletar imagem?}
+    AL -->|"X no thumbnail"| AM[Asset removido da lista]
+    AM --> AN["Blocos/placas que usavam ficam com fallback roxo"]
+
+    style Y fill:#B22222,color:#fff
+    style AB fill:#B22222,color:#fff
+    style AC fill:#B22222,color:#fff
+    style AE fill:#228B22,color:#fff
+    style AJ fill:#CC88FF,color:#000
+    style AK fill:#CC88FF,color:#000

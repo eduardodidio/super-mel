@@ -1,0 +1,53 @@
+flowchart TD
+    START([Player inicia o jogo]) --> MENU[Menu Principal]
+    MENU -->|Mostra Mel Lv.X| MENU
+
+    MENU -->|JOGAR - modo infinito| INF_START[Inicio do modo infinito]
+    MENU -->|Seleciona fase| LVL_START[Inicio da fase]
+
+    %% --- Infinite Mode Journey ---
+    INF_START --> INF_LOAD["Carrega 3 missoes ativas\n(localStorage ou pool)"]
+    INF_LOAD --> INF_PLAY["Joga com HUD:\n3 badges de missao\ncom barra de progresso"]
+
+    INF_PLAY -->|Coleta moedas, quebra blocos,\nvoa, avanca| INF_PROGRESS["Progresso das missoes\natualiza em tempo real"]
+    INF_PROGRESS --> INF_CHECK{Missao completa?}
+    INF_CHECK -->|Nao| INF_PLAY
+    INF_CHECK -->|Sim| INF_TOAST["Toast: MISSAO COMPLETA!\n+N moedas"]
+    INF_TOAST --> INF_REWARD["Moedas adicionadas\nXP da Mel aumenta\nNova missao rotaciona"]
+    INF_REWARD --> INF_PLAY
+
+    INF_PLAY -->|Morre / game over| INF_END["Game Over\nMissoes salvas no localStorage"]
+    INF_END --> MENU
+
+    %% --- Level Mode Journey ---
+    LVL_START --> LVL_LOAD["Carrega missions[]\ndo LevelDataV2"]
+    LVL_LOAD --> LVL_PLAY["Joga normalmente\n(missoes rastreadas em background)"]
+
+    LVL_PLAY -->|Coleta moedas, sem dano,\nacha osso, tempo| LVL_PROGRESS["MissionTracker acumula\neventos"]
+    LVL_PROGRESS --> LVL_CHECK{Missao completa\ndurante jogo?}
+    LVL_CHECK -->|Nao| LVL_PLAY
+    LVL_CHECK -->|Sim| LVL_TOAST["Toast: MISSAO COMPLETA!"]
+    LVL_TOAST --> LVL_PLAY
+
+    LVL_PLAY -->|Chega no goal| LVL_COMPLETE["level_complete event\nSnapshot final do tracker"]
+    LVL_COMPLETE --> RESULT["Tela de Resultado"]
+
+    RESULT --> STARS{"Calculo de estrelas"}
+    STARS -->|Sem missoes definidas| STARS_LEGACY["Legacy: 1=ok 2=0 mortes\n3=0 mortes + moedas"]
+    STARS -->|Com missoes| STARS_NEW["1=ok 2=0 mortes\n3=todas missoes completas"]
+
+    RESULT --> MISSIONS_DISPLAY["Secao MISSOES:\ncheckmark / X por missao\n+ texto de progresso"]
+
+    RESULT -->|REPETIR| LVL_START
+    RESULT -->|MENU| MENU
+
+    %% --- Mel Level Progression ---
+    INF_REWARD -->|+XP| MEL_LEVEL["Mel Level sobe\n(XP / 500 + 1)"]
+    MEL_LEVEL -->|Proximo menu| MENU
+
+    style INF_TOAST fill:#FFD700,color:#000
+    style LVL_TOAST fill:#FFD700,color:#000
+    style RESULT fill:#4a4a8a,color:#fff
+    style MISSIONS_DISPLAY fill:#4a8a4a,color:#fff
+    style MEL_LEVEL fill:#8a4a8a,color:#fff
+    style STARS_NEW fill:#4a8a4a,color:#fff

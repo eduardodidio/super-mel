@@ -1,0 +1,70 @@
+flowchart TD
+    subgraph PrismaSchema["Prisma Schema (Migration)"]
+        LVL["Level model<br/>+ code: String? @unique<br/>+ plays: Int<br/>+ clears: Int<br/>+ bestTime: Int?<br/>+ cleared: Boolean<br/>+ approved: Boolean"]
+        LA["LevelAttempt<br/>levelId, playerId<br/>cleared, time"]
+        LR["LevelReaction<br/>levelId, playerId<br/>stamp (paw/heart/bone/star)<br/>@@unique(levelId, playerId)"]
+        LRP["LevelReport<br/>levelId, playerId<br/>reason<br/>@@unique(levelId, playerId)"]
+    end
+
+    subgraph BackendRoutes["Backend Routes (levels.ts)"]
+        GL["GET /api/levels<br/>?sort=new|popular<br/>&familyMode=true|false"]
+        GC["GET /api/levels/code/:code<br/>lookup by 6-char code"]
+        PU["PUT /api/levels/:id<br/>published=true gated by cleared<br/>generates 6-char code"]
+        PA["POST /api/levels/:id/attempt<br/>plays++ / clears++ / bestTime"]
+        PR["POST /api/levels/:id/reaction<br/>upsert stamp"]
+        GR["GET /api/levels/:id/reactions<br/>stamp counts + playerStamp"]
+        PRE["POST /api/levels/:id/report<br/>one per player"]
+    end
+
+    subgraph Frontend["Frontend Components"]
+        EW["EditorWrapper.tsx<br/>levelCleared state<br/>savedLevelId<br/>levelCode<br/>word filter on save"]
+        EU["EditorUI.tsx<br/>name input<br/>SALVAR / PUBLICAR buttons<br/>code display + copy"]
+        LS["LevelSelectScene3D.tsx<br/>sort tabs (Novas/Populares)<br/>code search input<br/>stats + difficulty badge<br/>stamp reactions row<br/>report button [!]<br/>Family Mode toggle"]
+        WF["wordFilter.ts<br/>~200 PT blocked words<br/>validateLevelName()"]
+    end
+
+    subgraph GameFlow["Game Flow (from F42)"]
+        GS["GameScene3D<br/>level play"]
+        LCO["LevelClearOverlay<br/>level completed"]
+        UGS["useGameState<br/>startLevel / completeLevel"]
+    end
+
+    %% Schema relations
+    LVL -->|1:N| LA
+    LVL -->|1:N| LR
+    LVL -->|1:N| LRP
+
+    %% Editor flow
+    EW -->|save draft| GL
+    EW -->|publish gated| PU
+    EW -->|validate name| WF
+    EU -->|show code| EW
+    EW -->|test mode| UGS
+    UGS -->|goal reached| LCO
+    LCO -->|return to editor| EW
+
+    %% Level select flow
+    LS -->|browse| GL
+    LS -->|code search| GC
+    LS -->|start level| PA
+    LS -->|react| PR
+    LS -->|get reactions| GR
+    LS -->|report| PRE
+    LS -->|play| UGS
+
+    %% Game play
+    GS -->|level clear| LCO
+    LCO -->|track clear| PA
+
+    %% Backend operations
+    PU -->|generates| LVL
+    PA -->|increments plays/clears| LVL
+    GL -->|filters approved| LVL
+
+    style LVL fill:#4a4a8a,color:#fff
+    style LA fill:#4a6a8a,color:#fff
+    style LR fill:#4a6a8a,color:#fff
+    style LRP fill:#4a6a8a,color:#fff
+    style EW fill:#4a8a4a,color:#fff
+    style LS fill:#4a8a4a,color:#fff
+    style WF fill:#8a6a4a,color:#fff

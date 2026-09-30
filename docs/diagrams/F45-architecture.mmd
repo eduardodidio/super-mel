@@ -1,0 +1,98 @@
+flowchart TD
+    subgraph GameScene3D["GameScene3D (event source)"]
+        CC["handleCoinCollected"]
+        BH["handleBlockHit"]
+        HD["handleDamage"]
+        HC["handleHeartCollected"]
+        GR["handleGoalReached"]
+        PU["handlePositionUpdate"]
+        FS["handleFlyStateUpdate"]
+    end
+
+    subgraph EventBus["GameEventBus (singleton)"]
+        EB["gameEventBus"]
+    end
+
+    subgraph MissionEngine["MissionTracker (pure logic)"]
+        MT["MissionTracker"]
+        EC["EventCounters"]
+        ME["evaluate(condition)"]
+        MS["MissionStatus[]"]
+    end
+
+    subgraph SharedTypes["shared/types.ts"]
+        MCT["MissionConditionType"]
+        MC["MissionCondition"]
+        MI["Mission"]
+        LDV2["LevelDataV2.missions[]"]
+    end
+
+    subgraph LevelMissions["useLevelMissions (hook)"]
+        LMH["subscribe to bus"]
+        LMS["level MissionStatus[]"]
+    end
+
+    subgraph InfiniteMissions["useInfiniteMissions (hook)"]
+        IMH["subscribe to bus"]
+        IMP["INFINITE_MISSION_POOL"]
+        IMS["3 active MissionStatus[]"]
+        MLV["Mel Level + XP"]
+    end
+
+    subgraph UI["UI Components"]
+        LCO["LevelClearOverlay"]
+        HUD["HUD3D"]
+        MT2["MissionToast"]
+        MENU["Menu (Mel Lv.)"]
+    end
+
+    subgraph Persistence["Persistence"]
+        LS["localStorage"]
+        PS["useProgressSync"]
+        BE["PUT /api/progress"]
+    end
+
+    %% Event flow
+    CC -->|coin_collected| EB
+    BH -->|block_destroyed / item_block_activated| EB
+    HD -->|damage_taken| EB
+    HC -->|heart_collected| EB
+    GR -->|level_complete| EB
+    PU -->|distance_reached| EB
+    FS -->|fly_tick| EB
+
+    %% Hook subscriptions
+    EB --> LMH
+    EB --> IMH
+
+    %% Tracker feeding
+    LMH --> MT
+    IMH --> MT
+    MT --> EC
+    EC --> ME
+    ME --> MS
+
+    %% Data sources
+    LDV2 --> LMH
+    IMP --> IMH
+    MCT --> MC
+    MC --> MI
+    MI --> LDV2
+
+    %% Output to UI
+    LMS --> LCO
+    IMS --> HUD
+    MLV --> MENU
+    EB -->|mission_completed| MT2
+
+    %% Persistence
+    IMS --> LS
+    LS --> PS
+    PS --> BE
+    LMS -->|levelMissions| PS
+
+    style EB fill:#FFD700,color:#000
+    style MT fill:#4a8a4a,color:#fff
+    style LCO fill:#4a4a8a,color:#fff
+    style HUD fill:#4a4a8a,color:#fff
+    style MT2 fill:#4a4a8a,color:#fff

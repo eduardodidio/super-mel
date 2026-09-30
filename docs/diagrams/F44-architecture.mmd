@@ -1,0 +1,71 @@
+flowchart TD
+    subgraph Shared ["@super-mel/shared"]
+        GC[gameConfig.ts<br/>GAME_CONFIG + UPGRADE_CATALOG<br/>resolveConfig]
+        PT[types.ts<br/>PowerUpType]
+    end
+
+    subgraph ShopLayer [Shop & Persistence]
+        SS[useShopState<br/>purchased / equipped / buy / equip]
+        PS[useProgressSync<br/>sync shop data to backend]
+        LS[(localStorage)]
+        BE[(Backend Progress.data)]
+    end
+
+    subgraph ConfigLayer [Config Resolution]
+        RC[useResolvedConfig<br/>equipped -> resolveConfig -> ResolvedConfig]
+    end
+
+    subgraph GameplayLayer [Gameplay Components]
+        MEL[Mel.tsx<br/>reads config for physics<br/>applies power-up effects]
+        PRJ[Projectile.tsx<br/>reads speed from config]
+        PRM[ProjectileManager<br/>double_ball + fire pass-through]
+        GS3D[GameScene3D<br/>item_block drop logic<br/>power-up timer tick]
+    end
+
+    subgraph PowerUpLayer [Power-Up System]
+        PUS[usePowerUpState<br/>activePowerUp / timer / tick]
+        PUE[PowerUp Entity<br/>floating collectible<br/>star / magnet / fire / wings]
+        PUD[POWER_UP_DEFS<br/>duration / color / label]
+    end
+
+    subgraph UILayer [UI]
+        SHOP[ShopOverlay<br/>catalog / buy / equip / slots]
+        HUD[HUD3D<br/>equipped icons<br/>stamina bar w/ dynamic max]
+        PUHUD[PowerUpHUD<br/>icon + timer bar]
+        MENU[Game3D Menu<br/>LOJA button]
+    end
+
+    GC -->|UPGRADE_CATALOG| SHOP
+    GC -->|resolveConfig| RC
+    PT -->|PowerUpType| PUE
+    PT -->|PowerUpType| PUS
+
+    SS -->|equipped[]| RC
+    SS -->|buy deducts coins| SS
+    SS <-->|persist| LS
+    PS -->|sync data field| BE
+    SS -->|getProgressData| PS
+
+    RC -->|ResolvedConfig| MEL
+    RC -->|ResolvedConfig.projectileSpeed| PRJ
+    RC -->|projectileCount / coinMagnetRadius| PRM
+
+    GS3D -->|item_block hit: weighted random| PUE
+    GS3D -->|tick delta| PUS
+    PUE -->|onCollect type| PUS
+    PUS -->|activePowerUp star| MEL
+    PUS -->|activePowerUp wings| MEL
+    PUS -->|activePowerUp fire_ball| PRM
+    PUS -->|activePowerUp coin_magnet| GS3D
+
+    PUS -->|state| PUHUD
+    SS -->|equipped| HUD
+    RC -->|maxFlyTime| HUD
+    MENU -->|onClick LOJA| SHOP
+
+    style GC fill:#4a8a4a,color:#fff
+    style SS fill:#8a6a2a,color:#fff
+    style PUS fill:#FFD700,color:#000
+    style PUE fill:#FFD700,color:#000
+    style SHOP fill:#4a4a8a,color:#fff
+    style MEL fill:#ff8844,color:#fff
