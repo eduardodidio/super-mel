@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
-import { RigidBody, type RapierRigidBody, useRapier } from "@react-three/rapier";
+import { RigidBody, CuboidCollider, type RapierRigidBody, useRapier } from "@react-three/rapier";
 import * as THREE from "three";
 import type { Controls } from "../hooks/useControls";
 import { loadSprites, getFrame, getFrameEvent } from "../systems/SpriteAnimator";
@@ -16,6 +16,7 @@ const COYOTE_TIME = 0.1;
 const FLY_FORCE = 8;
 const FLY_GRAVITY_SCALE = 0.4;
 const FLY_MAX_VEL_Y = 4;
+const MAX_FLY_TIME = 5;
 const CROUCH_SPEED_MULT = 0.4;
 
 /** Sprite aspect ratio: 224 / 168 = 1.333... */
@@ -65,6 +66,7 @@ export function Mel({
   const attackTimer = useRef(0);
   const idleTime = useRef(0);
   const flying = useRef(false);
+  const flyTimer = useRef(0);
   const crouching = useRef(false);
   const lookingUp = useRef(false);
   const lastLookingUp = useRef(false);
@@ -153,9 +155,15 @@ export function Mel({
 
     lastJumpPressed.current = jumpPressed;
 
-    // --- Fly ---
+    // --- Fly (max 5s) ---
     if (ctrl.jump && !grounded.current && jumping.current && jumpHoldTimer.current >= MAX_JUMP_HOLD) {
       flying.current = true;
+    }
+    if (flying.current) {
+      flyTimer.current += delta;
+    }
+    if (flyTimer.current >= MAX_FLY_TIME) {
+      flying.current = false;
     }
     if (flying.current && ctrl.jump && !grounded.current) {
       const flyVelY = Math.min(vel.y + FLY_FORCE * delta, FLY_MAX_VEL_Y);
@@ -166,6 +174,7 @@ export function Mel({
     }
     if (grounded.current) {
       flying.current = false;
+      flyTimer.current = 0;
     }
 
     onPositionUpdate?.(pos.x, pos.y);
@@ -260,10 +269,11 @@ export function Mel({
       linearDamping={0}
       lockRotations
       enabledTranslations={[true, true, false]}
-      colliders="cuboid"
+      colliders={false}
       name="mel"
       friction={0}
     >
+      <CuboidCollider args={[0.3, 0.45, 0.25]} />
       {/* Sprite billboard */}
       <mesh ref={spriteRef} position={[0, 0.3, 0]} scale={[SPRITE_WIDTH, SPRITE_HEIGHT, 1]}>
         <planeGeometry args={[1, 1]} />
@@ -274,12 +284,6 @@ export function Mel({
           roughness={1}
           metalness={0}
         />
-      </mesh>
-
-      {/* Invisible collider box (smaller than sprite) */}
-      <mesh visible={false}>
-        <boxGeometry args={[0.6, 0.9, 0.5]} />
-        <meshBasicMaterial />
       </mesh>
     </RigidBody>
   );

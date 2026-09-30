@@ -17,7 +17,7 @@ const SPEED = 15;
 // Scale interpolation for the bark wave sprite
 const SCALE_START = 0.8;
 const SCALE_END = 1.5;
-const LIFETIME = 3; // seconds
+const LIFETIME = 10 / SPEED; // ~0.667s = 10 blocks range
 
 export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }: ProjectileProps) {
   const rbRef = useRef<RapierRigidBody>(null);
