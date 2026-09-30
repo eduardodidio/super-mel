@@ -13,6 +13,7 @@ import { TouchControls3D } from "./systems/TouchControls3D";
 import { useControls } from "./hooks/useControls";
 import { playTrack, toggleMute, isMuted } from "./systems/AudioManager3D";
 import { LeaderboardView } from "../components/LeaderboardView";
+import { usePWAInstall } from "../hooks/usePWAInstall";
 import type { BackgroundTheme } from "@super-mel/shared";
 import { useEffect, useState } from "react";
 
@@ -45,6 +46,7 @@ export function Game3D() {
   const testMode = useGameState((s) => s.testMode);
   const startTestMode = useGameState((s) => s.startTestMode);
   const controlsRef = useControls();
+  const { canInstall, triggerInstall, isInstalled } = usePWAInstall();
   const [muted, setMuted] = useState(isMuted());
 
   // Audio: maintheme on menu, comeco on playing
@@ -127,6 +129,23 @@ export function Game3D() {
               <button style={styles.btnSecondary} onClick={handleLogout}>
                 SAIR
               </button>
+              {canInstall && (
+                <button style={styles.btnInstall} onClick={triggerInstall}>
+                  INSTALAR APP
+                </button>
+              )}
+              {isInstalled && (
+                <p
+                  style={{
+                    color: "#4a8a4a",
+                    fontSize: "12px",
+                    textAlign: "center",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  App instalado!
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -240,5 +259,16 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontFamily: "monospace",
     zIndex: 15,
+  },
+  btnInstall: {
+    padding: "14px",
+    fontSize: "18px",
+    background: "#8a4a8a",
+    color: "#fff",
+    border: "2px solid #ffcc00",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontFamily: "monospace",
+    fontWeight: "bold",
   },
 };
