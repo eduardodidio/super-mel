@@ -18,8 +18,8 @@ Adicionar moedas coletaveis espalhadas pelos chunks que a Mel pode pegar. As moe
 ## Wave Manifest
 
 - **Wave 0**: F24-T01 (setup: copiar imagem, preparar asset)
-- **Wave 1**: F24-T02, F24-T03 (core: entidade Coin + gerador de moedas no chunk)
-- **Wave 2**: F24-T04, F24-T05 (integracao: state + HUD + wiring no ChunkRenderer/GameScene)
+- **Wave 1**: F24-T02, F24-T03, F24-T04 (core: entidade Coin + gerador de moedas + game state)
+- **Wave 2**: F24-T05 (integracao: HUD + wiring ChunkRenderer/GameScene)
 - **Wave 3**: F24-T06 (docs: diagramas)
 
 ## Global Acceptance Criteria

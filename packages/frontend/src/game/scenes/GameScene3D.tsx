@@ -18,6 +18,7 @@ export function GameScene3D() {
   const lives = useGameState((s) => s.lives);
   const setLives = useGameState((s) => s.setLives);
   const theme = useGameState((s) => s.theme);
+  const addCoin = useGameState((s) => s.addCoin);
   const invincibleRef = useRef(false);
   const lastX = useRef(0);
   const [playerPos, setPlayerPos] = useState({ x: 2, y: 5 });
@@ -49,6 +50,10 @@ export function GameScene3D() {
     }
   }, [lives, setLives]);
 
+  const handleCoinCollected = useCallback(() => {
+    addCoin();
+  }, [addCoin]);
+
   return (
     <>
       <CameraRig
@@ -78,6 +83,7 @@ export function GameScene3D() {
       <ChunkRenderer
         playerX={playerPos.x}
         onHeartCollected={handleHeartCollected}
+        onCoinCollected={handleCoinCollected}
       />
     </>
   );

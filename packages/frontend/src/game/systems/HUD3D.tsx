@@ -4,6 +4,7 @@ import type { GameScene } from "../hooks/useGameState";
 interface HUD3DProps {
   lives: number;
   score: number;
+  coins: number;
   scene: GameScene;
 }
 
@@ -13,7 +14,7 @@ function getPortraitFilter(lives: number): string | undefined {
   return "sepia(0.5) saturate(2) hue-rotate(-20deg)";
 }
 
-export function HUD3D({ lives, score, scene }: HUD3DProps) {
+export function HUD3D({ lives, score, coins, scene }: HUD3DProps) {
   const [portraitError, setPortraitError] = useState(false);
 
   if (scene !== "playing") return null;
@@ -40,6 +41,9 @@ export function HUD3D({ lives, score, scene }: HUD3DProps) {
               &#9829;
             </span>
           ))}
+        </span>
+        <span style={styles.coins}>
+          <span style={styles.coinIcon}>&#9679;</span> {coins}
         </span>
       </div>
       <div style={styles.center}>
@@ -86,6 +90,21 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 4,
     color: "#ff4444",
     filter: "drop-shadow(1px 1px 1px rgba(0,0,0,0.5))",
+  },
+  coins: {
+    color: "#FFD700",
+    fontSize: "18px",
+    fontWeight: "bold",
+    marginLeft: 12,
+    textShadow: "1px 1px 0 #000",
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+  },
+  coinIcon: {
+    fontSize: "14px",
+    color: "#FFD700",
+    filter: "drop-shadow(0 0 2px rgba(255,215,0,0.6))",
   },
   center: {},
   controls: {

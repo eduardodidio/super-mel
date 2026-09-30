@@ -2,19 +2,22 @@ import { useState, useRef, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Block } from "../entities/Block";
 import { Heart } from "../entities/Heart";
+import { Coin } from "../entities/Coin";
 import { generateChunk, getVisibleChunkIndices, type Chunk } from "./ChunkGenerator";
 
 interface ChunkRendererProps {
   playerX: number;
   onBlockDestroyed?: (x: number, y: number) => void;
   onHeartCollected?: () => void;
+  onCoinCollected?: () => void;
 }
 
-export function ChunkRenderer({ playerX, onBlockDestroyed, onHeartCollected }: ChunkRendererProps) {
+export function ChunkRenderer({ playerX, onBlockDestroyed, onHeartCollected, onCoinCollected }: ChunkRendererProps) {
   const [chunks, setChunks] = useState<Map<number, Chunk>>(new Map());
   const lastUpdate = useRef(0);
   const destroyedBlocks = useRef(new Set<string>());
   const collectedHearts = useRef(new Set<string>());
+  const collectedCoins = useRef(new Set<string>());
 
   useFrame(() => {
     const now = performance.now();
@@ -54,6 +57,11 @@ export function ChunkRenderer({ playerX, onBlockDestroyed, onHeartCollected }: C
     onHeartCollected?.();
   }, [onHeartCollected]);
 
+  const handleCoinCollect = useCallback((key: string) => {
+    collectedCoins.current.add(key);
+    onCoinCollected?.();
+  }, [onCoinCollected]);
+
   return (
     <>
       {Array.from(chunks.values()).flatMap((chunk) => [
@@ -75,6 +83,15 @@ export function ChunkRenderer({ playerX, onBlockDestroyed, onHeartCollected }: C
               key={`h-${h.x},${h.y}`}
               position={[h.x, h.y, 0]}
               onCollect={() => handleHeartCollect(`h-${h.x},${h.y}`)}
+            />
+          )),
+        ...chunk.coins
+          .filter((c) => !collectedCoins.current.has(`c-${c.x},${c.y}`))
+          .map((c) => (
+            <Coin
+              key={`c-${c.x},${c.y}`}
+              position={[c.x, c.y, 0]}
+              onCollect={() => handleCoinCollect(`c-${c.x},${c.y}`)}
             />
           )),
       ])}

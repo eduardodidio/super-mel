@@ -92,6 +92,7 @@ super-mel/
 - **F13:** Deploy Render (render.yaml Blueprint automatico)
 - **F14:** Polish + Integracao (menu completo, navegacao entre telas, logout)
 - **F23:** Sprites & Animation System — Novos sprites 2D de alta qualidade substituem placeholders voxel. Maquina de estados de animacao completa (idle/walk/run/jump/attack/hurt/death/sit), efeitos visuais procedurais (poeira, estrelas, coracoes), bark wave animado, e portrait da Mel no HUD.
+- **F24:** Sistema de Moedas — Moedas coletaveis espalhadas pelos chunks, contador no HUD, persistencia via localStorage para futuros upgrades.
 
 ## Poderes Futuros (pos-MVP)
 

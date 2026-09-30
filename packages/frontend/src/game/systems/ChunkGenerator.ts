@@ -13,10 +13,16 @@ export interface HeartData {
   y: number;
 }
 
+export interface CoinData {
+  x: number;
+  y: number;
+}
+
 export interface Chunk {
   startX: number;
   blocks: BlockData[];
   hearts: HeartData[];
+  coins: CoinData[];
 }
 
 const CHUNK_WIDTH = 16;
@@ -34,6 +40,7 @@ export function generateChunk(chunkIndex: number): Chunk {
   const rand = seededRandom(chunkIndex * 7919 + 31);
   const blocks: BlockData[] = [];
   const hearts: HeartData[] = [];
+  const coins: CoinData[] = [];
 
   const difficulty = Math.min(chunkIndex / 25, 1);
 
@@ -73,8 +80,19 @@ export function generateChunk(chunkIndex: number): Chunk {
     blocks.push({ type: "stone", x: worldX, y: surfaceY - 2, z: 0, isBackground: false });
   }
 
-  // Spawn area clear
-  if (chunkIndex <= 0) return { startX, blocks, hearts };
+  // Spawn area — place a few easy coins for the player
+  if (chunkIndex <= 0) {
+    for (let x = 2; x < CHUNK_WIDTH - 2; x++) {
+      if (rand() < 0.25) {
+        const groundY = heights[x];
+        coins.push({ x: startX + x, y: groundY + 1 });
+        if (rand() < 0.4) {
+          coins.push({ x: startX + x, y: groundY + 2 });
+        }
+      }
+    }
+    return { startX, blocks, hearts, coins };
+  }
 
   // --- PLATFORMS ---
   for (let x = 1; x < CHUNK_WIDTH - 2; x += 4 + Math.floor(rand() * 3)) {
@@ -198,7 +216,92 @@ export function generateChunk(chunkIndex: number): Chunk {
     }
   }
 
-  return { startX, blocks, hearts };
+  // --- COINS ---
+  // Build a set of occupied positions so coins never overlap solid blocks
+  const occupied = new Set<string>();
+  for (const b of blocks) {
+    if (!b.isBackground) {
+      occupied.add(`${b.x},${b.y}`);
+    }
+  }
+
+  // Line / cluster coins on ground and platforms
+  for (let x = 0; x < CHUNK_WIDTH; x++) {
+    if (gapPositions.has(x)) continue; // gaps handled separately for arcs
+    if (rand() < 0.3) {
+      const groundY = heights[x];
+      const count = 1 + Math.floor(rand() * 3); // 1-3 coins stacked
+      for (let i = 0; i < count; i++) {
+        const cx = startX + x;
+        const cy = groundY + 2 + i;
+        if (!occupied.has(`${cx},${cy}`)) {
+          coins.push({ x: cx, y: cy });
+        }
+      }
+    }
+  }
+
+  // Arcs of coins over gaps — reward jumping
+  // Find contiguous gap runs
+  const gapRuns: { start: number; length: number }[] = [];
+  {
+    let runStart = -1;
+    for (let x = 0; x < CHUNK_WIDTH; x++) {
+      if (gapPositions.has(x)) {
+        if (runStart === -1) runStart = x;
+      } else {
+        if (runStart !== -1) {
+          gapRuns.push({ start: runStart, length: x - runStart });
+          runStart = -1;
+        }
+      }
+    }
+    if (runStart !== -1) {
+      gapRuns.push({ start: runStart, length: CHUNK_WIDTH - runStart });
+    }
+  }
+
+  for (const gap of gapRuns) {
+    const arcCount = Math.min(3 + Math.floor(rand() * 3), gap.length + 2); // 3-5 coins
+    // Heights at edges of the gap for arc reference
+    const leftX = Math.max(gap.start - 1, 0);
+    const rightX = Math.min(gap.start + gap.length, CHUNK_WIDTH - 1);
+    const edgeY = Math.max(heights[leftX] || 0, heights[rightX] || 0);
+    const arcPeak = edgeY + 3 + Math.floor(rand() * 2); // peak 3-4 above edge
+
+    for (let i = 0; i < arcCount; i++) {
+      // Distribute coins across the gap span (including one position outside each edge)
+      const t = arcCount > 1 ? i / (arcCount - 1) : 0.5;
+      const coinLocalX = (gap.start - 0.5) + t * (gap.length + 1);
+      const coinX = startX + Math.round(coinLocalX);
+      // Parabola: y = peak - 4*(t-0.5)^2 * drop  (highest at center)
+      const drop = arcPeak - edgeY;
+      const coinY = Math.round(arcPeak - 4 * (t - 0.5) * (t - 0.5) * drop);
+      if (!occupied.has(`${coinX},${coinY}`)) {
+        coins.push({ x: coinX, y: coinY });
+      }
+    }
+  }
+
+  // Ensure minimum coins per chunk (5-15 target)
+  // If we have fewer than 5, add a few more on safe ground
+  if (coins.length < 5) {
+    for (let x = 0; x < CHUNK_WIDTH && coins.length < 5; x++) {
+      if (gapPositions.has(x)) continue;
+      const cx = startX + x;
+      const cy = heights[x] + 2;
+      if (!occupied.has(`${cx},${cy}`)) {
+        coins.push({ x: cx, y: cy });
+      }
+    }
+  }
+
+  // Cap at 15 to stay in range
+  if (coins.length > 15) {
+    coins.length = 15;
+  }
+
+  return { startX, blocks, hearts, coins };
 }
 
 export function getVisibleChunkIndices(cameraX: number, viewDistance: number = 3): number[] {
