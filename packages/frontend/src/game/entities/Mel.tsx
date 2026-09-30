@@ -32,6 +32,7 @@ interface MelProps {
   dead?: boolean;
   onAttackFrame?: () => void;
   onLookUp?: (looking: boolean) => void;
+  onFlyStateUpdate?: (flying: boolean, timeRemaining: number) => void;
 }
 
 export function Mel({
@@ -42,6 +43,7 @@ export function Mel({
   dead = false,
   onAttackFrame,
   onLookUp,
+  onFlyStateUpdate,
 }: MelProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const spriteRef = useRef<THREE.Mesh>(null);
@@ -178,6 +180,7 @@ export function Mel({
     }
 
     onPositionUpdate?.(pos.x, pos.y);
+    onFlyStateUpdate?.(flying.current, Math.max(0, MAX_FLY_TIME - flyTimer.current));
 
     // --- Attack timer ---
     if (ctrl.shoot && attackTimer.current <= 0) {
