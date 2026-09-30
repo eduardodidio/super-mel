@@ -148,6 +148,7 @@ const FALLBACK_SPRITE = "idle_right";
 // ---------------------------------------------------------------------------
 
 const textureCache = new Map<string, THREE.Texture>();
+let spriteManifest: SpriteManifest | null = null;
 const loader = new THREE.TextureLoader();
 
 function configureTexture(texture: THREE.Texture): THREE.Texture {
@@ -210,6 +211,11 @@ export function loadSprites(): Promise<void> {
   const names = getAllSpriteNames();
   const missing: string[] = [];
 
+  const manifestPromise = fetch(`${SPRITE_BASE_PATH}manifest.json`)
+    .then((res) => res.json())
+    .then((data: SpriteManifest) => { spriteManifest = data; })
+    .catch((err) => { console.warn("[SpriteAnimator] Failed to load manifest.json:", err); });
+
   const promises = names.map((name) => {
     return new Promise<void>((resolve) => {
       const url = `${SPRITE_BASE_PATH}${name}.png`;
@@ -229,7 +235,7 @@ export function loadSprites(): Promise<void> {
     });
   });
 
-  return Promise.all(promises).then(() => {
+  return Promise.all([...promises, manifestPromise]).then(() => {
     // Ensure fallback is available for any missing sprites
     const fallback = textureCache.get(FALLBACK_SPRITE);
     if (fallback) {
@@ -348,6 +354,21 @@ export function getFrameEvent(
 
   const frameIndex = resolveFrameIndex(anim, elapsed);
   return anim.events[frameIndex];
+}
+
+/**
+ * Get the aspect ratio (width / height) of the current frame's sprite
+ * from the manifest data. Returns 1.0 if manifest is not loaded or
+ * the sprite entry is not found.
+ */
+export function getFrameAspectRatio(animName: string, elapsed: number): number {
+  if (!spriteManifest) return 1.0;
+  const anim = ANIMATIONS[animName] ?? ANIMATIONS.idle;
+  const frameIndex = resolveFrameIndex(anim, elapsed);
+  const spriteName = anim.frames[frameIndex];
+  const entry = spriteManifest.sprites[spriteName];
+  if (!entry) return 1.0;
+  return entry.sourceSize[0] / entry.sourceSize[1];
 }
 
 /**
