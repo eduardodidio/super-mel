@@ -79,10 +79,10 @@ export const BLOCK_PROPERTIES: Record<
   { solid: boolean; destructible: boolean; dangerous: boolean; platform: boolean }
 > = {
   stone: { solid: true, destructible: false, dangerous: false, platform: false },
-  sand: { solid: false, destructible: false, dangerous: false, platform: false },
+  sand: { solid: true, destructible: false, dangerous: false, platform: false },
   wood: { solid: true, destructible: true, dangerous: false, platform: false },
   iron: { solid: true, destructible: false, dangerous: false, platform: false },
-  dirt: { solid: false, destructible: false, dangerous: false, platform: false },
+  dirt: { solid: true, destructible: false, dangerous: false, platform: false },
   brick: { solid: true, destructible: false, dangerous: false, platform: false },
   glass: { solid: true, destructible: true, dangerous: false, platform: false },
   leaf: { solid: false, destructible: false, dangerous: false, platform: true },
