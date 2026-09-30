@@ -6,7 +6,7 @@ com a Bola do Infinito.
 
 ## Stack
 
-- **Frontend:** Vite + React 18 + TypeScript + Phaser 3
+- **Frontend:** Vite + React 18 + TypeScript + React Three Fiber + Rapier
 - **Backend:** Fastify + TypeScript + Prisma
 - **Database:** PostgreSQL
 - **Deploy:** Render.com
@@ -51,6 +51,37 @@ pnpm dev
 - **Z** — Atacar (Bola do Infinito)
 - **Mobile:** D-pad 4 direcoes + A (pular/voar) + B (atacar)
 
+## Arquitetura
+
+```
+super-mel/
+├── packages/frontend/    Vite + React 18 + R3F + Rapier + Zustand
+│   └── src/game/
+│       ├── entities/     Mel, Coin, Heart, Projectile, Block
+│       ├── systems/      ChunkGenerator, AnimationStateMachine, HUD, Camera
+│       ├── scenes/       GameScene3D, MenuScene, EditorScene
+│       └── hooks/        useControls, useGameState, useFrame
+├── packages/backend/     Fastify + Prisma + PostgreSQL
+│   └── src/routes/       auth, scores, levels
+├── packages/shared/      Types compartilhados (BlockType, etc.)
+└── docs/                 ADRs, PRDs, Mermaid diagrams
+```
+
+## Tech Stack
+
+- **Frontend:** Vite 6 + React 18 + TypeScript 5.6 + React Three Fiber + @react-three/rapier + Three.js + Zustand
+- **Backend:** Fastify 5 + TypeScript + Prisma 6 + PostgreSQL
+- **Monorepo:** pnpm workspaces
+- **Deploy:** Render.com (Blueprint via render.yaml)
+- **Auth:** bcryptjs + JWT (guest play com localStorage)
+
+## Documentacao
+
+- [`docs/adr/`](docs/adr/) -- Architecture Decision Records
+- [`docs/prd/`](docs/prd/) -- Product Requirements Documents
+- [`docs/diagrams/`](docs/diagrams/) -- Mermaid diagrams (arquitetura + jornada por feature)
+- [`tasks/features/`](tasks/features/) -- Task manifests por feature
+
 ## Editor de Fases (Mario Maker)
 
 1. Menu > **CRIAR FASE**
@@ -69,16 +100,19 @@ Vidro, Folha, Agua, Lava, Item Block (?)
 ```
 super-mel/
 ├── packages/
-│   ├── frontend/     # Vite + React + Phaser 3
+│   ├── frontend/     # Vite + React 18 + R3F + Rapier + Zustand
 │   │   └── src/
-│   │       ├── scenes/      # Boot, Menu, Game, GameOver, Editor, LevelSelect, Leaderboard
-│   │       ├── systems/     # Player, BlockManager, Parallax, Audio, HUD, Projectiles, Touch
-│   │       └── components/  # AuthScreen, GameView
+│   │       ├── game/
+│   │       │   ├── entities/   # Mel, Coin, Heart, Projectile, Block
+│   │       │   ├── systems/    # ChunkGenerator, AnimationStateMachine, HUD, Camera
+│   │       │   ├── scenes/     # GameScene3D, MenuScene, EditorScene
+│   │       │   └── hooks/      # useControls, useGameState, useFrame
+│   │       └── components/     # AuthScreen, GameView
 │   ├── backend/      # Fastify + Prisma
 │   │   └── src/routes/  # auth, scores, levels
-│   └── shared/       # Types compartilhados
+│   └── shared/       # Types compartilhados (BlockType, etc.)
 ├── render.yaml       # Deploy Render.com
-├── docs/             # ADRs, PRDs, diagramas
+├── docs/             # ADRs, PRDs, diagramas Mermaid
 ├── agents/           # Prompts do framework didio
 └── tasks/            # Features e tasks
 ```
@@ -107,6 +141,9 @@ super-mel/
 - **F25** — Controles refinados: crouch, fly, look up, remap de teclas, D-pad mobile 4 direcoes
 - **F26** — Fase basica de teste: 5 chunks manuais para testar gameplay (botao FASE TESTE no menu)
 - **F27** — Performance: removed 100+ pointLights, eliminated 60 re-renders/sec, fixed GC pressure, added resource disposal
+- **F28** — Moedas + Drop: moedas usam sprite personalizado (moedaDoJogo.png), item_blocks vermelhos com "?" liberam 1-3 moedas ao serem atingidos, blocos destrutiveis dropam moedas (40% chance), HUD coin counter vermelho
+- **F29** — Sprites Completos: corrigido mapeamento de jump_land/hurt_heavy, animacoes crouch/look_up/fly agora usam sprites dedicados, timing de ataque e landing mais responsivos
+- **F30** — Docs & Arquitetura: README com secoes de Arquitetura e Tech Stack, docs/README.md como indice navegavel, Doc-Review Gate no CLAUDE.md, template de checklist de docs
 
 ## Poderes Futuros (pos-MVP)
 

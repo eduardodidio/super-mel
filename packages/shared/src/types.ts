@@ -88,7 +88,7 @@ export const BLOCK_PROPERTIES: Record<
   leaf: { solid: false, destructible: false, dangerous: false, platform: true },
   water: { solid: false, destructible: false, dangerous: false, platform: false },
   lava: { solid: false, destructible: false, dangerous: true, platform: false },
-  item_block: { solid: true, destructible: true, dangerous: false, platform: false },
+  item_block: { solid: true, destructible: false, dangerous: false, platform: false },
 };
 
 export const GAME_CONFIG = {

@@ -7,7 +7,7 @@ interface ProjectileManagerProps {
   controlsRef: React.RefObject<Controls>;
   playerPosRef: React.RefObject<{ x: number; y: number }>;
   facingRightRef: React.RefObject<boolean>;
-  onBlockHit?: (blockName: string) => void;
+  onBlockHit?: (blockName: string, blockPos: { x: number; y: number; z: number }) => void;
 }
 
 interface ProjectileData {
@@ -47,8 +47,8 @@ export function ProjectileManager({ controlsRef, playerPosRef, facingRightRef, o
     lastShootRef.current = wantsShoot;
   });
 
-  const handleHit = useCallback((id: string, targetName?: string) => {
-    if (targetName) onBlockHit?.(targetName);
+  const handleHit = useCallback((id: string, targetName?: string, blockPos?: { x: number; y: number; z: number }) => {
+    if (targetName && blockPos) onBlockHit?.(targetName, blockPos);
   }, [onBlockHit]);
 
   const handleExpire = useCallback((id: string) => {

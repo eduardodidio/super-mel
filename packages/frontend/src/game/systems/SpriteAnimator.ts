@@ -63,8 +63,14 @@ const ANIMATIONS: Record<string, SpriteAnimationDef> = {
   },
   fall: {
     name: "fall",
-    frames: ["jump_fall", "jump_land"],
+    frames: ["jump_fall"],
     fps: 8,
+    loop: false,
+  },
+  land: {
+    name: "land",
+    frames: ["jump_land"],
+    fps: 10,
     loop: false,
   },
   attack: {
@@ -78,6 +84,12 @@ const ANIMATIONS: Record<string, SpriteAnimationDef> = {
     name: "hurt",
     frames: ["hurt_light", "hurt_medium"],
     fps: 8,
+    loop: false,
+  },
+  hurt_heavy: {
+    name: "hurt_heavy",
+    frames: ["hurt_medium", "hurt_heavy"],
+    fps: 6,
     loop: false,
   },
   death: {
@@ -106,20 +118,20 @@ const ANIMATIONS: Record<string, SpriteAnimationDef> = {
   },
   crouch: {
     name: "crouch",
-    frames: ["sit"],
+    frames: ["crouch"],
     fps: 4,
     loop: true,
   },
   look_up: {
     name: "look_up",
-    frames: ["idle_right"],
+    frames: ["look_up"],
     fps: 4,
     loop: true,
   },
   fly: {
     name: "fly",
-    frames: ["jump_air"],
-    fps: 8,
+    frames: ["fly_1", "fly_2"],
+    fps: 10,
     loop: true,
   },
 };

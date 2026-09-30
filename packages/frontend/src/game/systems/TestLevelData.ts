@@ -58,6 +58,9 @@ function generateChunk0(): Chunk {
   blocks.push(block("wood", 1, 1));
   blocks.push(block("wood", 1, 2));
 
+  // Item block tutorial: visible above the path
+  blocks.push(block("item_block", 10, 3));
+
   // 3 coins
   coins.push({ x: 4, y: 2 });
   coins.push({ x: 6, y: 2 });
@@ -99,6 +102,10 @@ function generateChunk1(): Chunk {
   for (let x = 25; x <= 28; x++) {
     blocks.push(block("stone", x, 6));
   }
+
+  // Item blocks over gap (reward exploration)
+  blocks.push(block("item_block", 20, 6));
+  blocks.push(block("item_block", 22, 6));
 
   // 5 coins in arc over gap
   coins.push({ x: 19, y: 3 });
@@ -171,6 +178,11 @@ function generateChunk3(): Chunk {
   blocks.push(block("stone", 51, 2));
   blocks.push(block("stone", 53, 4));
   blocks.push(block("stone", 59, 3));
+
+  // Item blocks on elevated platforms
+  blocks.push(block("item_block", 54, 10));
+  blocks.push(block("item_block", 55, 10));
+  blocks.push(block("item_block", 56, 10));
 
   // High stone platform at y=8 from x=54 to x=56 (fly practice)
   for (let x = 54; x <= 56; x++) {

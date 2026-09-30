@@ -1,0 +1,23 @@
+flowchart TD
+    A[Developer quer entender o projeto] --> B[Abre README.md]
+    B --> C{O que precisa?}
+
+    C -->|Setup| D[README > Setup Local]
+    C -->|Arquitetura| E[README > Arquitetura + diagrama]
+    C -->|Tech Stack| F[README > Tech Stack]
+    C -->|Docs detalhados| G[README > Documentacao > links]
+    G --> H[docs/README.md - indice completo]
+    H --> I{Qual tipo?}
+    I -->|Decisao arquitetural| J[docs/adr/]
+    I -->|Requisitos| K[docs/prd/]
+    I -->|Diagramas| L[docs/diagrams/]
+    I -->|Tasks| M[tasks/features/]
+
+    N[Developer termina feature] --> O[Roda Doc-Review Checklist]
+    O --> P{README atualizado?}
+    P -->|Nao| Q[Atualizar README.md]
+    P -->|Sim| R{Diagramas criados?}
+    R -->|Nao| S[Criar F<XX>-architecture.mmd + journey.mmd]
+    R -->|Sim| T{docs/README atualizado?}
+    T -->|Nao| U[Adicionar links ao indice]
+    T -->|Sim| V[Feature DONE]

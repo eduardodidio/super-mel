@@ -8,7 +8,7 @@ interface ProjectileProps {
   id: string;
   startPosition: [number, number, number];
   direction?: number;
-  onHit: (id: string, targetName?: string) => void;
+  onHit: (id: string, targetName?: string, blockPos?: { x: number; y: number; z: number }) => void;
   onExpire: (id: string) => void;
 }
 
@@ -98,8 +98,10 @@ export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }
     if (otherName.startsWith("block-")) {
       const pos = rbRef.current?.translation();
       if (pos) explodePosRef.current.set(pos.x, pos.y, pos.z);
+      const bp = payload.other.rigidBody?.translation();
+      const blockPos = bp ? { x: Math.round(bp.x), y: Math.round(bp.y), z: Math.round(bp.z) } : undefined;
       setExploding(true);
-      onHit(id, otherName);
+      onHit(id, otherName, blockPos);
     }
   };
 

@@ -11,15 +11,34 @@ interface BlockProps {
   position: [number, number, number];
   onDestroy?: () => void;
   isBackground?: boolean;
+  activated?: boolean;
 }
 
-export function Block({ type, position, onDestroy, isBackground = false }: BlockProps) {
+export function Block({ type, position, onDestroy, isBackground = false, activated = false }: BlockProps) {
   const [destroyed, setDestroyed] = useState(false);
   const props = BLOCK_PROPERTIES[type];
   const materials = getBlockMaterials(type);
 
   if (destroyed) {
     return <BlockParticles position={position} type={type} />;
+  }
+
+  // Activated item_block: gray empty block (no "?", no glow)
+  if (type === "item_block" && activated) {
+    return (
+      <RigidBody
+        type="fixed"
+        position={position}
+        colliders="cuboid"
+        name={`block-${type}`}
+        userData={{ blockType: type, destructible: false, dangerous: false }}
+      >
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="#555555" roughness={0.9} metalness={0} />
+        </mesh>
+      </RigidBody>
+    );
   }
 
   if (isBackground) {

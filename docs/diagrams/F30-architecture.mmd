@@ -1,0 +1,53 @@
+flowchart TD
+    subgraph ProjectRoot["super-mel/"]
+        README["README.md
+        - Stack, Setup, Como Jogar
+        - Arquitetura (diagrama)
+        - Tech Stack (detalhado)
+        - Documentacao (links)
+        - Features Entregues"]
+
+        CLAUDE["CLAUDE.md
+        - Mission, Architecture
+        - Doc-Review Gate
+        - Guardrails"]
+    end
+
+    subgraph Docs["docs/"]
+        DocsREADME["docs/README.md
+        Indice navegavel completo"]
+
+        ADR["docs/adr/
+        0001-adopt-claude-didio"]
+
+        PRD["docs/prd/
+        PRD-001, 3d-rewrite-plan"]
+
+        Diagrams["docs/diagrams/
+        F01..F30 architecture + journey"]
+
+        Templates["docs/templates/
+        doc-review-checklist.md"]
+    end
+
+    subgraph Tasks["tasks/features/"]
+        TF["F01..F30
+        README + T01..T0N por feature"]
+    end
+
+    README -->|links para| DocsREADME
+    README -->|links para| Docs
+    DocsREADME -->|links para| ADR
+    DocsREADME -->|links para| PRD
+    DocsREADME -->|links para| Diagrams
+    DocsREADME -->|links para| TF
+    CLAUDE -->|referencia| Templates
+
+    subgraph Gate["Doc-Review Gate"]
+        G1["README atualizado?"]
+        G2["Diagramas criados?"]
+        G3["ADR se necessario?"]
+        G4["docs/README atualizado?"]
+    end
+
+    Gate -.->|checklist por feature| Templates

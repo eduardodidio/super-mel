@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
@@ -8,10 +8,28 @@ interface CoinProps {
   onCollect: () => void;
 }
 
+// Aspect ratio from moedaDoJogo.png (1072x394)
+const COIN_WIDTH = 0.7;
+const COIN_HEIGHT = COIN_WIDTH * (394 / 1072); // ~0.257
+
+const textureLoader = new THREE.TextureLoader();
+let sharedTexture: THREE.Texture | null = null;
+
+function getCoinTexture(): THREE.Texture {
+  if (sharedTexture) return sharedTexture;
+  sharedTexture = textureLoader.load("/sprites/coin.png");
+  sharedTexture.magFilter = THREE.NearestFilter;
+  sharedTexture.minFilter = THREE.NearestFilter;
+  sharedTexture.colorSpace = THREE.SRGBColorSpace;
+  return sharedTexture;
+}
+
 export function Coin({ position, onCollect }: CoinProps) {
   const meshRef = useRef<THREE.Group>(null);
   const collected = useRef(false);
   const timeRef = useRef(Math.random() * Math.PI * 2);
+
+  const texture = useMemo(() => getCoinTexture(), []);
 
   useFrame((_, delta) => {
     if (!meshRef.current || collected.current) return;
@@ -43,15 +61,16 @@ export function Coin({ position, onCollect }: CoinProps) {
       }}
     >
       <group ref={meshRef}>
-        {/* Coin shape — flat cylinder */}
+        {/* Coin sprite — flat plane with moedaDoJogo texture */}
         <mesh castShadow>
-          <cylinderGeometry args={[0.25, 0.25, 0.06, 16]} />
+          <planeGeometry args={[COIN_WIDTH, COIN_HEIGHT]} />
           <meshStandardMaterial
-            color="#FFD700"
-            emissive="#FFA500"
-            emissiveIntensity={0.6}
+            map={texture}
+            side={THREE.DoubleSide}
+            emissive="#8B0000"
+            emissiveIntensity={0.4}
             roughness={0.3}
-            metalness={0.8}
+            metalness={0.5}
           />
         </mesh>
       </group>

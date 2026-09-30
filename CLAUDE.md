@@ -88,6 +88,19 @@ See `agents/orchestrator.md` for the full pipeline and
   optional — if the feature doesn't change the README, either the README
   is stale or the feature shouldn't have shipped.
 
+## Doc-Review Gate (obrigatorio por feature)
+
+Toda feature que ship DEVE passar por este checklist antes de ser considerada "done":
+
+- [ ] README.md atualizado com nota sobre a feature (secao Features Entregues)
+- [ ] README.md Arquitetura atualizada se a feature mudou a estrutura
+- [ ] docs/README.md indice atualizado se novos docs foram criados
+- [ ] Diagramas F<XX>-architecture.mmd e F<XX>-journey.mmd criados/atualizados
+- [ ] ADR criado se houve decisao arquitetural significativa
+- [ ] PRD existe para a feature (pode ser inline no F<XX>-README.md)
+
+Template: `docs/templates/doc-review-checklist.md`
+
 ## Agent Learnings (Retrospective)
 
 At the end of every feature, QA runs a retrospective ceremony and appends
