@@ -13,12 +13,73 @@ export interface Score {
   createdAt: Date;
 }
 
-export interface LevelData {
+// --- Entity System ---
+
+export type EntityType =
+  | "coin"
+  | "heart"
+  | "goal"
+  | "checkpoint"
+  | "spawn"
+  | "item_block_content"
+  | "sign"
+  | "bone"
+  | "enemy";
+
+export interface EntityData {
+  type: EntityType;
+  x: number;
+  y: number;
+  props?: Record<string, unknown>;
+}
+
+export interface Mission {
+  id: string;
+  description: string;
+  condition: Record<string, unknown>;
+}
+
+// --- LevelData v1 (original, no version field) ---
+
+/** @deprecated Use LevelDataV2 */
+export interface LevelDataV1 {
   grid: BlockCell[][];
   width: number;
   height: number;
   spawnPoint: { x: number; y: number };
 }
+
+// Backward compat alias -- existing code importing LevelData still compiles
+export type LevelData = LevelDataV1;
+
+// --- LevelData v2 ---
+
+export interface LevelDataV2 {
+  version: 2;
+  grid: BlockCell[][];
+  width: number;
+  height: number;
+  entities: EntityData[];
+  theme?: BackgroundTheme;
+  missions?: Mission[];
+}
+
+// Union for migration input
+export type LevelDataAny = LevelDataV1 | LevelDataV2;
+
+// --- Entity type constants for palette ---
+
+export const ENTITY_TYPES: readonly EntityType[] = [
+  "coin",
+  "heart",
+  "goal",
+  "checkpoint",
+  "spawn",
+  "item_block_content",
+  "sign",
+  "bone",
+  "enemy",
+] as const;
 
 export interface BlockCell {
   type: BlockType;
@@ -44,7 +105,7 @@ export interface Level {
   id: string;
   creatorId: string;
   name: string;
-  data: LevelData;
+  data: LevelData | LevelDataV2; // May be v1 or v2 in storage
   background: BackgroundTheme;
   published: boolean;
   createdAt: Date;
