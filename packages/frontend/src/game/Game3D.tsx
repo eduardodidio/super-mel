@@ -15,6 +15,7 @@ import { PauseOverlay } from "./systems/PauseOverlay";
 import { ComoJogarScreen } from "./systems/ComoJogarScreen";
 import { AssistModeUI } from "./systems/AssistModeUI";
 import { useControls } from "./hooks/useControls";
+import { useProgressSync, flushProgress } from "./hooks/useProgressSync";
 import { playTrack, toggleMute, isMuted } from "./systems/AudioManager3D";
 import { LeaderboardView } from "../components/LeaderboardView";
 import { usePWAInstall } from "../hooks/usePWAInstall";
@@ -58,6 +59,7 @@ export function Game3D() {
   const startDailyMode = useGameState((s) => s.startDailyMode);
   const gameSpeed = useAssistMode((s) => s.gameSpeed);
   const controlsRef = useControls();
+  useProgressSync();
   const { canInstall, triggerInstall, isInstalled } = usePWAInstall();
   const [muted, setMuted] = useState(isMuted());
   const coinPopupRef = useRef<CoinPopupHandle | null>(null);
@@ -151,6 +153,7 @@ export function Game3D() {
   };
 
   const handleLogout = () => {
+    flushProgress(); // Sync progress to backend before clearing session
     localStorage.removeItem("supermel_token");
     localStorage.removeItem("supermel_player_id");
     localStorage.removeItem("supermel_player_name");
