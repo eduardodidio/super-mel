@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { RigidBody, CuboidCollider, type RapierRigidBody, useRapier } from "@react-three/rapier";
 import * as THREE from "three";
 import type { Controls } from "../hooks/useControls";
-import { loadSprites, getFrame, getFrameEvent } from "../systems/SpriteAnimator";
+import { loadSprites, getFrame, getFrameEvent, getFrameAspectRatio } from "../systems/SpriteAnimator";
 import { AnimationStateMachine, type AnimInput } from "../systems/AnimationStateMachine";
 
 const MOVE_SPEED = 6;
@@ -19,10 +19,7 @@ const FLY_MAX_VEL_Y = 4;
 const MAX_FLY_TIME = 5;
 const CROUCH_SPEED_MULT = 0.4;
 
-/** Sprite aspect ratio: 224 / 168 = 1.333... */
-const SPRITE_RATIO = 224 / 168;
 const SPRITE_HEIGHT = 2;
-const SPRITE_WIDTH = SPRITE_HEIGHT * SPRITE_RATIO; // ~2.67
 
 interface MelProps {
   controlsRef: React.RefObject<Controls>;
@@ -239,12 +236,19 @@ export function Mel({
         mat.map = texture;
         mat.needsUpdate = true;
       }
+
+      const ratio = getFrameAspectRatio(animName, stateMachine.current.stateTime);
+      const frameWidth = SPRITE_HEIGHT * ratio;
+      spriteRef.current.scale.set(
+        facingRight.current ? frameWidth : -frameWidth,
+        SPRITE_HEIGHT,
+        1
+      );
     }
 
-    // --- Flip sprite based on facing ---
+    // --- Update facing direction ---
     const facing = stateMachine.current.facing;
     facingRight.current = facing === "right";
-    spriteRef.current.scale.x = facingRight.current ? SPRITE_WIDTH : -SPRITE_WIDTH;
 
     // --- Invincibility blink ---
     if (invincible) {
@@ -275,7 +279,7 @@ export function Mel({
     >
       <CuboidCollider args={[0.3, 0.45, 0.25]} />
       {/* Sprite billboard */}
-      <mesh ref={spriteRef} position={[0, 0.3, 0]} scale={[SPRITE_WIDTH, SPRITE_HEIGHT, 1]}>
+      <mesh ref={spriteRef} position={[0, 0.3, 0]} scale={[SPRITE_HEIGHT, SPRITE_HEIGHT, 1]}>
         <planeGeometry args={[1, 1]} />
         <meshStandardMaterial
           transparent
