@@ -92,7 +92,7 @@ const styles: Record<string, React.CSSProperties> = {
     filter: "drop-shadow(1px 1px 1px rgba(0,0,0,0.5))",
   },
   coins: {
-    color: "#FFD700",
+    color: "#DC143C",
     fontSize: "18px",
     fontWeight: "bold",
     marginLeft: 12,
@@ -103,8 +103,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   coinIcon: {
     fontSize: "14px",
-    color: "#FFD700",
-    filter: "drop-shadow(0 0 2px rgba(255,215,0,0.6))",
+    color: "#DC143C",
+    filter: "drop-shadow(0 0 2px rgba(220,20,60,0.6))",
   },
   center: {},
   controls: {

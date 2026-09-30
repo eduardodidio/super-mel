@@ -1,0 +1,32 @@
+flowchart TD
+    A[Player pressiona tecla] --> B[useControls atualiza input]
+    B --> C[AnimationStateMachine.update]
+    C --> D{Qual prioridade?}
+
+    D -->|Death| E[death state - terminal]
+    D -->|Damage| F[hurt_light/medium/heavy]
+    D -->|Attack| G[attack_prep -> 1 -> 2 -> end]
+    D -->|Airborne + flying| H[fly state]
+    D -->|Airborne| I[jump_rise/air/fall]
+    D -->|Landing| J[jump_land -> idle/walk]
+    D -->|Running| K[run state]
+    D -->|Walking| L[walk state]
+    D -->|Crouching| M[crouch state]
+    D -->|Looking up| N[look_up state]
+    D -->|Idle > 8s| O[sit -> lie_down]
+    D -->|Default| P[idle state]
+
+    F & G & H & I & J & K & L & M & N & O & P --> Q[getAnimName]
+    Q --> R[SpriteAnimator.getFrame]
+    R --> S[Resolve frame index from elapsed time]
+    S --> T[Load texture from cache]
+    T --> U[Apply to Mel mesh]
+    U --> V[Render frame]
+
+    subgraph Correcoes["Bug Fixes F29"]
+        BF1["jump_land agora usa jump_land.png"]
+        BF2["hurt_heavy agora usa hurt_heavy.png"]
+        BF3["crouch usa crouch.png dedicado"]
+        BF4["look_up usa look_up.png dedicado"]
+        BF5["fly usa fly_1 + fly_2 com loop"]
+    end

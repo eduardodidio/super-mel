@@ -1,0 +1,46 @@
+flowchart TD
+    subgraph AnimationPipeline
+        ASM[AnimationStateMachine]
+        SA[SpriteAnimator]
+        Mel[Mel.tsx]
+    end
+
+    subgraph States["20 Animation States"]
+        idle & walk & run
+        jump_rise & jump_air & jump_fall & jump_land
+        attack_prep & attack_1 & attack_2 & attack_end
+        hurt_light & hurt_medium & hurt_heavy & death
+        sit & lie_down & crouch & look_up & fly
+    end
+
+    subgraph Animations["Animation Defs"]
+        A_idle["idle: idle_right (fps 6)"]
+        A_walk["walk: walk_right, walk_right_b (fps 10)"]
+        A_run["run: run_right, run_right_b (fps 14)"]
+        A_jump["jump: jump_rise, jump_air (fps 10)"]
+        A_fall["fall: jump_fall (fps 8)"]
+        A_land["land: jump_land (fps 10)"]
+        A_attack["attack: prep, 1, 2, end (fps 12)"]
+        A_hurt["hurt: light, medium (fps 8)"]
+        A_hurtH["hurt_heavy: medium, heavy (fps 6)"]
+        A_death["death: heavy, death (fps 6)"]
+        A_crouch["crouch: crouch.png (fps 4)"]
+        A_lookup["look_up: look_up.png (fps 4)"]
+        A_fly["fly: fly_1, fly_2 (fps 10)"]
+    end
+
+    subgraph Sprites["35+ Sprite PNGs"]
+        S_existing["Existentes: 35 sprites"]
+        S_new["Novos: crouch, look_up, fly_1, fly_2"]
+        S_frames["Futuros: idle_b/c, walk_c/d, run_c/d"]
+    end
+
+    ASM -->|state + ANIM_NAME_MAP| SA
+    SA -->|getFrame + elapsed| Mel
+    Mel -->|texture -> mesh| Render[Screen]
+    States --> ASM
+    Animations --> SA
+    Sprites --> SA
+
+    style S_new fill:#ff9,color:#000
+    style S_frames fill:#ffd,color:#666

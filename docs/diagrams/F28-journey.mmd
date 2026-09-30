@@ -1,0 +1,25 @@
+flowchart TD
+    A[Player ataca com Z] --> B[Projectile voa]
+    B --> C{Colide com bloco?}
+    C -->|Nao| D[Projectile expira apos 3s]
+    C -->|Sim| E{Tipo do bloco?}
+
+    E -->|Destructivel: wood, glass| F[Bloco destruido + particulas]
+    F --> G{Drop chance 40%?}
+    G -->|Sim| H[1-2 moedas caem do local]
+    G -->|Nao| I[Nenhum drop]
+
+    E -->|item_block| J{Ja ativado?}
+    J -->|Nao| K[Bloco fica cinza - sem ?]
+    K --> L[1-3 moedas pop do topo]
+    J -->|Sim| M[Nada acontece]
+
+    E -->|Indestrutivel: stone, iron, brick| N[Projectile explode, bloco intacto]
+
+    H --> O[Moeda cai com gravidade]
+    L --> O
+    O --> P{Player perto?}
+    P -->|Sim - dist < 1.2| Q[Moeda coletada - HUD +1]
+    P -->|Nao| R{Timeout 8s?}
+    R -->|Sim| S[Moeda pisca e desaparece]
+    R -->|Nao| O

@@ -1,0 +1,44 @@
+flowchart TD
+    subgraph GameScene3D
+        PM[ProjectileManager]
+        CR[ChunkRenderer]
+        DC[DroppedCoins State]
+        BH[handleBlockHit]
+    end
+
+    subgraph Entities
+        Proj[Projectile]
+        Coin[Coin - moedaDoJogo.png]
+        DCoin[DroppedCoin]
+        Blk[Block]
+    end
+
+    subgraph Systems
+        BT[BlockTextures3D]
+        CG[ChunkGenerator]
+        TL[TestLevelData]
+    end
+
+    subgraph Shared
+        BP[BLOCK_PROPERTIES]
+    end
+
+    PM -->|onBlockHit + blockPos| BH
+    Proj -->|collision payload| PM
+    BH -->|destructible block| CR
+    BH -->|item_block| CR
+    BH -->|spawnDroppedCoins| DC
+    CR -->|destroyBlock| Blk
+    CR -->|activateBlock| Blk
+    DC --> DCoin
+    DCoin -->|onCollect -> addCoin| GameScene3D
+    DCoin -->|onExpire -> cleanup| DC
+    Blk -->|activated=true| BT
+    BT -->|item_block red -> gray| Blk
+    CG -->|generateChunk| CR
+    TL -->|testChunks + item_blocks| CR
+    BP -->|destructible check| BH
+
+    style Coin fill:#DC143C,color:#FFD700
+    style DCoin fill:#DC143C,color:#FFD700
+    style Blk fill:#555,color:#fff

@@ -23,7 +23,7 @@ const BLOCK_VISUALS: Record<Exclude<BlockType, "empty">, BlockVisual> = {
   leaf: { color: "#228B22", roughness: 1, transparent: true, opacity: 0.9 },
   water: { color: "#1E90FF", transparent: true, opacity: 0.5, roughness: 0.2, emissive: "#0a2a6a", emissiveIntensity: 0.1 },
   lava: { color: "#FF4500", emissive: "#FF4500", emissiveIntensity: 0.8, roughness: 0.3 },
-  item_block: { color: "#FFD700", emissive: "#FFD700", emissiveIntensity: 0.3, roughness: 0.5 },
+  item_block: { color: "#DC143C", emissive: "#FF4444", emissiveIntensity: 0.3, roughness: 0.5 },
 };
 
 const textureCache = new Map<string, THREE.CanvasTexture>();
@@ -88,7 +88,7 @@ function createBlockTexture(type: Exclude<BlockType, "empty">, face: "side" | "t
     ctx.fillRect(2, 2, 4, 4);
     ctx.fillRect(10, 10, 4, 4);
   } else if (type === "item_block") {
-    ctx.fillStyle = "#B8860B";
+    ctx.fillStyle = "#8B0000";
     ctx.font = "bold 12px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
