@@ -14,6 +14,8 @@ interface GameState {
   coins: number;
   totalCoins: number;
   testMode: boolean;
+  dailyMode: boolean;
+  dailySeed: number;
   isFlying: boolean;
   flyTimeRemaining: number;
   lastInputType: InputType;
@@ -30,6 +32,7 @@ interface GameState {
   healLife: () => void;
   resetGame: () => void;
   startTestMode: () => void;
+  startDailyMode: (seed: number) => void;
   setFlyState: (isFlying: boolean, flyTimeRemaining: number) => void;
   setLastInputType: (type: InputType) => void;
   setGamepadConnected: (connected: boolean) => void;
@@ -43,6 +46,8 @@ export const useGameState = create<GameState>((set) => ({
   paused: false,
   coins: 0,
   testMode: false,
+  dailyMode: false,
+  dailySeed: 0,
   isFlying: false,
   flyTimeRemaining: 5,
   lastInputType: "keyboard" as InputType,
@@ -86,10 +91,14 @@ export const useGameState = create<GameState>((set) => ({
   setGamepadConnected: (connected) => set({ gamepadConnected: connected }),
   resetGame: () => {
     const maxHearts = useAssistMode.getState().fiveHearts ? 5 : 3;
-    set({ score: 0, lives: maxHearts, coins: 0, scene: "playing", paused: false, testMode: false, isFlying: false, flyTimeRemaining: 5 });
+    set({ score: 0, lives: maxHearts, coins: 0, scene: "playing", paused: false, testMode: false, dailyMode: false, dailySeed: 0, isFlying: false, flyTimeRemaining: 5 });
   },
   startTestMode: () => {
     const maxHearts = useAssistMode.getState().fiveHearts ? 5 : 3;
-    set({ score: 0, lives: maxHearts, coins: 0, scene: "playing", paused: false, testMode: true, isFlying: false, flyTimeRemaining: 5 });
+    set({ score: 0, lives: maxHearts, coins: 0, scene: "playing", paused: false, testMode: true, dailyMode: false, dailySeed: 0, isFlying: false, flyTimeRemaining: 5 });
+  },
+  startDailyMode: (seed) => {
+    const maxHearts = useAssistMode.getState().fiveHearts ? 5 : 3;
+    set({ score: 0, lives: maxHearts, coins: 0, scene: "playing", paused: false, testMode: false, dailyMode: true, dailySeed: seed, isFlying: false, flyTimeRemaining: 5 });
   },
 }));
