@@ -38,6 +38,7 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
   const healLife = useGameState((s) => s.healLife);
   const invincibleRef = useRef(false);
   const lastX = useRef(0);
+  const maxX = useRef(0);
   const playerPosRef = useRef({ x: 2, y: 5 });
   const facingRightRef = useRef(true);
   const [isLookingUp, setIsLookingUp] = useState(false);
@@ -53,9 +54,14 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
     playerPosRef.current.x = x;
     playerPosRef.current.y = y;
     const dx = x - lastX.current;
-    if (Math.abs(dx) > 0.01) {
-      addScore(Math.abs(dx));
-      facingRightRef.current = dx > 0;
+    if (dx > 0.01) {
+      facingRightRef.current = true;
+    } else if (dx < -0.01) {
+      facingRightRef.current = false;
+    }
+    if (x > maxX.current) {
+      addScore(x - maxX.current);
+      maxX.current = x;
     }
     lastX.current = x;
   }, [addScore]);
