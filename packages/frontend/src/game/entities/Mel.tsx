@@ -30,6 +30,8 @@ interface MelProps {
   onAttackFrame?: () => void;
   onLookUp?: (looking: boolean) => void;
   onFlyStateUpdate?: (flying: boolean, timeRemaining: number) => void;
+  heartJustCollected?: boolean;
+  stateRef?: React.MutableRefObject<{ state: string; grounded: boolean; velX: number }>;
 }
 
 export function Mel({
@@ -41,6 +43,8 @@ export function Mel({
   onAttackFrame,
   onLookUp,
   onFlyStateUpdate,
+  heartJustCollected,
+  stateRef,
 }: MelProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const spriteRef = useRef<THREE.Mesh>(null);
@@ -69,6 +73,8 @@ export function Mel({
   const crouching = useRef(false);
   const lookingUp = useRef(false);
   const lastLookingUp = useRef(false);
+  const lookUpTime = useRef(0);
+  const wasHeartCollected = useRef(false);
 
   // Load sprites once on mount
   useEffect(() => {
@@ -194,6 +200,13 @@ export function Mel({
       lastLookingUp.current = lookingUp.current;
     }
 
+    // --- Look up time tracking ---
+    if (lookingUp.current) {
+      lookUpTime.current += delta;
+    } else {
+      lookUpTime.current = 0;
+    }
+
     // --- Idle time tracking ---
     const hasHorizontalInput = ctrl.left || ctrl.right;
     if (hasHorizontalInput || !grounded.current) {
@@ -205,6 +218,10 @@ export function Mel({
     // --- Damage edge detection (true only on the frame damage occurs) ---
     const justDamaged = invincible && !wasInvincible.current;
     wasInvincible.current = invincible;
+
+    // --- Heart collection edge detection ---
+    const justCollectedHeart = (heartJustCollected ?? false) && !wasHeartCollected.current;
+    wasHeartCollected.current = heartJustCollected ?? false;
 
     // --- Animation state machine update ---
     const animInput: AnimInput = {
@@ -219,6 +236,8 @@ export function Mel({
       crouching: crouching.current,
       lookingUp: lookingUp.current,
       flying: flying.current,
+      lookUpTime: lookUpTime.current,
+      heartCollected: justCollectedHeart,
     };
 
     stateMachine.current.update(animInput, delta);
@@ -252,6 +271,15 @@ export function Mel({
     // --- Update facing direction ---
     const facing = stateMachine.current.facing;
     facingRight.current = facing === "right";
+
+    // --- Expose state for EffectManager ---
+    if (stateRef) {
+      stateRef.current = {
+        state: stateMachine.current.state,
+        grounded: grounded.current,
+        velX: vel.x,
+      };
+    }
 
     // --- Invincibility blink ---
     if (invincible) {

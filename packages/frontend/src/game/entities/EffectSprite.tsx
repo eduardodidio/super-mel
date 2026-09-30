@@ -7,7 +7,7 @@ import * as THREE from "three";
 // ---------------------------------------------------------------------------
 
 export interface EffectSpriteProps {
-  type: "dust" | "stars" | "heart" | "exclamation";
+  type: "dust" | "stars" | "heart" | "exclamation" | "zzz";
   position: [number, number, number];
   onComplete: () => void;
   scale?: number;
@@ -27,6 +27,7 @@ const EFFECT_CONFIGS: Record<EffectSpriteProps["type"], EffectConfig> = {
   stars: { duration: 0.5 },
   heart: { duration: 0.8 },
   exclamation: { duration: 1.0 },
+  zzz: { duration: 2.0 },
 };
 
 // ---------------------------------------------------------------------------
@@ -261,6 +262,79 @@ function ExclamationEffect({
   );
 }
 
+/** Zzz: three small light-blue boxes floating upward with staggered timing */
+function ZzzEffect({
+  position,
+  onComplete,
+  scale = 1,
+}: Omit<EffectSpriteProps, "type">) {
+  const groupRef = useRef<THREE.Group>(null);
+  const elapsed = useRef(0);
+  const config = EFFECT_CONFIGS.zzz;
+
+  const zData = useRef([
+    { delay: 0.0, offsetX: 0 },
+    { delay: 0.4, offsetX: 0.15 },
+    { delay: 0.8, offsetX: -0.1 },
+  ]);
+
+  useFrame((_, delta) => {
+    elapsed.current += delta;
+    const t = elapsed.current / config.duration;
+
+    if (t >= 1) {
+      onComplete();
+      return;
+    }
+
+    if (!groupRef.current) return;
+    const children = groupRef.current.children;
+
+    for (let i = 0; i < zData.current.length; i++) {
+      const z = zData.current[i];
+      const localT = Math.max(0, (elapsed.current - z.delay) / (config.duration - z.delay));
+      if (localT <= 0) {
+        children[i].visible = false;
+        continue;
+      }
+      children[i].visible = true;
+
+      // Float upward with gentle sway
+      const yOffset = localT * 1.2;
+      const xSway = Math.sin(elapsed.current * 3 + i * 2) * 0.08;
+      children[i].position.set(
+        z.offsetX + xSway,
+        yOffset,
+        0.1
+      );
+
+      // Scale: grow in, then stable
+      const s = Math.min(localT * 4, 1) * 0.08 * scale * (1 - i * 0.15);
+      children[i].scale.setScalar(s);
+
+      // Fade out in last 40%
+      const mat = (children[i] as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      mat.opacity = localT > 0.6 ? THREE.MathUtils.lerp(0.9, 0, (localT - 0.6) / 0.4) : 0.9;
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={position}>
+      {zData.current.map((_, i) => (
+        <mesh key={i} visible={false}>
+          <boxGeometry args={[0.2, 0.2, 0.02]} />
+          <meshBasicMaterial
+            color={0xaaddff}
+            transparent
+            opacity={0.9}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main EffectSprite Component
 // ---------------------------------------------------------------------------
@@ -277,6 +351,8 @@ export function EffectSprite({ type, position, onComplete, scale }: EffectSprite
       return <HeartEffect {...props} />;
     case "exclamation":
       return <ExclamationEffect {...props} />;
+    case "zzz":
+      return <ZzzEffect {...props} />;
     default:
       return null;
   }
