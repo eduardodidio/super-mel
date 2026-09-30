@@ -21,7 +21,9 @@ export type AnimState =
   | "lie_down"
   | "crouch"
   | "look_up"
-  | "fly";
+  | "fly"
+  | "wait"
+  | "affection";
 
 export interface AnimInput {
   velX: number;
@@ -35,6 +37,8 @@ export interface AnimInput {
   crouching: boolean;
   lookingUp: boolean;
   flying: boolean;
+  lookUpTime: number;
+  heartCollected: boolean;
 }
 
 // Duration map for one-shot states (seconds).
@@ -48,6 +52,7 @@ const ONE_SHOT_DURATIONS: Partial<Record<AnimState, number>> = {
   attack_2: 0.17,
   attack_end: 0.17,
   jump_land: 0.15,
+  affection: 0.6,
 };
 
 // Maps one-shot states to their default next state.
@@ -60,6 +65,7 @@ const ONE_SHOT_NEXT: Partial<Record<AnimState, AnimState>> = {
   attack_2: "attack_end",
   attack_end: "idle",
   jump_land: "idle",
+  affection: "idle",
 };
 
 // States that cannot be interrupted by lower-priority input.
@@ -72,6 +78,7 @@ const NON_INTERRUPTIBLE: Set<AnimState> = new Set([
   "attack_2",
   "attack_end",
   "death",
+  "affection",
 ]);
 
 // Maps AnimState to the animation name used by SpriteAnimator.
@@ -96,6 +103,8 @@ const ANIM_NAME_MAP: Record<AnimState, string> = {
   crouch: "crouch",
   look_up: "look_up",
   fly: "fly",
+  wait: "wait",
+  affection: "affection",
 };
 
 export class AnimationStateMachine {
@@ -129,6 +138,12 @@ export class AnimationStateMachine {
     if (input.damaged && !this.isHurt()) {
       const hurtState = this.damageToHurtState(input.damageLevel);
       this.transition(hurtState);
+      return this.state;
+    }
+
+    // --- Priority 2.5: Affection (heart collected, one-shot) ---
+    if (input.heartCollected && !NON_INTERRUPTIBLE.has(this.state)) {
+      this.transition("affection");
       return this.state;
     }
 
@@ -194,17 +209,22 @@ export class AnimationStateMachine {
 
     // --- Priority 7.6: Look up (grounded + holding up + not moving) ---
     if (input.lookingUp && input.grounded && Math.abs(input.velX) < 0.5) {
+      // --- Priority 7.7: Wait (looking up for >3s) ---
+      if (input.lookUpTime > 3) {
+        this.transitionIfDifferent("wait");
+        return this.state;
+      }
       this.transitionIfDifferent("look_up");
       return this.state;
     }
 
-    // --- Priority 8: Sit (idle > 8s) ---
-    if (input.idleTime > 16 && (this.state === "sit" || this.state === "lie_down")) {
+    // --- Priority 8: Sit (idle > 5s) ---
+    if (input.idleTime > 12 && (this.state === "sit" || this.state === "lie_down")) {
       this.transitionIfDifferent("lie_down");
       return this.state;
     }
 
-    if (input.idleTime > 8) {
+    if (input.idleTime > 5) {
       this.transitionIfDifferent("sit");
       return this.state;
     }
@@ -293,6 +313,7 @@ export class AnimationStateMachine {
       this.state === "run" ||
       this.state === "sit" ||
       this.state === "lie_down" ||
+      this.state === "wait" ||
       this.state === "crouch" ||
       this.state === "jump_land"
     );

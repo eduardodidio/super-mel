@@ -1,4 +1,6 @@
 import { useRef, useCallback, useState, useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useRapier } from "@react-three/rapier";
 import * as THREE from "three";
 import { BLOCK_PROPERTIES, type BlockType } from "@super-mel/shared";
 import { Mel } from "../entities/Mel";
@@ -7,9 +9,12 @@ import { CameraRig } from "../systems/CameraRig";
 import { ChunkRenderer, type ChunkRendererHandle } from "../systems/ChunkRenderer";
 import { ProjectileManager } from "../systems/ProjectileManager";
 import { BackgroundDecor } from "../systems/BackgroundDecor";
+import { EffectManager } from "../systems/EffectManager";
+import { useScreenShake } from "../systems/useScreenShake";
 import { useControls } from "../hooks/useControls";
 import { useGameState } from "../hooks/useGameState";
 import { generateTestLevel } from "../systems/TestLevelData";
+import { sharedCoinPopup } from "../systems/CoinPopup";
 
 const INVINCIBILITY_MS = 1500;
 const MAX_DROPPED_COINS = 20;
@@ -50,6 +55,21 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
   const [droppedCoins, setDroppedCoins] = useState<DroppedCoinData[]>([]);
   const dropIdRef = useRef(0);
 
+  // Heart collection signal for affection animation (T01)
+  const heartCollectedRef = useRef(false);
+  const heartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Mel state ref for EffectManager (T02)
+  const melStateRef = useRef({ state: "idle", grounded: true, velX: 0 });
+
+  // Screen shake (T04)
+  const shake = useScreenShake((s) => s.shake);
+
+  // Hit-stop (T04)
+  const hitStopRef = useRef(false);
+
+  // Coin popup uses sharedCoinPopup (module-level ref set by CoinPopupLayer outside Canvas)
+
   const handlePositionUpdate = useCallback((x: number, y: number) => {
     melTracker.current.position.set(x, y, 0);
     playerPosRef.current.x = x;
@@ -74,15 +94,27 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
   const handleDamage = useCallback(() => {
     if (invincibleRef.current) return;
     loseLife();
+    shake(0.15, 0.2);
+    hitStopRef.current = true;
     invincibleRef.current = true;
     window.setTimeout(() => {
       invincibleRef.current = false;
     }, INVINCIBILITY_MS);
-  }, [loseLife]);
+  }, [loseLife, shake]);
 
   const handleCoinCollected = useCallback(() => {
     addCoin();
+    sharedCoinPopup.current?.spawn(playerPosRef.current.x, playerPosRef.current.y + 1);
   }, [addCoin]);
+
+  const handleHeartCollected = useCallback(() => {
+    healLife();
+    heartCollectedRef.current = true;
+    if (heartTimerRef.current) clearTimeout(heartTimerRef.current);
+    heartTimerRef.current = setTimeout(() => {
+      heartCollectedRef.current = false;
+    }, 50);
+  }, [healLife]);
 
   const spawnDroppedCoins = useCallback((x: number, y: number, count: number, popVelocity: number) => {
     const newCoins: DroppedCoinData[] = [];
@@ -106,20 +138,23 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
     if (blockType === "item_block") {
       const activated = chunkRef.current?.activateBlock(blockPos.x, blockPos.y, blockPos.z);
       if (activated) {
+        shake(0.06, 0.1);
         const coinCount = 1 + Math.floor(Math.random() * 3);
         spawnDroppedCoins(blockPos.x, blockPos.y + 1, coinCount, ITEM_BLOCK_POP_VELOCITY);
       }
     } else if (BLOCK_PROPERTIES[blockType]?.destructible) {
       chunkRef.current?.destroyBlock(blockPos.x, blockPos.y, blockPos.z);
+      shake(0.1, 0.12);
       if (Math.random() < DROP_CHANCE) {
         const coinCount = 1 + Math.floor(Math.random() * 2);
         spawnDroppedCoins(blockPos.x, blockPos.y, coinCount, DROP_VELOCITY_Y);
       }
     }
-  }, [spawnDroppedCoins]);
+  }, [spawnDroppedCoins, shake]);
 
   const handleDroppedCoinCollect = useCallback((coinId: string) => {
     addCoin();
+    sharedCoinPopup.current?.spawn(playerPosRef.current.x, playerPosRef.current.y + 1);
     setDroppedCoins(prev => prev.filter(c => c.id !== coinId));
   }, [addCoin]);
 
@@ -136,6 +171,8 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
         deadzone={{ x: 2, y: 1.5 }}
         isLookingUp={isLookingUp}
         lookUpOffset={5}
+        facingRightRef={facingRightRef}
+        lookaheadX={1.5}
       />
 
       <BackgroundDecor theme={theme} playerXRef={playerPosRef} />
@@ -148,6 +185,8 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
         dead={lives <= 0}
         onLookUp={setIsLookingUp}
         onFlyStateUpdate={handleFlyStateUpdate}
+        heartJustCollected={heartCollectedRef.current}
+        stateRef={melStateRef}
       />
 
       <ProjectileManager
@@ -160,7 +199,7 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
       <ChunkRenderer
         ref={chunkRef}
         playerPosRef={playerPosRef}
-        onHeartCollected={healLife}
+        onHeartCollected={handleHeartCollected}
         onCoinCollected={handleCoinCollected}
         testChunks={testChunks}
       />
@@ -176,6 +215,47 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
           onExpire={handleDroppedCoinExpire}
         />
       ))}
+
+      <EffectManager
+        playerX={playerPosRef.current.x}
+        playerY={playerPosRef.current.y}
+        playerState={melStateRef.current.state}
+        playerGrounded={melStateRef.current.grounded}
+        playerVelX={melStateRef.current.velX}
+      />
+
+      <HitStop triggerRef={hitStopRef} />
     </>
   );
+}
+
+// ---------------------------------------------------------------------------
+// HitStop -- 40ms physics freeze on damage
+// ---------------------------------------------------------------------------
+
+function HitStop({ triggerRef }: { triggerRef: React.RefObject<boolean> }) {
+  const { world } = useRapier();
+  const originalTimestep = useRef(1 / 60);
+  const timerRef = useRef(0);
+  const active = useRef(false);
+
+  useFrame((_, delta) => {
+    if (triggerRef.current && !active.current) {
+      originalTimestep.current = world.timestep;
+      world.timestep = 0;
+      active.current = true;
+      timerRef.current = 0;
+      (triggerRef as React.MutableRefObject<boolean>).current = false;
+    }
+
+    if (active.current) {
+      timerRef.current += delta;
+      if (timerRef.current >= 0.04) {
+        world.timestep = originalTimestep.current;
+        active.current = false;
+      }
+    }
+  });
+
+  return null;
 }

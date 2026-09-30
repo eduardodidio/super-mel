@@ -15,7 +15,8 @@ import { playTrack, toggleMute, isMuted } from "./systems/AudioManager3D";
 import { LeaderboardView } from "../components/LeaderboardView";
 import { usePWAInstall } from "../hooks/usePWAInstall";
 import type { BackgroundTheme } from "@super-mel/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CoinPopupLayer, type CoinPopupHandle } from "./systems/CoinPopup";
 
 const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
 
@@ -50,6 +51,7 @@ export function Game3D() {
   const controlsRef = useControls();
   const { canInstall, triggerInstall, isInstalled } = usePWAInstall();
   const [muted, setMuted] = useState(isMuted());
+  const coinPopupRef = useRef<CoinPopupHandle | null>(null);
 
   // Audio: maintheme on menu, comeco on playing
   useEffect(() => {
@@ -94,6 +96,9 @@ export function Game3D() {
 
       {/* HUD */}
       <HUD3D lives={lives} score={score} coins={coins} scene={scene} isFlying={isFlying} flyTimeRemaining={flyTimeRemaining} />
+
+      {/* Coin popup overlay */}
+      {scene === "playing" && <CoinPopupLayer popupRef={coinPopupRef} />}
 
       {/* Mute button */}
       <button

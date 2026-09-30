@@ -134,6 +134,18 @@ const ANIMATIONS: Record<string, SpriteAnimationDef> = {
     fps: 10,
     loop: true,
   },
+  wait: {
+    name: "wait",
+    frames: ["wait"],
+    fps: 4,
+    loop: true,
+  },
+  affection: {
+    name: "affection",
+    frames: ["affection"],
+    fps: 6,
+    loop: false,
+  },
 };
 
 // ---------------------------------------------------------------------------
