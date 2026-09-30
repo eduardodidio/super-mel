@@ -8,6 +8,18 @@ const TRACKS: Record<TrackName, string> = {
 let currentAudio: HTMLAudioElement | null = null;
 let currentTrack: TrackName | null = null;
 let muted = false;
+let volume = 0.4;
+
+export function setVolume(v: number): void {
+  volume = Math.max(0, Math.min(1, v));
+  if (currentAudio) {
+    currentAudio.volume = volume;
+  }
+}
+
+export function getVolume(): number {
+  return volume;
+}
 
 export function playTrack(name: TrackName, loop = true) {
   if (currentTrack === name && currentAudio && !currentAudio.paused) return;
@@ -16,7 +28,7 @@ export function playTrack(name: TrackName, loop = true) {
 
   const audio = new Audio(TRACKS[name]);
   audio.loop = loop;
-  audio.volume = 0.4;
+  audio.volume = volume;
   audio.muted = muted;
   audio.play().catch(() => {
     // Autoplay blocked — will play on next user interaction

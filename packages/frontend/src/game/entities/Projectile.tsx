@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { RigidBody, type RapierRigidBody, type CollisionPayload } from "@react-three/rapier";
 import * as THREE from "three";
 import { getFrame, ANIMATIONS } from "../systems/SpriteAnimator";
+import { useGameState } from "../hooks/useGameState";
 
 interface ProjectileProps {
   id: string;
@@ -39,6 +40,7 @@ export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }
   }, []);
 
   useFrame((_, delta) => {
+    if (useGameState.getState().paused) return;
     if (exploding) {
       explodeRef.current += delta;
       if (meshRef.current) {

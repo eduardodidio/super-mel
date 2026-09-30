@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import type { GameScene } from "../hooks/useGameState";
+import { useGameState, type InputType, type GameScene } from "../hooks/useGameState";
+import { useAssistMode } from "../hooks/useAssistMode";
 
 interface HUD3DProps {
   lives: number;
@@ -14,6 +15,19 @@ function getPortraitFilter(lives: number): string | undefined {
   if (lives >= 3) return undefined;
   if (lives === 2) return "sepia(0.3) saturate(1.3)";
   return "sepia(0.5) saturate(2) hue-rotate(-20deg)";
+}
+
+function getControlsHint(inputType: InputType): string {
+  switch (inputType) {
+    case "keyboard":
+      return "A/D = andar   Space = pular   Z = atirar";
+    case "touch":
+      return "D-pad = andar   A = pular   B = atirar";
+    case "gamepad":
+      return "Stick = andar   A = pular   X = atirar   Start = pausar";
+    default:
+      return "A/D = andar   Space = pular   Z = atirar";
+  }
 }
 
 function getBarColor(ratio: number): string {
@@ -118,6 +132,12 @@ function StaminaBar({ isFlying, flyTimeRemaining }: { isFlying: boolean; flyTime
 
 export function HUD3D({ lives, score, coins, scene, isFlying = false, flyTimeRemaining = 5 }: HUD3DProps) {
   const [portraitError, setPortraitError] = useState(false);
+  const lastInputType = useGameState((s) => s.lastInputType);
+  const fiveHearts = useAssistMode((s) => s.fiveHearts);
+  const anyAssist = useAssistMode((s) =>
+    s.invincible || s.unlimitedFlight || s.fiveHearts || s.gameSpeed !== 1.0
+  );
+  const maxHearts = fiveHearts ? 5 : 3;
 
   if (scene !== "playing") return null;
 
@@ -140,7 +160,7 @@ export function HUD3D({ lives, score, coins, scene, isFlying = false, flyTimeRem
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <span style={styles.hearts}>
-              {Array.from({ length: 3 }, (_, i) => (
+              {Array.from({ length: maxHearts }, (_, i) => (
                 <span key={i} style={{ opacity: i < lives ? 1 : 0.2, fontSize: "24px" }}>
                   &#9829;
                 </span>
@@ -155,8 +175,13 @@ export function HUD3D({ lives, score, coins, scene, isFlying = false, flyTimeRem
       </div>
       <div style={styles.center}>
         <span style={styles.controls}>
-          A/D = andar &nbsp; Space = pular &nbsp; Z = atirar
+          {getControlsHint(lastInputType)}
         </span>
+        {anyAssist && (
+          <span style={styles.assistIndicator}>
+            MODO ASSISTIDO ATIVO
+          </span>
+        )}
       </div>
       <div style={styles.right}>
         <span style={styles.score}>{Math.floor(score)}m</span>
@@ -213,10 +238,20 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#DC143C",
     filter: "drop-shadow(0 0 2px rgba(220,20,60,0.6))",
   },
-  center: {},
+  center: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
   controls: {
     color: "rgba(255,255,255,0.4)",
     fontSize: "11px",
+  },
+  assistIndicator: {
+    color: "#888",
+    fontSize: "10px",
+    marginTop: 4,
+    fontFamily: "monospace",
   },
   right: {},
   score: {

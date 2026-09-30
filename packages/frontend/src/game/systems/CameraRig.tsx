@@ -3,6 +3,7 @@ import { useRef } from "react";
 import * as THREE from "three";
 import { useScreenShake } from "./useScreenShake";
 import { sharedCameraRef, sharedCanvasSize } from "./CoinPopup";
+import { useGameState } from "../hooks/useGameState";
 
 interface CameraRigProps {
   targetRef: React.RefObject<THREE.Object3D | null>;
@@ -35,6 +36,7 @@ export function CameraRig({
   const lookaheadRef = useRef(0);
 
   useFrame((_, delta) => {
+    if (useGameState.getState().paused) return;
     if (!targetRef.current) return;
     const target = targetRef.current.position;
 

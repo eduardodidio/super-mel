@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Controls } from "../hooks/useControls";
-import type { GameScene } from "../hooks/useGameState";
+import { useGameState, type GameScene } from "../hooks/useGameState";
 
 interface TouchControls3DProps {
   controlsRef: React.RefObject<Controls>;
@@ -9,17 +9,25 @@ interface TouchControls3DProps {
 
 export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const gamepadConnected = useGameState((s) => s.gamepadConnected);
 
   useEffect(() => {
     setIsMobile("ontouchstart" in window || navigator.maxTouchPoints > 0);
   }, []);
 
-  if (!isMobile || scene !== "playing") return null;
+  if (!isMobile || scene !== "playing" || gamepadConnected) return null;
 
   const set = (key: keyof Controls, value: boolean) => (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (controlsRef.current) controlsRef.current[key] = value;
+    // Track touch input type
+    if (value) {
+      const state = useGameState.getState();
+      if (state.lastInputType !== "touch") {
+        state.setLastInputType("touch");
+      }
+    }
   };
 
   return (

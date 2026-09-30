@@ -1,8 +1,9 @@
 import { useRef, useEffect } from "react";
-import { useFrame } from "@react-three/fiber";
 import { RigidBody, CuboidCollider, type RapierRigidBody, useRapier } from "@react-three/rapier";
 import * as THREE from "three";
 import type { Controls } from "../hooks/useControls";
+import { useGameFrame } from "../hooks/useGameFrame";
+import { useAssistMode } from "../hooks/useAssistMode";
 import { loadSprites, getFrame, getFrameEvent, getFrameAspectRatio } from "../systems/SpriteAnimator";
 import { AnimationStateMachine, type AnimInput } from "../systems/AnimationStateMachine";
 
@@ -55,7 +56,7 @@ export function Mel({
   const spritesLoaded = useRef(false);
   const lastEvent = useRef<string | undefined>(undefined);
 
-  // Damage edge-detection: true only on the frame invincible flips from false→true
+  // Damage edge-detection: true only on the frame invincible flips from false->true
   const wasInvincible = useRef(false);
 
   // Physics refs
@@ -83,7 +84,7 @@ export function Mel({
     });
   }, []);
 
-  useFrame((_, delta) => {
+  useGameFrame((_, delta) => {
     if (!rigidBodyRef.current || !spriteRef.current) return;
 
     timeRef.current += delta;
@@ -160,14 +161,16 @@ export function Mel({
 
     lastJumpPressed.current = jumpPressed;
 
-    // --- Fly (max 5s) ---
+    // --- Fly (max 5s, or unlimited with assist mode) ---
+    const unlimitedFlight = useAssistMode.getState().unlimitedFlight;
+
     if (ctrl.jump && !grounded.current && jumping.current && jumpHoldTimer.current >= MAX_JUMP_HOLD) {
       flying.current = true;
     }
     if (flying.current) {
       flyTimer.current += delta;
     }
-    if (flyTimer.current >= MAX_FLY_TIME) {
+    if (flyTimer.current >= MAX_FLY_TIME && !unlimitedFlight) {
       flying.current = false;
     }
     if (flying.current && ctrl.jump && !grounded.current) {
@@ -183,7 +186,12 @@ export function Mel({
     }
 
     onPositionUpdate?.(pos.x, pos.y);
-    onFlyStateUpdate?.(flying.current, Math.max(0, MAX_FLY_TIME - flyTimer.current));
+
+    // Report fly state — unlimited flight always shows full stamina bar
+    const reportedTime = unlimitedFlight
+      ? MAX_FLY_TIME
+      : Math.max(0, MAX_FLY_TIME - flyTimer.current);
+    onFlyStateUpdate?.(flying.current, reportedTime);
 
     // --- Attack timer ---
     if (ctrl.shoot && attackTimer.current <= 0) {

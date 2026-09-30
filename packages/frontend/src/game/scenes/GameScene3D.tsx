@@ -13,6 +13,7 @@ import { EffectManager } from "../systems/EffectManager";
 import { useScreenShake } from "../systems/useScreenShake";
 import { useControls } from "../hooks/useControls";
 import { useGameState } from "../hooks/useGameState";
+import { useAssistMode } from "../hooks/useAssistMode";
 import { generateTestLevel } from "../systems/TestLevelData";
 import { sharedCoinPopup } from "../systems/CoinPopup";
 
@@ -42,6 +43,7 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
   const addCoin = useGameState((s) => s.addCoin);
   const healLife = useGameState((s) => s.healLife);
   const setFlyState = useGameState((s) => s.setFlyState);
+  const assistInvincible = useAssistMode((s) => s.invincible);
   const invincibleRef = useRef(false);
   const lastX = useRef(0);
   const maxX = useRef(0);
@@ -92,7 +94,7 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
   }, [setFlyState]);
 
   const handleDamage = useCallback(() => {
-    if (invincibleRef.current) return;
+    if (invincibleRef.current || assistInvincible) return;
     loseLife();
     shake(0.15, 0.2);
     hitStopRef.current = true;
@@ -100,7 +102,7 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
     window.setTimeout(() => {
       invincibleRef.current = false;
     }, INVINCIBILITY_MS);
-  }, [loseLife, shake]);
+  }, [loseLife, shake, assistInvincible]);
 
   const handleCoinCollected = useCallback(() => {
     addCoin();
