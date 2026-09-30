@@ -33,6 +33,8 @@ interface MelProps {
   onFlyStateUpdate?: (flying: boolean, timeRemaining: number) => void;
   heartJustCollected?: boolean;
   stateRef?: React.MutableRefObject<{ state: string; grounded: boolean; velX: number }>;
+  respawnPoint?: { x: number; y: number };
+  initialPosition?: [number, number, number];
 }
 
 export function Mel({
@@ -46,6 +48,8 @@ export function Mel({
   onFlyStateUpdate,
   heartJustCollected,
   stateRef,
+  respawnPoint,
+  initialPosition,
 }: MelProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const spriteRef = useRef<THREE.Mesh>(null);
@@ -299,7 +303,9 @@ export function Mel({
     // --- Fall death ---
     if (pos.y < -15) {
       onCollisionDamage?.();
-      rb.setTranslation({ x: pos.x, y: 8, z: 0 }, true);
+      const rx = respawnPoint?.x ?? pos.x;
+      const ry = (respawnPoint?.y ?? 8) + 2;
+      rb.setTranslation({ x: rx, y: ry, z: 0 }, true);
       rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
     }
   });
@@ -307,7 +313,7 @@ export function Mel({
   return (
     <RigidBody
       ref={rigidBodyRef}
-      position={[2, 5, 0]}
+      position={initialPosition ?? [2, 5, 0]}
       mass={1}
       linearDamping={0}
       lockRotations

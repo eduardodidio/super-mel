@@ -127,12 +127,21 @@ export function EditorWrapper() {
     };
   }, [blocks, entities, theme]);
 
+  const startLevel = useGameState((s) => s.startLevel);
+
   const handleTest = useCallback(() => {
-    // Store level data for testing
-    const levelData = buildLevelDataV2();
-    sessionStorage.setItem("supermel_test_level", JSON.stringify(levelData));
-    setScene("playing");
-  }, [buildLevelDataV2, setScene]);
+    // Build level data and start in level mode
+    const data = buildLevelDataV2();
+    // Check if the level has a goal entity — if so, use level mode; otherwise fallback to test mode
+    const hasGoal = data.entities.some((e) => e.type === "goal");
+    if (hasGoal) {
+      startLevel(`editor-test-${Date.now()}`, data);
+    } else {
+      // No goal: use legacy test mode (infinite mode with level chunks)
+      sessionStorage.setItem("supermel_test_level", JSON.stringify(data));
+      setScene("playing");
+    }
+  }, [buildLevelDataV2, setScene, startLevel]);
 
   const handleSave = useCallback(async () => {
     const name = prompt("Nome da fase:", levelName || "Minha Fase");

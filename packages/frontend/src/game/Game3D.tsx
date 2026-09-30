@@ -6,6 +6,7 @@ import { HUD3D } from "./systems/HUD3D";
 import { MenuScene3D } from "./scenes/MenuScene3D";
 import { GameScene3D } from "./scenes/GameScene3D";
 import { GameOverOverlay } from "./scenes/GameOverScene3D";
+import { LevelClearOverlay } from "./scenes/LevelClearOverlay";
 import { EditorWrapper } from "./scenes/EditorWrapper";
 import { LevelSelectOverlay } from "./scenes/LevelSelectScene3D";
 import { useGameState } from "./hooks/useGameState";
@@ -30,13 +31,21 @@ function SceneContent() {
   const scene = useGameState((s) => s.scene);
   const theme = useGameState((s) => s.theme);
   const testMode = useGameState((s) => s.testMode);
+  const currentLevelData = useGameState((s) => s.currentLevelData);
+  const levelId = useGameState((s) => s.levelId);
 
   return (
     <>
       <Skybox theme={theme} />
       <Lighting theme={theme} />
       {scene === "menu" && <MenuScene3D />}
-      {scene === "playing" && <GameScene3D testMode={testMode} />}
+      {scene === "playing" && (
+        <GameScene3D
+          key={levelId ?? "infinite"}
+          testMode={testMode}
+          levelData={currentLevelData ?? undefined}
+        />
+      )}
     </>
   );
 }
@@ -90,6 +99,9 @@ export function Game3D() {
       playTrack("maintheme", true);
     } else if (scene === "playing") {
       playTrack("comeco", true);
+    } else if (scene === "levelclear") {
+      // TODO: play victory fanfare SFX when available
+      playTrack("maintheme", true);
     }
   }, [scene]);
 
@@ -265,6 +277,7 @@ export function Game3D() {
         )}
 
         {scene === "gameover" && <GameOverOverlay />}
+        {scene === "levelclear" && <LevelClearOverlay />}
         {scene === "levelselect" && <LevelSelectOverlay />}
       </div>
 

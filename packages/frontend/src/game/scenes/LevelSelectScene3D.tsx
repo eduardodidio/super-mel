@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useGameState } from "../hooks/useGameState";
+import { migrateLevelData } from "@super-mel/shared";
+import type { LevelDataV2 } from "@super-mel/shared";
 
 interface LevelEntry {
   id: string;
@@ -11,8 +13,11 @@ interface LevelEntry {
 
 export function LevelSelectOverlay() {
   const setScene = useGameState((s) => s.setScene);
+  const setTheme = useGameState((s) => s.setTheme);
+  const startLevel = useGameState((s) => s.startLevel);
   const [levels, setLevels] = useState<LevelEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingLevelId, setLoadingLevelId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/levels")
@@ -21,6 +26,30 @@ export function LevelSelectOverlay() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const handlePlayLevel = async (level: LevelEntry) => {
+    setLoadingLevelId(level.id);
+    try {
+      const res = await fetch(`/api/levels/${level.id}`);
+      if (!res.ok) {
+        alert("Erro ao carregar fase.");
+        setLoadingLevelId(null);
+        return;
+      }
+      const data = await res.json();
+      // Migrate level data to v2 format
+      const levelData: LevelDataV2 = migrateLevelData(data.data);
+      // Set the theme from the level
+      if (data.background) {
+        setTheme(data.background);
+      }
+      // Start in level mode
+      startLevel(level.id, levelData);
+    } catch {
+      alert("Erro de conexao.");
+      setLoadingLevelId(null);
+    }
+  };
 
   return (
     <div style={styles.overlay}>
@@ -33,13 +62,24 @@ export function LevelSelectOverlay() {
           <p style={styles.empty}>Nenhuma fase publicada ainda. Crie a primeira!</p>
         ) : (
           levels.map((level) => (
-            <div key={level.id} style={styles.levelCard}>
+            <div
+              key={level.id}
+              style={styles.levelCard}
+              onClick={() => handlePlayLevel(level)}
+            >
               <div>
                 <strong>{level.name}</strong>
                 <br />
                 <span style={styles.creator}>por {level.creatorName}</span>
               </div>
-              <span style={styles.theme}>{level.background}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={styles.theme}>{level.background}</span>
+                {loadingLevelId === level.id ? (
+                  <span style={{ fontSize: "11px", color: "#ffcc00" }}>...</span>
+                ) : (
+                  <span style={styles.playBtn}>JOGAR</span>
+                )}
+              </div>
             </div>
           ))
         )}
@@ -107,6 +147,12 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#666",
     padding: 30,
     fontSize: "14px",
+  },
+  playBtn: {
+    fontSize: "11px",
+    color: "#4a8a4a",
+    fontWeight: "bold",
+    fontFamily: "monospace",
   },
   backBtn: {
     marginTop: 20,

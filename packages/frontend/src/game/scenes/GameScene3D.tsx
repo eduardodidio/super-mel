@@ -2,8 +2,10 @@ import { useRef, useCallback, useState, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useRapier } from "@react-three/rapier";
 import * as THREE from "three";
-import { BLOCK_PROPERTIES, type BlockType } from "@super-mel/shared";
+import { BLOCK_PROPERTIES, type BlockType, type LevelDataV2 } from "@super-mel/shared";
 import { Mel } from "../entities/Mel";
+import { Goal } from "../entities/Goal";
+import { Checkpoint } from "../entities/Checkpoint";
 import { DroppedCoin } from "../entities/DroppedCoin";
 import { CameraRig } from "../systems/CameraRig";
 import { ChunkRenderer, type ChunkRendererHandle } from "../systems/ChunkRenderer";
@@ -11,10 +13,11 @@ import { ProjectileManager } from "../systems/ProjectileManager";
 import { BackgroundDecor } from "../systems/BackgroundDecor";
 import { EffectManager } from "../systems/EffectManager";
 import { useScreenShake } from "../systems/useScreenShake";
-import { useControls } from "../hooks/useControls";
+import { useControls, type Controls } from "../hooks/useControls";
 import { useGameState } from "../hooks/useGameState";
 import { useAssistMode } from "../hooks/useAssistMode";
 import { generateTestLevel } from "../systems/TestLevelData";
+import { levelToSceneObjects, sceneObjectsToChunks } from "../systems/LevelSceneConverter";
 import { sharedCoinPopup } from "../systems/CoinPopup";
 
 const INVINCIBILITY_MS = 1500;
@@ -25,6 +28,7 @@ const DROP_VELOCITY_Y = 5;
 
 interface GameScene3DProps {
   testMode?: boolean;
+  levelData?: LevelDataV2;
 }
 
 interface DroppedCoinData {
@@ -33,7 +37,13 @@ interface DroppedCoinData {
   velocity: [number, number];
 }
 
-export function GameScene3D({ testMode = false }: GameScene3DProps) {
+// Frozen controls ref for level-completing state (no input)
+const FROZEN_CONTROLS: Controls = {
+  left: false, right: false, up: false, down: false,
+  jump: false, shoot: false,
+};
+
+export function GameScene3D({ testMode = false, levelData }: GameScene3DProps) {
   const melTracker = useRef<THREE.Object3D>(new THREE.Object3D());
   const controlsRef = useControls();
   const addScore = useGameState((s) => s.addScore);
@@ -55,6 +65,58 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
   const [isLookingUp, setIsLookingUp] = useState(false);
   const testChunks = useMemo(() => testMode ? generateTestLevel() : undefined, [testMode]);
 
+  // Level mode state
+  const gameMode = useGameState((s) => s.gameMode);
+  const levelCompleting = useGameState((s) => s.levelCompleting);
+  const setLevelCompleting = useGameState((s) => s.setLevelCompleting);
+  const completeLevel = useGameState((s) => s.completeLevel);
+  const setLastCheckpoint = useGameState((s) => s.setLastCheckpoint);
+  const lastCheckpoint = useGameState((s) => s.lastCheckpoint);
+
+  // Parse level entities from LevelDataV2
+  const sceneObjects = useMemo(() => {
+    if (!levelData) return null;
+    return levelToSceneObjects(levelData);
+  }, [levelData]);
+
+  const levelChunks = useMemo(() => {
+    if (!sceneObjects) return undefined;
+    return sceneObjectsToChunks(sceneObjects);
+  }, [sceneObjects]);
+
+  const goalEntities = sceneObjects?.goal ? [sceneObjects.goal] : [];
+  const checkpointEntities = sceneObjects?.checkpoints ?? [];
+  const spawnPoint = sceneObjects?.spawnPoint ?? { x: 2, y: 5 };
+
+  // Warn if level has no goal
+  if (levelData && goalEntities.length === 0) {
+    // eslint-disable-next-line no-console
+    console.warn("Level has no goal entity");
+  }
+
+  // Respawn point: last checkpoint or spawn point
+  const respawnPoint = lastCheckpoint || spawnPoint;
+
+  // Checkpoint activation state
+  const [activeCheckpointId, setActiveCheckpointId] = useState<string | null>(null);
+
+  // Goal position ref for celebration sprite
+  const goalPositionRef = useRef<{ x: number; y: number } | null>(
+    goalEntities.length > 0 ? goalEntities[0] : null
+  );
+
+  // Celebration sprite texture
+  const jumpOnOwnerTexture = useMemo(() => {
+    const tex = new THREE.TextureLoader().load("/sprites/mel/jump_on_owner.png");
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+
+  // Frozen controls ref for levelCompleting
+  const frozenControlsRef = useRef<Controls>(FROZEN_CONTROLS);
+
   // Coin drop system
   const chunkRef = useRef<ChunkRendererHandle>(null);
   const [droppedCoins, setDroppedCoins] = useState<DroppedCoinData[]>([]);
@@ -74,6 +136,23 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
   const hitStopRef = useRef(false);
 
   // Coin popup uses sharedCoinPopup (module-level ref set by CoinPopupLayer outside Canvas)
+
+  // --- Goal collision handler ---
+  const handleGoalReached = useCallback(() => {
+    if (gameMode !== "level") return;
+    if (levelCompleting) return; // guard against double trigger
+    setLevelCompleting(true);
+    // After 1.5s celebration delay, transition to result screen
+    setTimeout(() => {
+      completeLevel(); // sets scene to "levelclear"
+    }, 1500);
+  }, [gameMode, levelCompleting, setLevelCompleting, completeLevel]);
+
+  // --- Checkpoint activation handler ---
+  const handleCheckpointActivate = useCallback((id: string, x: number, y: number) => {
+    setActiveCheckpointId(id);
+    setLastCheckpoint(x, y);
+  }, [setLastCheckpoint]);
 
   const handlePositionUpdate = useCallback((x: number, y: number) => {
     melTracker.current.position.set(x, y, 0);
@@ -167,6 +246,14 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
     setDroppedCoins(prev => prev.filter(c => c.id !== coinId));
   }, []);
 
+  // Determine which chunks to use: level data chunks vs infinite/test chunks
+  const effectiveChunks = levelChunks ?? testChunks;
+
+  // Mel initial position: from spawn point (level mode) or default
+  const melInitialPosition: [number, number, number] = levelData
+    ? [spawnPoint.x, spawnPoint.y + 1, 0]
+    : [2, 5, 0];
+
   return (
     <>
       <CameraRig
@@ -183,7 +270,7 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
       <BackgroundDecor theme={theme} playerXRef={playerPosRef} />
 
       <Mel
-        controlsRef={controlsRef}
+        controlsRef={levelCompleting ? frozenControlsRef : controlsRef}
         onPositionUpdate={handlePositionUpdate}
         onCollisionDamage={handleDamage}
         invincible={invincibleRef.current}
@@ -192,6 +279,8 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
         onFlyStateUpdate={handleFlyStateUpdate}
         heartJustCollected={heartCollectedRef.current}
         stateRef={melStateRef}
+        respawnPoint={gameMode === "level" ? respawnPoint : undefined}
+        initialPosition={melInitialPosition}
       />
 
       <ProjectileManager
@@ -206,9 +295,46 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
         playerPosRef={playerPosRef}
         onHeartCollected={handleHeartCollected}
         onCoinCollected={handleCoinCollected}
-        testChunks={testChunks}
+        testChunks={effectiveChunks}
         baseSeed={baseSeed}
       />
+
+      {/* Goal entities from level data */}
+      {goalEntities.map((g, i) => (
+        <Goal
+          key={`goal-${i}`}
+          position={[g.x, g.y, 0]}
+          onGoalReached={handleGoalReached}
+        />
+      ))}
+
+      {/* Checkpoint entities from level data */}
+      {checkpointEntities.map((cp) => {
+        const cpId = `checkpoint-${cp.x}-${cp.y}`;
+        return (
+          <Checkpoint
+            key={cpId}
+            id={cpId}
+            position={[cp.x, cp.y, 0]}
+            active={activeCheckpointId === cpId}
+            onActivate={handleCheckpointActivate}
+          />
+        );
+      })}
+
+      {/* Celebration sprite during levelCompleting */}
+      {levelCompleting && goalPositionRef.current && (
+        <sprite
+          position={[goalPositionRef.current.x, goalPositionRef.current.y + 1.5, 0.1]}
+          scale={[2.5, 2.5, 1]}
+        >
+          <spriteMaterial
+            map={jumpOnOwnerTexture}
+            transparent
+            depthTest={false}
+          />
+        </sprite>
+      )}
 
       {droppedCoins.map(coin => (
         <DroppedCoin
