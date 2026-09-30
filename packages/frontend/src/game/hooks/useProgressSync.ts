@@ -2,7 +2,51 @@ import { useEffect, useRef } from "react";
 import { useGameState } from "./useGameState";
 
 const DEBOUNCE_MS = 2000;
-const FLUSH_SCENES = ["gameover", "menu"]; // flush immediately on these scene changes
+const FLUSH_SCENES = ["gameover", "menu", "worldmap", "levelclear"]; // flush immediately on these scene changes
+
+// ---------------------------------------------------------------------------
+// Campaign progress types and merge logic (F49)
+// ---------------------------------------------------------------------------
+
+interface CampaignProgress {
+  levelsCleared: string[];
+  stars: Record<string, number>;
+  bones: Record<string, number>;
+}
+
+function getLocalCampaignProgress(): CampaignProgress {
+  try {
+    const raw = localStorage.getItem("supermel_campaign_progress");
+    if (raw) return JSON.parse(raw) as CampaignProgress;
+  } catch { /* ignore */ }
+  return { levelsCleared: [], stars: {}, bones: {} };
+}
+
+function mergeCampaignProgress(a: CampaignProgress, b: CampaignProgress): CampaignProgress {
+  const levelsCleared = [...new Set([...a.levelsCleared, ...b.levelsCleared])];
+  const stars: Record<string, number> = { ...a.stars };
+  const bones: Record<string, number> = { ...a.bones };
+
+  for (const [key, val] of Object.entries(b.stars)) {
+    stars[key] = Math.max(stars[key] ?? 0, val);
+  }
+  for (const [key, val] of Object.entries(b.bones)) {
+    bones[key] = Math.max(bones[key] ?? 0, val);
+  }
+
+  return { levelsCleared, stars, bones };
+}
+
+function campaignNeedsSync(backend: CampaignProgress, merged: CampaignProgress): boolean {
+  if (merged.levelsCleared.length > backend.levelsCleared.length) return true;
+  for (const key of Object.keys(merged.stars)) {
+    if ((merged.stars[key] ?? 0) > (backend.stars[key] ?? 0)) return true;
+  }
+  for (const key of Object.keys(merged.bones)) {
+    if ((merged.bones[key] ?? 0) > (backend.bones[key] ?? 0)) return true;
+  }
+  return false;
+}
 
 // ---------------------------------------------------------------------------
 // Auth helpers
@@ -16,6 +60,32 @@ function isGuest(): boolean {
   const token = getAuthToken();
   const playerId = localStorage.getItem("supermel_player_id") || "";
   return !token || playerId.startsWith("local-");
+}
+
+// ---------------------------------------------------------------------------
+// Helper: build data payload with optional extras
+// ---------------------------------------------------------------------------
+
+function buildDataPayload(): Record<string, unknown> | undefined {
+  const data: Record<string, unknown> = {};
+
+  // Infinite missions
+  const infData = localStorage.getItem("supermel_infinite_missions");
+  if (infData) {
+    try {
+      data.infiniteMissions = JSON.parse(infData);
+    } catch { /* ignore */ }
+  }
+
+  // Campaign progress
+  const campaignRaw = localStorage.getItem("supermel_campaign_progress");
+  if (campaignRaw) {
+    try {
+      data.campaign = JSON.parse(campaignRaw);
+    } catch { /* ignore */ }
+  }
+
+  return Object.keys(data).length > 0 ? data : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,7 +129,7 @@ async function putProgress(
 // ---------------------------------------------------------------------------
 
 /**
- * Immediately sync current totalCoins to the backend.
+ * Immediately sync current totalCoins + campaign progress to the backend.
  * No-op for guests. Safe to call anywhere (fire-and-forget).
  */
 export function flushProgress(): void {
@@ -67,7 +137,11 @@ export function flushProgress(): void {
   const token = getAuthToken();
   if (!token) return;
   const state = useGameState.getState();
-  putProgress(token, { totalCoins: state.totalCoins });
+
+  putProgress(token, {
+    totalCoins: state.totalCoins,
+    data: buildDataPayload(),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -79,17 +153,12 @@ export function flushProgress(): void {
  *
  * For registered (non-guest) players:
  *   1. On mount: loads progress from backend, resolves conflicts with
- *      localStorage via Math.max.
+ *      localStorage via Math.max. Also merges campaign progress (F49).
  *   2. Subscribes to Zustand: debounces PUT calls when totalCoins changes.
- *   3. Flushes immediately when the scene changes to gameover or menu.
+ *   3. Flushes immediately when the scene changes to gameover, menu,
+ *      worldmap, or levelclear.
  *
  * For guests: complete no-op (no network calls).
- *
- * Extension notes for future mutations:
- *   When adding new progress fields (levelsCleared, achievements, etc.),
- *   include them in the subscribe callback and pass them in the `data`
- *   field of putProgress. The backend merges arrays via set-union and
- *   objects via shallow overwrite.
  */
 export function useProgressSync() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,6 +194,40 @@ export function useProgressSync() {
       }
 
       lastSyncedCoins.current = resolvedCoins;
+
+      // Merge infinite missions data from backend if available
+      const backendInfMissions = progress.data?.infiniteMissions;
+      if (backendInfMissions && typeof backendInfMissions === "object") {
+        const localInfRaw = localStorage.getItem("supermel_infinite_missions");
+        if (!localInfRaw) {
+          // No local data -- use backend data
+          try {
+            localStorage.setItem("supermel_infinite_missions", JSON.stringify(backendInfMissions));
+          } catch { /* ignore */ }
+        }
+      }
+
+      // Merge campaign progress from backend (F49)
+      const backendCampaign = (progress.data?.campaign as CampaignProgress | undefined) ?? {
+        levelsCleared: [],
+        stars: {},
+        bones: {},
+      };
+      const localCampaign = getLocalCampaignProgress();
+      const mergedCampaign = mergeCampaignProgress(backendCampaign, localCampaign);
+
+      // Write merged back to localStorage
+      try {
+        localStorage.setItem("supermel_campaign_progress", JSON.stringify(mergedCampaign));
+      } catch { /* ignore */ }
+
+      // If local had data not in backend, push to backend
+      if (campaignNeedsSync(backendCampaign, mergedCampaign)) {
+        putProgress(token, {
+          totalCoins: resolvedCoins,
+          data: { campaign: mergedCampaign },
+        });
+      }
     });
   }, []);
 
@@ -146,7 +249,11 @@ export function useProgressSync() {
       timerRef.current = setTimeout(() => {
         const current = useGameState.getState();
         lastSyncedCoins.current = current.totalCoins;
-        putProgress(token, { totalCoins: current.totalCoins });
+
+        putProgress(token, {
+          totalCoins: current.totalCoins,
+          data: buildDataPayload(),
+        });
       }, DEBOUNCE_MS);
     });
 
@@ -156,7 +263,7 @@ export function useProgressSync() {
     };
   }, []);
 
-  // 3. Flush immediately on critical scene changes (gameover, menu)
+  // 3. Flush immediately on critical scene changes
   useEffect(() => {
     if (isGuest()) return;
 
@@ -174,10 +281,12 @@ export function useProgressSync() {
       }
 
       const current = useGameState.getState();
-      if (current.totalCoins !== lastSyncedCoins.current) {
-        lastSyncedCoins.current = current.totalCoins;
-        putProgress(token, { totalCoins: current.totalCoins });
-      }
+      lastSyncedCoins.current = current.totalCoins;
+
+      putProgress(token, {
+        totalCoins: current.totalCoins,
+        data: buildDataPayload(),
+      });
     });
 
     return () => unsubscribe();

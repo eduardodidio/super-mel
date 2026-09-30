@@ -1,5 +1,5 @@
 import type { LevelDataV2, EntityData, BlockCell, BlockType } from "@super-mel/shared";
-import type { Chunk, BlockData, HeartData, CoinData } from "./ChunkGenerator";
+import type { Chunk, BlockData, HeartData, CoinData, EnemyChunkData } from "./ChunkGenerator";
 
 // ---------------------------------------------------------------------------
 // Helper: lay ground (dirt surface + 2 layers of stone underground)
@@ -79,7 +79,7 @@ function generateChunk0(): Chunk {
   blocks.push(block("wood", 10, 1, -3, true));
   blocks.push(block("wood", 10, 2, -3, true));
 
-  return { startX: 0, blocks, hearts, coins };
+  return { startX: 0, blocks, hearts, coins, enemies: [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +118,7 @@ function generateChunk1(): Chunk {
   // 1 heart on high platform
   hearts.push({ x: 26, y: 7 });
 
-  return { startX: 16, blocks, hearts, coins };
+  return { startX: 16, blocks, hearts, coins, enemies: [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +154,13 @@ function generateChunk2(): Chunk {
   // 1 item_block at x=39, y=4
   blocks.push(block("item_block", 39, 4));
 
-  return { startX: 32, blocks, hearts, coins };
+  // Enemies in combat zone
+  const enemies: EnemyChunkData[] = [
+    { subtype: "vacuum", x: 34, y: 1 },
+    { subtype: "vacuum", x: 43, y: 1 },
+  ];
+
+  return { startX: 32, blocks, hearts, coins, enemies };
 }
 
 // ---------------------------------------------------------------------------
@@ -203,7 +209,12 @@ function generateChunk3(): Chunk {
     blocks.push(block("lava", x, -4));
   }
 
-  return { startX: 48, blocks, hearts, coins };
+  // Pigeon flying over the gap
+  const enemies: EnemyChunkData[] = [
+    { subtype: "pigeon", x: 58, y: 5 },
+  ];
+
+  return { startX: 48, blocks, hearts, coins, enemies };
 }
 
 // ---------------------------------------------------------------------------
@@ -240,7 +251,12 @@ function generateChunk4(): Chunk {
   blocks.push(block("wood", 74, 1, -3, true));
   blocks.push(block("wood", 74, 2, -3, true));
 
-  return { startX: 64, blocks, hearts, coins };
+  // Bee guarding the approach to the finish
+  const enemies: EnemyChunkData[] = [
+    { subtype: "bee", x: 70, y: 2 },
+  ];
+
+  return { startX: 64, blocks, hearts, coins, enemies };
 }
 
 // ---------------------------------------------------------------------------
@@ -351,6 +367,9 @@ export function generateTestLevelV2(): LevelDataV2 {
   entities.push({ type: "coin", x: 38, y: 1 });
   // Item block
   setBlock("item_block", 39, 4);
+  // Enemies in combat zone
+  entities.push({ type: "enemy", x: 34, y: 1, props: { subtype: "vacuum" } });
+  entities.push({ type: "enemy", x: 43, y: 1, props: { subtype: "vacuum" } });
 
   // --- Chunk 3 (x: 48-63): Advanced Platforming ---
   for (let x = 48; x <= 49; x++) {
@@ -387,6 +406,8 @@ export function generateTestLevelV2(): LevelDataV2 {
   entities.push({ type: "coin", x: 60, y: 4 });
   // Lava
   for (let x = 57; x <= 60; x++) setBlock("lava", x, -4);
+  // Pigeon flying over the gap
+  entities.push({ type: "enemy", x: 58, y: 5, props: { subtype: "pigeon" } });
 
   // --- Chunk 4 (x: 64-79): Victory Run ---
   for (let x = 64; x <= 79; x++) {
@@ -405,6 +426,8 @@ export function generateTestLevelV2(): LevelDataV2 {
   setBlock("item_block", 76, 1);
   setBlock("item_block", 76, 2);
   setBlock("item_block", 76, 3);
+  // Bee guarding the approach to the finish
+  entities.push({ type: "enemy", x: 70, y: 2, props: { subtype: "bee" } });
   // Goal
   entities.push({ type: "goal", x: 78, y: 1 });
 

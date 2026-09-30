@@ -23,7 +23,10 @@ export type AnimState =
   | "look_up"
   | "fly"
   | "wait"
-  | "affection";
+  | "affection"
+  | "bark"
+  | "dig"
+  | "sniff";
 
 export interface AnimInput {
   velX: number;
@@ -39,6 +42,9 @@ export interface AnimInput {
   flying: boolean;
   lookUpTime: number;
   heartCollected: boolean;
+  barkPressed: boolean;
+  digging: boolean;
+  sniffing: boolean;
 }
 
 // Duration map for one-shot states (seconds).
@@ -53,6 +59,8 @@ const ONE_SHOT_DURATIONS: Partial<Record<AnimState, number>> = {
   attack_end: 0.17,
   jump_land: 0.15,
   affection: 0.6,
+  bark: 0.35,
+  dig: 0.5,
 };
 
 // Maps one-shot states to their default next state.
@@ -66,6 +74,8 @@ const ONE_SHOT_NEXT: Partial<Record<AnimState, AnimState>> = {
   attack_end: "idle",
   jump_land: "idle",
   affection: "idle",
+  bark: "idle",
+  dig: "crouch",
 };
 
 // States that cannot be interrupted by lower-priority input.
@@ -79,6 +89,8 @@ const NON_INTERRUPTIBLE: Set<AnimState> = new Set([
   "attack_end",
   "death",
   "affection",
+  "bark",
+  "dig",
 ]);
 
 // Maps AnimState to the animation name used by SpriteAnimator.
@@ -105,6 +117,9 @@ const ANIM_NAME_MAP: Record<AnimState, string> = {
   fly: "fly",
   wait: "wait",
   affection: "affection",
+  bark: "bark",
+  dig: "dig",
+  sniff: "sniff",
 };
 
 export class AnimationStateMachine {
@@ -160,9 +175,21 @@ export class AnimationStateMachine {
       return this.state;
     }
 
+    // --- Priority 2.7: Bark (one-shot, non-interruptible) ---
+    if (input.barkPressed && !NON_INTERRUPTIBLE.has(this.state)) {
+      this.transition("bark");
+      return this.state;
+    }
+
     // --- Priority 3: Attack ---
     if (input.attackPressed && this.canStartAttack()) {
       this.transition("attack_prep");
+      return this.state;
+    }
+
+    // --- Priority 3.5: Dig (one-shot, requires crouching) ---
+    if (input.digging && this.canStartAttack()) {
+      this.transition("dig");
       return this.state;
     }
 
@@ -203,6 +230,11 @@ export class AnimationStateMachine {
 
     // --- Priority 7.5: Crouch (grounded + holding down) ---
     if (input.crouching && input.grounded) {
+      // --- Priority 7.55: Sniff (holding down while still for 1s+) ---
+      if (input.sniffing && input.grounded && Math.abs(input.velX) < 0.5) {
+        this.transitionIfDifferent("sniff");
+        return this.state;
+      }
       this.transitionIfDifferent("crouch");
       return this.state;
     }

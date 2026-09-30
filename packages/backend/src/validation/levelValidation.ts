@@ -1,11 +1,15 @@
+import { validateCustomAssets } from "./customAssetValidation.js";
+
 const VALID_ENTITY_TYPES: Set<string> = new Set([
   "coin", "heart", "goal", "checkpoint", "spawn",
   "item_block_content", "sign", "bone", "enemy",
+  "custom_block_asset",
 ]);
 
 const VALID_BLOCK_TYPES: Set<string> = new Set([
   "empty", "stone", "sand", "wood", "iron", "dirt",
   "brick", "glass", "leaf", "water", "lava", "item_block",
+  "custom",
 ]);
 
 interface ValidationResult {
@@ -111,6 +115,14 @@ export function validateLevelDataV2(data: unknown): ValidationResult {
     const validThemes = ["forest", "desert", "night", "space", "ocean"];
     if (typeof obj.theme !== "string" || !validThemes.includes(obj.theme)) {
       errors.push(`data.theme "${obj.theme}" is not a valid BackgroundTheme`);
+    }
+  }
+
+  // Optional: customAssets (Galeria do Rafa)
+  if (obj.customAssets !== undefined) {
+    const assetResult = validateCustomAssets(obj.customAssets);
+    if (!assetResult.valid) {
+      errors.push(...assetResult.errors);
     }
   }
 

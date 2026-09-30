@@ -14,9 +14,12 @@ model Player {
   isGuest   Boolean  @default(true) @map("is_guest")
   createdAt DateTime @default(now()) @map("created_at")
 
-  scores   Score[]
-  levels   Level[]
-  progress Progress?
+  scores    Score[]
+  levels    Level[]
+  progress  Progress?
+  attempts  LevelAttempt[]
+  reactions LevelReaction[]
+  reports   LevelReport[]
 
   @@map("players")
 }
@@ -57,9 +60,60 @@ model Level {
   published  Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
+  code       String?  @unique @db.VarChar(6)
+  plays      Int      @default(0)
+  clears     Int      @default(0)
+  bestTime   Int?     @map("best_time")
+  cleared    Boolean  @default(false)
+  approved   Boolean  @default(false)
 
-  creator Player  @relation(fields: [creatorId], references: [id])
-  scores  Score[]
+  creator   Player           @relation(fields: [creatorId], references: [id])
+  scores    Score[]
+  attempts  LevelAttempt[]
+  reactions LevelReaction[]
+  reports   LevelReport[]
 
   @@map("levels")
+}
+
+model LevelAttempt {
+  id        String   @id @default(uuid()) @db.Uuid
+  levelId   String   @map("level_id") @db.Uuid
+  playerId  String   @map("player_id") @db.Uuid
+  cleared   Boolean  @default(false)
+  time      Int?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  level  Level  @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@map("level_attempts")
+}
+
+model LevelReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  levelId   String   @map("level_id") @db.Uuid
+  playerId  String   @map("player_id") @db.Uuid
+  stamp     String   @db.VarChar(10)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  level  Level  @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([levelId, playerId])
+  @@map("level_reactions")
+}
+
+model LevelReport {
+  id        String   @id @default(uuid()) @db.Uuid
+  levelId   String   @map("level_id") @db.Uuid
+  playerId  String   @map("player_id") @db.Uuid
+  reason    String   @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  level  Level  @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([levelId, playerId])
+  @@map("level_reports")
 }

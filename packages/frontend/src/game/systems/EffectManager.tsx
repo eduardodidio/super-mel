@@ -123,6 +123,21 @@ export function EffectManager({
       zzzTimerRef.current = 0;
     }
 
+    // --- Bark ring: when entering bark state ---
+    if (stateChanged && playerState === "bark") {
+      spawnEffect("bark_ring", [playerX, playerY, 0.1]);
+    }
+
+    // --- Dig dust: when entering dig state ---
+    if (stateChanged && playerState === "dig") {
+      spawnEffect("dig_dust", [playerX, playerY - 0.4, 0.1]);
+    }
+
+    // --- Sniff dust: when entering sniff state (small puff at nose) ---
+    if (stateChanged && playerState === "sniff") {
+      spawnEffect("dust", [playerX + 0.3, playerY - 0.2, 0.1], 0.5);
+    }
+
     // Update prev state
     prevStateRef.current = playerState;
   });

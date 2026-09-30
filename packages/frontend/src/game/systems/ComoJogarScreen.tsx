@@ -23,6 +23,9 @@ const KEYBOARD_CONTROLS: ControlRow[] = [
   { action: "ABAIXAR", key: "S / Seta Baixo" },
   { action: "OLHAR PRA CIMA", key: "W / Seta Cima" },
   { action: "ATIRAR", key: "Z / J" },
+  { action: "LATIR", key: "X / K" },
+  { action: "CAVAR", key: "Baixo + Z (terra/areia)" },
+  { action: "FAREJAR", key: "Segurar Baixo (1s parada)" },
   { action: "PAUSAR", key: "Esc" },
 ];
 
@@ -30,6 +33,9 @@ const TOUCH_CONTROLS: ControlRow[] = [
   { action: "MOVER", key: "D-pad esquerdo" },
   { action: "PULAR / VOAR", key: "Botao A (segurar = voar)" },
   { action: "ATIRAR", key: "Botao B" },
+  { action: "LATIR", key: "Botao C" },
+  { action: "CAVAR", key: "Baixo + B (terra/areia)" },
+  { action: "FAREJAR", key: "Segurar Baixo (1s parada)" },
   { action: "PAUSAR", key: "(use Esc no teclado)" },
 ];
 
@@ -37,6 +43,9 @@ const GAMEPAD_CONTROLS: ControlRow[] = [
   { action: "MOVER", key: "D-pad / Analogico esquerdo" },
   { action: "PULAR / VOAR", key: "A / X (segurar = voar)" },
   { action: "ATIRAR", key: "X / Quadrado" },
+  { action: "LATIR", key: "Y / Triangulo" },
+  { action: "CAVAR", key: "Baixo + X (terra/areia)" },
+  { action: "FAREJAR", key: "Segurar Baixo (1s parado)" },
   { action: "PAUSAR", key: "Start" },
 ];
 
@@ -51,6 +60,10 @@ const TIPS = [
   "Atire na Bola do Infinito para destruir blocos",
   "Colete coracoes para recuperar vida",
   "Moedas vermelhas valem pontos -- pegue todas!",
+  "Latir (X) atordoa inimigos e revela item_blocks",
+  "Cave terra e areia (Baixo+Z) para encontrar ossos e moedas",
+  "Fique parada segurando Baixo para farejar segredos por perto",
+  "A Bola do Infinito volta como bumerangue coletando moedas!",
 ];
 
 export function ComoJogarScreen({ onBack }: ComoJogarScreenProps) {

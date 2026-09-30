@@ -1,6 +1,6 @@
 # Feature F47 -- Movimentos de Cachorro + Latido
 
-**Status:** planned
+**Status:** done
 **Owner:** @architect
 **PRD:** inline (B-20 + B-14)
 **Backlog:** B-20 (Cavar, Buscar, Farejar), B-14 (Latido)

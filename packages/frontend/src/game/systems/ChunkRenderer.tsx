@@ -1,9 +1,11 @@
-import React, { useState, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Block } from "../entities/Block";
 import { Heart } from "../entities/Heart";
 import { Coin } from "../entities/Coin";
-import { generateChunk, getVisibleChunkIndices, type Chunk } from "./ChunkGenerator";
+import { generateChunk, generateChunkBiome, getVisibleChunkIndices, type Chunk, type EnemyChunkData } from "./ChunkGenerator";
+import { getBiomeForChunk } from "./BiomeManager";
+import { getPrefabCandidates, chunkDifficultyRange } from "./PrefabLibrary";
 import { useGameState } from "../hooks/useGameState";
 
 interface ChunkRendererProps {
@@ -11,17 +13,21 @@ interface ChunkRendererProps {
   onBlockDestroyed?: (x: number, y: number) => void;
   onHeartCollected?: () => void;
   onCoinCollected?: () => void;
+  onEnemiesUpdate?: (enemies: EnemyChunkData[]) => void;
   testChunks?: Chunk[];
   baseSeed?: number;
+  biomeEnabled?: boolean;
 }
 
 export interface ChunkRendererHandle {
   destroyBlock: (x: number, y: number, z: number) => boolean;
   activateBlock: (x: number, y: number, z: number) => boolean;
+  getBlockAt: (x: number, y: number, z: number) => import("@super-mel/shared").BlockType | null;
+  isBlockActivated: (x: number, y: number, z: number) => boolean;
 }
 
 export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>(
-  function ChunkRenderer({ playerPosRef, onBlockDestroyed, onHeartCollected, onCoinCollected, testChunks, baseSeed }, ref) {
+  function ChunkRenderer({ playerPosRef, onBlockDestroyed, onHeartCollected, onCoinCollected, onEnemiesUpdate, testChunks, baseSeed, biomeEnabled }, ref) {
     const [chunks, setChunks] = useState<Map<number, Chunk>>(() => {
       if (testChunks) {
         const map = new Map<number, Chunk>();
@@ -53,6 +59,22 @@ export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>
         setRenderTick(t => t + 1);
         return true;
       },
+      getBlockAt(x, y, z) {
+        const key = `${x},${y},${z}`;
+        if (destroyedBlocks.current.has(key)) return null;
+        for (const chunk of chunks.values()) {
+          for (const b of chunk.blocks) {
+            if (b.x === x && b.y === y && b.z === z) {
+              return b.type;
+            }
+          }
+        }
+        return null;
+      },
+      isBlockActivated(x, y, z) {
+        const key = `${x},${y},${z}`;
+        return activatedBlocks.current.has(key);
+      },
     }));
 
     useFrame(() => {
@@ -70,7 +92,14 @@ export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>
 
         for (const idx of visibleIndices) {
           if (!next.has(idx)) {
-            next.set(idx, generateChunk(idx, baseSeed ?? 0));
+            if (biomeEnabled) {
+              const biomeState = getBiomeForChunk(idx);
+              const { min, max } = chunkDifficultyRange(idx);
+              const candidates = getPrefabCandidates(min, max, biomeState.current);
+              next.set(idx, generateChunkBiome(idx, baseSeed ?? 0, biomeState.current, candidates));
+            } else {
+              next.set(idx, generateChunk(idx, baseSeed ?? 0));
+            }
             changed = true;
           }
         }
@@ -100,6 +129,24 @@ export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>
       collectedCoins.current.add(key);
       onCoinCollected?.();
     }, [onCoinCollected]);
+
+    // Notify parent about enemies from all visible chunks
+    const lastEnemyHashRef = useRef("");
+    useEffect(() => {
+      if (!onEnemiesUpdate) return;
+      const allEnemies: EnemyChunkData[] = [];
+      for (const chunk of chunks.values()) {
+        if (chunk.enemies) {
+          allEnemies.push(...chunk.enemies);
+        }
+      }
+      // Only fire if enemies actually changed (avoid infinite loops)
+      const hash = allEnemies.map(e => `${e.subtype}-${e.x}-${e.y}`).join("|");
+      if (hash !== lastEnemyHashRef.current) {
+        lastEnemyHashRef.current = hash;
+        onEnemiesUpdate(allEnemies);
+      }
+    }, [chunks, onEnemiesUpdate]);
 
     // renderTick is used to force re-render when blocks are destroyed/activated externally
     void renderTick;

@@ -4,7 +4,8 @@ import { RigidBody, type RapierRigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 import type { BlockType } from "@super-mel/shared";
 import { BLOCK_PROPERTIES } from "@super-mel/shared";
-import { getBlockMaterials } from "../systems/BlockTextures3D";
+import { getBlockMaterials, getCustomBlockMaterials } from "../systems/BlockTextures3D";
+import { getCustomBlockDataUri } from "../systems/CustomTextureCache";
 
 interface BlockProps {
   type: Exclude<BlockType, "empty">;
@@ -17,7 +18,15 @@ interface BlockProps {
 export function Block({ type, position, onDestroy, isBackground = false, activated = false }: BlockProps) {
   const [destroyed, setDestroyed] = useState(false);
   const props = BLOCK_PROPERTIES[type];
-  const materials = getBlockMaterials(type);
+
+  // For custom blocks, look up the data URI and use custom materials
+  let materials: THREE.MeshStandardMaterial[];
+  if (type === "custom") {
+    const dataUri = getCustomBlockDataUri(position[0], position[1]);
+    materials = dataUri ? getCustomBlockMaterials(dataUri) : getBlockMaterials("custom");
+  } else {
+    materials = getBlockMaterials(type);
+  }
 
   // Item block bump animation refs
   const bumpMeshRef = useRef<THREE.Mesh>(null);

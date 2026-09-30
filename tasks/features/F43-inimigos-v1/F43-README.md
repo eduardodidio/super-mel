@@ -1,6 +1,6 @@
 # Feature F43 -- Inimigos v1: 3 tipos + pisao
 
-**Status:** planned
+**Status:** done
 **Owner:** @architect
 **PRD:** inline (B-13)
 **Backlog:** B-13 (Inimigos v1 -- 3 tipos + pisao)

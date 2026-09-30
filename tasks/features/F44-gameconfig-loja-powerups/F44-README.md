@@ -1,6 +1,6 @@
 # Feature F44 -- GAME_CONFIG centralizado + Loja + Power-ups
 
-**Status:** planned
+**Status:** done
 **Owner:** @architect
 **PRD:** inline (B-42 + B-17 + B-18)
 **Backlog:** B-42 (GAME_CONFIG centralizado), B-17 (Loja da Mel), B-18 (Power-ups temporarios)

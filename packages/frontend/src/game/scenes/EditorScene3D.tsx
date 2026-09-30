@@ -1,9 +1,9 @@
 import { useRef, useState, useCallback } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import type { BlockType, BackgroundTheme, EntityData, EntityType } from "@super-mel/shared";
+import type { BlockType, BackgroundTheme, EntityData, EntityType, CustomAsset } from "@super-mel/shared";
 import type { EditorTool } from "./EditorUI";
-import { getBlockMaterials } from "../systems/BlockTextures3D";
+import { getBlockMaterials, getCustomBlockMaterials } from "../systems/BlockTextures3D";
 
 interface EditorBlock {
   type: Exclude<BlockType, "empty">;
@@ -18,6 +18,7 @@ interface EditorSceneProps {
   currentZ: number;
   selectedTool: EditorTool;
   itemBlockContent: string;
+  signText: string;
   spawnPoint: { x: number; y: number };
   onPlaceBlock: (x: number, y: number) => void;
   onRemoveBlock: (x: number, y: number) => void;
@@ -25,20 +26,24 @@ interface EditorSceneProps {
   onPlaceEntity: (entity: EntityData) => void;
   onRemoveEntity: (x: number, y: number) => void;
   theme: BackgroundTheme;
+  // Custom assets (Galeria do Rafa)
+  customAssets: CustomAsset[];
+  selectedCustomAssetId: string | null;
 }
 
 // --- Tool classification helpers ---
 
-function isBlockTool(tool: EditorTool): tool is Exclude<BlockType, "empty"> {
+function isBlockTool(tool: EditorTool): boolean {
   const blockTypes = new Set([
     "stone", "sand", "wood", "iron", "dirt", "brick",
     "glass", "leaf", "water", "lava", "item_block",
+    "custom", "custom_block",
   ]);
   return blockTypes.has(tool);
 }
 
 function isEntityTool(tool: EditorTool): boolean {
-  return tool.startsWith("entity_");
+  return tool.startsWith("entity_") || tool === "custom_sign";
 }
 
 function entityToolToType(tool: EditorTool): EntityType | null {
@@ -49,6 +54,8 @@ function entityToolToType(tool: EditorTool): EntityType | null {
     entity_spawn: "spawn",
     entity_checkpoint: "checkpoint",
     entity_goal: "goal",
+    entity_bone: "bone",
+    entity_sign: "sign",
   };
   return map[tool] ?? null;
 }
@@ -124,6 +131,10 @@ function getHoverColor(selectedTool: EditorTool): string {
   if (selectedTool === "entity_item_block") return "#FFD700";
   if (selectedTool === "entity_checkpoint") return "#4488FF";
   if (selectedTool === "entity_goal") return "#FF8800";
+  if (selectedTool === "entity_bone") return "#F5F5DC";
+  if (selectedTool === "entity_sign") return "#A0522D";
+  if (selectedTool === "custom_block") return "#CC88FF";
+  if (selectedTool === "custom_sign") return "#8B5A2B";
   return "#ffffff";
 }
 
@@ -135,12 +146,15 @@ export function EditorScene3D({
   currentZ,
   selectedTool,
   itemBlockContent,
+  signText,
   spawnPoint,
   onPlaceBlock,
   onRemoveBlock,
   onSetSpawn,
   onPlaceEntity,
   onRemoveEntity,
+  customAssets,
+  selectedCustomAssetId,
 }: EditorSceneProps) {
   const { camera, raycaster, pointer } = useThree();
   const gridPlaneRef = useRef<THREE.Mesh>(null);
@@ -171,6 +185,19 @@ export function EditorScene3D({
       // Eraser removes both blocks and entities at the position
       onRemoveBlock(pos.x, pos.y);
       onRemoveEntity(pos.x, pos.y);
+    } else if (selectedTool === "custom_block") {
+      // Custom block: handled by onPlaceBlock which places block + entity
+      onPlaceBlock(pos.x, pos.y);
+    } else if (selectedTool === "custom_sign") {
+      // Custom sign: place a sign entity with customAssetId
+      if (!selectedCustomAssetId) return;
+      const entity: EntityData = {
+        type: "sign",
+        x: pos.x,
+        y: pos.y,
+        props: { customAssetId: selectedCustomAssetId },
+      };
+      onPlaceEntity(entity);
     } else if (isBlockTool(selectedTool)) {
       onPlaceBlock(pos.x, pos.y);
     } else if (isEntityTool(selectedTool)) {
@@ -193,9 +220,14 @@ export function EditorScene3D({
         onPlaceBlock(pos.x, pos.y);
       }
 
+      // Special case: sign entity includes text prop
+      if (entityType === "sign") {
+        entity.props = { text: signText };
+      }
+
       onPlaceEntity(entity);
     }
-  }, [selectedTool, itemBlockContent, onPlaceBlock, onRemoveBlock, onSetSpawn, onPlaceEntity, onRemoveEntity]);
+  }, [selectedTool, selectedCustomAssetId, itemBlockContent, signText, onPlaceBlock, onRemoveBlock, onSetSpawn, onPlaceEntity, onRemoveEntity]);
 
   const onPointerDown = useCallback(() => {
     isDragging.current = true;
@@ -238,7 +270,22 @@ export function EditorScene3D({
       {/* Placed blocks */}
       {blocks.map((b) => {
         const isCurrentLayer = b.z === currentZ;
-        const materials = getBlockMaterials(b.type);
+
+        // For custom blocks, look up the custom asset texture
+        let materials: THREE.MeshStandardMaterial[];
+        if (b.type === "custom") {
+          const assetEntity = entities.find(
+            (e) => e.type === "custom_block_asset" && e.x === b.x && e.y === b.y
+          );
+          const assetId = assetEntity?.props?.customAssetId as string | undefined;
+          const asset = customAssets.find((a) => a.id === assetId);
+          materials = asset
+            ? getCustomBlockMaterials(asset.dataUri)
+            : getBlockMaterials("custom");
+        } else {
+          materials = getBlockMaterials(b.type);
+        }
+
         return (
           <mesh
             key={`${b.x},${b.y},${b.z}`}
@@ -269,7 +316,7 @@ export function EditorScene3D({
 
       {/* Entity markers */}
       {entities
-        .filter((e) => e.type !== "spawn") // spawn has its own marker
+        .filter((e) => e.type !== "spawn" && e.type !== "custom_block_asset") // spawn has its own marker, custom_block_asset is invisible
         .map((e, i) => (
           <EntityMarker key={`entity-${e.type}-${e.x}-${e.y}-${i}`} entity={e} currentZ={currentZ} />
         ))}

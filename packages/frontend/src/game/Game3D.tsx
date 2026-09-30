@@ -9,6 +9,7 @@ import { GameOverOverlay } from "./scenes/GameOverScene3D";
 import { LevelClearOverlay } from "./scenes/LevelClearOverlay";
 import { EditorWrapper } from "./scenes/EditorWrapper";
 import { LevelSelectOverlay } from "./scenes/LevelSelectScene3D";
+import { WorldMapScene } from "./scenes/WorldMapScene";
 import { useGameState } from "./hooks/useGameState";
 import { useAssistMode } from "./hooks/useAssistMode";
 import { TouchControls3D } from "./systems/TouchControls3D";
@@ -22,8 +23,11 @@ import { LeaderboardView } from "../components/LeaderboardView";
 import { usePWAInstall } from "../hooks/usePWAInstall";
 import { getTodaySeed } from "./systems/ChunkGenerator";
 import type { BackgroundTheme } from "@super-mel/shared";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CoinPopupLayer, type CoinPopupHandle } from "./systems/CoinPopup";
+import { useLevelMissions } from "./hooks/useLevelMissions";
+import { useInfiniteMissions } from "./hooks/useInfiniteMissions";
+import { MissionToast } from "./systems/MissionToast";
 
 const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
 
@@ -33,11 +37,24 @@ function SceneContent() {
   const testMode = useGameState((s) => s.testMode);
   const currentLevelData = useGameState((s) => s.currentLevelData);
   const levelId = useGameState((s) => s.levelId);
+  const gameMode = useGameState((s) => s.gameMode);
+
+  // In infinite playing mode (not test, not level), BiomeTransition inside
+  // GameScene3D manages Skybox+Lighting+BackgroundDecor. Skip them here.
+  const biomeHandledByScene =
+    scene === "playing" &&
+    gameMode === "infinite" &&
+    !testMode &&
+    !currentLevelData;
 
   return (
     <>
-      <Skybox theme={theme} />
-      <Lighting theme={theme} />
+      {!biomeHandledByScene && (
+        <>
+          <Skybox theme={theme} />
+          <Lighting theme={theme} />
+        </>
+      )}
       {scene === "menu" && <MenuScene3D />}
       {scene === "playing" && (
         <GameScene3D
@@ -76,6 +93,27 @@ export function Game3D() {
   const [canPlayDaily, setCanPlayDaily] = useState<boolean | null>(null);
   const [checkingDaily, setCheckingDaily] = useState(false);
 
+  // Mission system hooks
+  const gameMode = useGameState((s) => s.gameMode);
+  const currentLevelData = useGameState((s) => s.currentLevelData);
+  const melLevel = useGameState((s) => s.melLevel);
+
+  // Campaign bone tracking (F49)
+  const levelBones = useGameState((s) => s.levelBones);
+  const totalBones = useMemo(() => {
+    if (!currentLevelData) return 0;
+    return currentLevelData.entities.filter((e) => e.type === "bone").length;
+  }, [currentLevelData]);
+
+  const levelMissions = useLevelMissions(
+    currentLevelData?.missions,
+    scene === "playing" && gameMode === "level",
+  );
+
+  const infiniteMissions = useInfiniteMissions(
+    scene === "playing" && gameMode === "infinite",
+  );
+
   // Check daily eligibility when on menu
   useEffect(() => {
     if (scene === "menu") {
@@ -95,7 +133,7 @@ export function Game3D() {
 
   // Audio: maintheme on menu, comeco on playing
   useEffect(() => {
-    if (scene === "menu" || scene === "gameover") {
+    if (scene === "menu" || scene === "gameover" || scene === "worldmap") {
       playTrack("maintheme", true);
     } else if (scene === "playing") {
       playTrack("comeco", true);
@@ -201,10 +239,23 @@ export function Game3D() {
       </Canvas>
 
       {/* HUD */}
-      <HUD3D lives={lives} score={score} coins={coins} scene={scene} isFlying={isFlying} flyTimeRemaining={flyTimeRemaining} />
+      <HUD3D
+        lives={lives}
+        score={score}
+        coins={coins}
+        scene={scene}
+        isFlying={isFlying}
+        flyTimeRemaining={flyTimeRemaining}
+        infiniteMissions={gameMode === "infinite" ? infiniteMissions.activeMissions : undefined}
+        levelBones={levelBones}
+        totalBones={totalBones}
+      />
 
       {/* Coin popup overlay */}
       {scene === "playing" && <CoinPopupLayer popupRef={coinPopupRef} />}
+
+      {/* Mission toast overlay */}
+      {scene === "playing" && <MissionToast />}
 
       {/* Mute button */}
       <button
@@ -221,7 +272,7 @@ export function Game3D() {
             <h1 style={styles.title}>SUPER MEL</h1>
             <p style={styles.subtitle}>A Yorkshire Micro Heroina — 3D Edition</p>
             <p style={styles.playerName}>
-              Jogador: {localStorage.getItem("supermel_player_name") || "???"}
+              Jogador: {localStorage.getItem("supermel_player_name") || "???"}{" | "}Mel Lv.{melLevel}
             </p>
             <div style={styles.buttonGroup}>
               <button style={styles.btn} onClick={() => resetGame()}>
@@ -239,6 +290,9 @@ export function Game3D() {
                 }}
               >
                 {canPlayDaily === false ? "JA JOGOU HOJE" : checkingDaily ? "VERIFICANDO..." : "DESAFIO DO DIA"}
+              </button>
+              <button style={styles.btn} onClick={() => setScene("worldmap")}>
+                CAMPANHA
               </button>
               <button style={styles.btnTest} onClick={() => startTestMode()}>
                 FASE TESTE
@@ -277,8 +331,9 @@ export function Game3D() {
         )}
 
         {scene === "gameover" && <GameOverOverlay />}
-        {scene === "levelclear" && <LevelClearOverlay />}
+        {scene === "levelclear" && <LevelClearOverlay missionStatus={levelMissions.missions} />}
         {scene === "levelselect" && <LevelSelectOverlay />}
+        {scene === "worldmap" && <WorldMapScene />}
       </div>
 
       {/* Pause overlay and sub-screens */}

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import type { BlockType, BackgroundTheme, EntityData } from "@super-mel/shared";
+import type { BlockType, BackgroundTheme, EntityData, CustomAsset } from "@super-mel/shared";
 import { useGameState } from "../hooks/useGameState";
+import { CustomAssetPalette } from "../editor/CustomAssetPalette";
 
 // --- EditorTool type (exported for EditorScene3D) ---
 export type EditorTool =
@@ -13,7 +14,12 @@ export type EditorTool =
   | "entity_item_block"
   | "entity_spawn"
   | "entity_checkpoint"
-  | "entity_goal";
+  | "entity_goal"
+  | "entity_bone"
+  | "entity_sign"
+  // Custom tools (Galeria do Rafa)
+  | "custom_block"
+  | "custom_sign";
 
 const BLOCK_PALETTE: { type: Exclude<BlockType, "empty">; label: string; color: string }[] = [
   { type: "stone", label: "Pedra", color: "#808080" },
@@ -33,17 +39,19 @@ const ITEM_PALETTE: { tool: EditorTool; label: string; color: string; symbol: st
   { tool: "entity_coin", label: "Moeda", color: "#FFD700", symbol: "$" },
   { tool: "entity_heart", label: "Vida", color: "#FF4466", symbol: "+" },
   { tool: "entity_item_block", label: "Bloco?", color: "#FFD700", symbol: "?" },
+  { tool: "entity_bone", label: "Osso", color: "#F5F5DC", symbol: "B" },
 ];
 
 const SPECIAL_PALETTE: { tool: EditorTool; label: string; color: string; symbol: string }[] = [
   { tool: "entity_spawn", label: "MEL", color: "#22AA22", symbol: "M" },
   { tool: "entity_checkpoint", label: "Check", color: "#4488FF", symbol: "F" },
   { tool: "entity_goal", label: "Meta", color: "#FF8800", symbol: "G" },
+  { tool: "entity_sign", label: "Placa", color: "#A0522D", symbol: "!" },
 ];
 
 const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
 
-type PaletteTab = "blocos" | "itens" | "especiais";
+type PaletteTab = "blocos" | "itens" | "especiais" | "custom";
 
 interface EditorBlock {
   type: Exclude<BlockType, "empty">;
@@ -64,7 +72,23 @@ interface EditorUIProps {
   spawnPoint: { x: number; y: number };
   onTest: () => void;
   onSave: () => void;
+  onPublish: () => void;
   onBack: () => void;
+  // Custom assets (Galeria do Rafa)
+  customAssets: CustomAsset[];
+  selectedCustomAssetId: string | null;
+  onUploadCustomAsset: () => void;
+  onRemoveCustomAsset: (assetId: string) => void;
+  onSelectCustomAsset: (assetId: string, mode: "block" | "sign") => void;
+  // Sign text (F49)
+  signText: string;
+  onSignTextChange: (text: string) => void;
+  // F46: Clear check + publish
+  levelName: string;
+  onLevelNameChange: (name: string) => void;
+  levelCleared: boolean;
+  levelCode: string | null;
+  savedLevelId: string | null;
 }
 
 export function EditorUI({
@@ -79,11 +103,25 @@ export function EditorUI({
   spawnPoint,
   onTest,
   onSave,
+  onPublish,
   onBack,
+  customAssets,
+  selectedCustomAssetId,
+  onUploadCustomAsset,
+  onRemoveCustomAsset,
+  onSelectCustomAsset,
+  signText,
+  onSignTextChange,
+  levelName,
+  onLevelNameChange,
+  levelCleared,
+  levelCode,
+  savedLevelId,
 }: EditorUIProps) {
   const theme = useGameState((s) => s.theme);
   const setTheme = useGameState((s) => s.setTheme);
   const [activeTab, setActiveTab] = useState<PaletteTab>("blocos");
+  const [copied, setCopied] = useState(false);
 
   const cycleTheme = () => {
     const idx = THEMES.indexOf(theme);
@@ -96,7 +134,7 @@ export function EditorUI({
       <div style={styles.palette}>
         {/* Tab bar */}
         <div style={styles.tabBar}>
-          {(["blocos", "itens", "especiais"] as PaletteTab[]).map((tab) => (
+          {(["blocos", "itens", "especiais", "custom"] as PaletteTab[]).map((tab) => (
             <button
               key={tab}
               style={{
@@ -105,7 +143,7 @@ export function EditorUI({
               }}
               onClick={() => setActiveTab(tab)}
             >
-              {tab.toUpperCase()}
+              {tab === "custom" ? "IMG" : tab.toUpperCase()}
             </button>
           ))}
         </div>
@@ -193,7 +231,37 @@ export function EditorUI({
                 {item.symbol}
               </button>
             ))}
+            {/* Sign text input */}
+            {selectedTool === "entity_sign" && (
+              <div style={styles.contentDropdown}>
+                <label style={styles.dropdownLabel}>Texto:</label>
+                <input
+                  type="text"
+                  style={styles.dropdownSelect}
+                  value={signText}
+                  onChange={(e) => onSignTextChange(e.target.value)}
+                  maxLength={40}
+                  placeholder="Texto da placa..."
+                />
+              </div>
+            )}
           </>
+        )}
+
+        {/* Tab content: CUSTOM (Galeria do Rafa) */}
+        {activeTab === "custom" && (
+          <CustomAssetPalette
+            assets={customAssets}
+            selectedAssetId={selectedCustomAssetId}
+            selectedMode={
+              selectedTool === "custom_block" ? "block" :
+              selectedTool === "custom_sign" ? "sign" :
+              null
+            }
+            onSelectAsset={onSelectCustomAsset}
+            onUpload={onUploadCustomAsset}
+            onRemoveAsset={onRemoveCustomAsset}
+          />
         )}
       </div>
 
@@ -209,6 +277,16 @@ export function EditorUI({
           </button>
         </div>
 
+        {/* F46: Level name input */}
+        <input
+          type="text"
+          placeholder="Nome da fase"
+          value={levelName}
+          onChange={(e) => onLevelNameChange(e.target.value)}
+          maxLength={30}
+          style={styles.nameInput}
+        />
+
         <div style={styles.info}>
           Blocos: {blocks.length} | Entidades: {entities.length} | Spawn: ({spawnPoint.x}, {spawnPoint.y})
         </div>
@@ -223,10 +301,63 @@ export function EditorUI({
           <button style={{ ...styles.actionBtn, background: "#4a4aaa" }} onClick={onSave}>
             SALVAR
           </button>
+          <button
+            style={{
+              ...styles.actionBtn,
+              background: (levelCleared && savedLevelId) ? "#aa6a00" : "#555",
+              opacity: (levelCleared && savedLevelId) ? 1 : 0.5,
+              cursor: (levelCleared && savedLevelId) ? "pointer" : "not-allowed",
+            }}
+            onClick={onPublish}
+            disabled={!levelCleared || !savedLevelId}
+            title={!levelCleared ? "Zere a fase para publicar (TESTAR)" : !savedLevelId ? "Salve a fase primeiro" : "Publicar fase"}
+          >
+            PUBLICAR
+          </button>
           <button style={{ ...styles.actionBtn, background: "#6a4a4a" }} onClick={onBack}>
             VOLTAR
           </button>
         </div>
+      </div>
+
+      {/* F46: Clear check status + code display */}
+      <div style={styles.bottomBar}>
+        {!levelCleared && (
+          <span style={styles.clearCheckMsg}>
+            Zere a fase para publicar (TESTAR com Meta)
+          </span>
+        )}
+        {levelCleared && !savedLevelId && (
+          <span style={{ ...styles.clearCheckMsg, color: "#88aa44" }}>
+            Fase zerada! Salve para poder publicar.
+          </span>
+        )}
+        {levelCleared && savedLevelId && !levelCode && (
+          <span style={{ ...styles.clearCheckMsg, color: "#88cc44" }}>
+            Pronto para publicar!
+          </span>
+        )}
+        {levelCode && (
+          <>
+            <span style={styles.codeDisplay}>
+              CODIGO: {levelCode}
+            </span>
+            <button
+              style={styles.copyBtn}
+              onClick={() => {
+                navigator.clipboard.writeText(levelCode).then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }).catch(() => {});
+              }}
+            >
+              {copied ? "Copiado!" : "Copiar"}
+            </button>
+            <span style={{ ...styles.clearCheckMsg, color: "#aaa" }}>
+              Compartilhe com amigos!
+            </span>
+          </>
+        )}
       </div>
     </div>
   );
@@ -378,5 +509,53 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontFamily: "monospace",
     fontWeight: "bold",
+  },
+  nameInput: {
+    padding: "4px 8px",
+    fontSize: "13px",
+    fontFamily: "monospace",
+    background: "rgba(255,255,255,0.1)",
+    color: "#fff",
+    border: "1px solid #555",
+    borderRadius: 4,
+    minWidth: 140,
+    maxWidth: 200,
+  },
+  bottomBar: {
+    position: "absolute",
+    bottom: 8,
+    left: 70,
+    right: 8,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: "6px 12px",
+    background: "rgba(0,0,0,0.6)",
+    borderRadius: 6,
+    pointerEvents: "auto",
+    gap: 16,
+  },
+  clearCheckMsg: {
+    fontSize: "12px",
+    color: "#cc8844",
+    fontFamily: "monospace",
+  },
+  codeDisplay: {
+    fontSize: "16px",
+    color: "#FFD700",
+    fontFamily: "monospace",
+    fontWeight: "bold",
+    letterSpacing: "2px",
+  },
+  copyBtn: {
+    padding: "3px 10px",
+    fontSize: "11px",
+    fontFamily: "monospace",
+    fontWeight: "bold",
+    background: "#4a4a8a",
+    color: "#fff",
+    border: "none",
+    borderRadius: 3,
+    cursor: "pointer",
   },
 };

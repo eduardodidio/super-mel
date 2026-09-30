@@ -1,0 +1,12 @@
+{
+  "levels": [
+    { "id": "1-1", "name": "Quintal da Mel", "file": "1-1.json", "theme": "forest" },
+    { "id": "1-2", "name": "Cerca do Vizinho", "file": "1-2.json", "theme": "forest" },
+    { "id": "1-3", "name": "Pracinha do Parque", "file": "1-3.json", "theme": "forest" },
+    { "id": "1-4", "name": "Lago dos Patos", "file": "1-4.json", "theme": "ocean" },
+    { "id": "1-5", "name": "Trilha da Montanha", "file": "1-5.json", "theme": "desert" },
+    { "id": "1-6", "name": "Ponte Quebrada", "file": "1-6.json", "theme": "desert" },
+    { "id": "1-7", "name": "Aterro Noturno", "file": "1-7.json", "theme": "night" },
+    { "id": "1-8", "name": "Telhado da Casa", "file": "1-8.json", "theme": "night" }
+  ]
+}

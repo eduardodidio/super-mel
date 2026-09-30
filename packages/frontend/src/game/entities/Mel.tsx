@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { RigidBody, CuboidCollider, type RapierRigidBody, useRapier } from "@react-three/rapier";
 import * as THREE from "three";
 import type { Controls } from "../hooks/useControls";
@@ -19,8 +19,13 @@ const FLY_GRAVITY_SCALE = 0.4;
 const FLY_MAX_VEL_Y = 4;
 const MAX_FLY_TIME = 5;
 const CROUCH_SPEED_MULT = 0.4;
+const STOMP_BOUNCE_FORCE = 7;
 
 const SPRITE_HEIGHT = 2;
+
+export interface MelHandle {
+  stompBounce: () => void;
+}
 
 interface MelProps {
   controlsRef: React.RefObject<Controls>;
@@ -29,28 +34,32 @@ interface MelProps {
   invincible?: boolean;
   dead?: boolean;
   onAttackFrame?: () => void;
+  onBarkFrame?: () => void;
   onLookUp?: (looking: boolean) => void;
   onFlyStateUpdate?: (flying: boolean, timeRemaining: number) => void;
   heartJustCollected?: boolean;
-  stateRef?: React.MutableRefObject<{ state: string; grounded: boolean; velX: number }>;
+  stateRef?: React.MutableRefObject<{ state: string; grounded: boolean; velX: number; sniffing: boolean }>;
+  digActiveRef?: React.RefObject<boolean>;
   respawnPoint?: { x: number; y: number };
   initialPosition?: [number, number, number];
 }
 
-export function Mel({
+export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
   controlsRef,
   onPositionUpdate,
   onCollisionDamage,
   invincible = false,
   dead = false,
   onAttackFrame,
+  onBarkFrame,
   onLookUp,
   onFlyStateUpdate,
   heartJustCollected,
   stateRef,
+  digActiveRef,
   respawnPoint,
   initialPosition,
-}: MelProps) {
+}, ref) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const spriteRef = useRef<THREE.Mesh>(null);
   const { world } = useRapier();
@@ -80,6 +89,24 @@ export function Mel({
   const lastLookingUp = useRef(false);
   const lookUpTime = useRef(0);
   const wasHeartCollected = useRef(false);
+  const lastBarkPressed = useRef(false);
+  const sniffTimer = useRef(0);
+
+  // Expose stomp bounce via imperative handle
+  useImperativeHandle(ref, () => ({
+    stompBounce() {
+      if (!rigidBodyRef.current) return;
+      const vel = rigidBodyRef.current.linvel();
+      rigidBodyRef.current.setLinvel(
+        { x: vel.x, y: STOMP_BOUNCE_FORCE, z: 0 },
+        true,
+      );
+      // Reset fly/jump state so Mel can re-jump
+      jumping.current = false;
+      flying.current = false;
+      flyTimer.current = 0;
+    },
+  }));
 
   // Load sprites once on mount
   useEffect(() => {
@@ -235,6 +262,17 @@ export function Mel({
     const justCollectedHeart = (heartJustCollected ?? false) && !wasHeartCollected.current;
     wasHeartCollected.current = heartJustCollected ?? false;
 
+    // --- Bark edge detection ---
+    const justBarked = ctrl.bark && !lastBarkPressed.current;
+    lastBarkPressed.current = ctrl.bark;
+
+    // --- Sniff timer: holding down while grounded and still ---
+    if (ctrl.down && grounded.current && Math.abs(vel.x) < 0.1 && !ctrl.left && !ctrl.right) {
+      sniffTimer.current += delta;
+    } else {
+      sniffTimer.current = 0;
+    }
+
     // --- Animation state machine update ---
     const animInput: AnimInput = {
       velX: vel.x,
@@ -250,6 +288,9 @@ export function Mel({
       flying: flying.current,
       lookUpTime: lookUpTime.current,
       heartCollected: justCollectedHeart,
+      barkPressed: justBarked,
+      digging: digActiveRef?.current ?? false,
+      sniffing: sniffTimer.current >= 1.0,
     };
 
     stateMachine.current.update(animInput, delta);
@@ -258,7 +299,12 @@ export function Mel({
     const animName = stateMachine.current.getAnimName();
     const event = getFrameEvent(animName, stateMachine.current.stateTime);
     if (event === "bark_fire" && lastEvent.current !== "bark_fire") {
-      onAttackFrame?.();
+      // Differentiate bark from attack: check current ASM state
+      if (stateMachine.current.state === "bark") {
+        onBarkFrame?.();
+      } else {
+        onAttackFrame?.();
+      }
     }
     lastEvent.current = event;
 
@@ -290,6 +336,7 @@ export function Mel({
         state: stateMachine.current.state,
         grounded: grounded.current,
         velX: vel.x,
+        sniffing: sniffTimer.current >= 1.0,
       };
     }
 
@@ -336,4 +383,4 @@ export function Mel({
       </mesh>
     </RigidBody>
   );
-}
+});

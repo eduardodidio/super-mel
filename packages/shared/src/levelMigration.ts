@@ -20,7 +20,15 @@ export function migrateLevelData(data: unknown): LevelDataV2 {
     const v2 = data as LevelDataV2;
     // Ensure entities array exists (defensive)
     if (!Array.isArray(v2.entities)) {
-      return { ...v2, entities: [] };
+      const result = { ...v2, entities: [] };
+      if (!result.customAssets) {
+        result.customAssets = [];
+      }
+      return result;
+    }
+    // Ensure customAssets defaults to [] if missing
+    if (!v2.customAssets) {
+      return { ...v2, customAssets: [] };
     }
     return v2;
   }
@@ -45,6 +53,7 @@ export function migrateLevelData(data: unknown): LevelDataV2 {
       width: v1.width,
       height: v1.height,
       entities,
+      customAssets: [],
       // theme not present in v1 -- leave undefined (caller uses level.background)
     };
   }

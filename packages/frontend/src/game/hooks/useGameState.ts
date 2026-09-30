@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { BackgroundTheme, LevelDataV2 } from "@super-mel/shared";
 import { useAssistMode } from "./useAssistMode";
 
-export type GameScene = "menu" | "playing" | "gameover" | "editor" | "levelselect" | "leaderboard" | "levelclear";
+export type GameScene = "menu" | "playing" | "gameover" | "editor" | "levelselect" | "leaderboard" | "levelclear" | "worldmap";
 export type InputType = "keyboard" | "touch" | "gamepad";
 
 interface GameState {
@@ -31,6 +31,17 @@ interface GameState {
   levelCoins: number;
   currentLevelData: LevelDataV2 | null;
 
+  // Campaign fields (F49)
+  campaignLevelId: string | null;
+  campaignIndex: number;
+  levelBones: number;
+
+  // Biome tracking (for infinite mode auto-cycling)
+  currentBiome: BackgroundTheme;
+
+  // Mel level (from infinite mission XP)
+  melLevel: number;
+
   setScene: (scene: GameScene) => void;
   setScore: (score: number) => void;
   addScore: (delta: number) => void;
@@ -47,12 +58,18 @@ interface GameState {
   setLastInputType: (type: InputType) => void;
   setGamepadConnected: (connected: boolean) => void;
 
+  setCurrentBiome: (biome: BackgroundTheme) => void;
+
   // Level mode actions
   startLevel: (levelId: string, levelData?: LevelDataV2) => void;
   setLastCheckpoint: (x: number, y: number) => void;
   incrementDeaths: () => void;
   completeLevel: () => void;
   setLevelCompleting: (completing: boolean) => void;
+
+  // Campaign actions (F49)
+  addBone: () => void;
+  startCampaignLevel: (levelId: string, campaignIndex: number, levelData: LevelDataV2) => void;
 }
 
 export const useGameState = create<GameState>((set) => ({
@@ -87,6 +104,22 @@ export const useGameState = create<GameState>((set) => ({
   levelCoins: 0,
   currentLevelData: null,
 
+  // Campaign defaults (F49)
+  campaignLevelId: null,
+  campaignIndex: -1,
+  levelBones: 0,
+
+  // Biome tracking
+  currentBiome: "forest" as BackgroundTheme,
+
+  // Mel level (derived from infinite mission XP in localStorage)
+  melLevel: (() => {
+    try {
+      const data = JSON.parse(localStorage.getItem("supermel_infinite_missions") || "{}");
+      return Math.floor((data.melXp || 0) / 500) + 1;
+    } catch { return 1; }
+  })(),
+
   setScene: (scene) => set({ scene }),
   setScore: (score) => set({ score }),
   addScore: (delta) => set((s) => ({ score: s.score + delta })),
@@ -106,6 +139,7 @@ export const useGameState = create<GameState>((set) => ({
       return { lives };
     }),
   setTheme: (theme) => set({ theme }),
+  setCurrentBiome: (biome) => set({ currentBiome: biome }),
   setPaused: (paused) => set({ paused }),
   healLife: () => set((s) => {
     const maxHearts = useAssistMode.getState().fiveHearts ? 5 : 3;
@@ -133,6 +167,8 @@ export const useGameState = create<GameState>((set) => ({
       testMode: false, dailyMode: false, dailySeed: 0, isFlying: false, flyTimeRemaining: 5,
       gameMode: "infinite", levelId: null, deaths: 0, lastCheckpoint: null,
       levelCompleting: false, levelStartTime: 0, levelCoins: 0, currentLevelData: null,
+      currentBiome: "forest" as BackgroundTheme,
+      campaignLevelId: null, campaignIndex: -1, levelBones: 0,
     });
   },
   startTestMode: () => {
@@ -142,6 +178,8 @@ export const useGameState = create<GameState>((set) => ({
       testMode: true, dailyMode: false, dailySeed: 0, isFlying: false, flyTimeRemaining: 5,
       gameMode: "infinite", levelId: null, deaths: 0, lastCheckpoint: null,
       levelCompleting: false, levelStartTime: 0, levelCoins: 0, currentLevelData: null,
+      currentBiome: "forest" as BackgroundTheme,
+      campaignLevelId: null, campaignIndex: -1, levelBones: 0,
     });
   },
   startDailyMode: (seed) => {
@@ -151,6 +189,8 @@ export const useGameState = create<GameState>((set) => ({
       testMode: false, dailyMode: true, dailySeed: seed, isFlying: false, flyTimeRemaining: 5,
       gameMode: "infinite", levelId: null, deaths: 0, lastCheckpoint: null,
       levelCompleting: false, levelStartTime: 0, levelCoins: 0, currentLevelData: null,
+      currentBiome: "forest" as BackgroundTheme,
+      campaignLevelId: null, campaignIndex: -1, levelBones: 0,
     });
   },
 
@@ -176,10 +216,41 @@ export const useGameState = create<GameState>((set) => ({
       isFlying: false,
       flyTimeRemaining: 5,
       levelStartTime: Date.now(),
+      currentBiome: "forest" as BackgroundTheme,
+      campaignLevelId: null, campaignIndex: -1, levelBones: 0,
     });
   },
   setLastCheckpoint: (x, y) => set({ lastCheckpoint: { x, y } }),
   incrementDeaths: () => set((s) => ({ deaths: s.deaths + 1 })),
   completeLevel: () => set({ scene: "levelclear", levelCompleting: false }),
   setLevelCompleting: (completing) => set({ levelCompleting: completing }),
+
+  // Campaign actions (F49)
+  addBone: () => set((s) => ({ levelBones: s.levelBones + 1 })),
+  startCampaignLevel: (levelId, campaignIndex, levelData) => {
+    const maxHearts = useAssistMode.getState().fiveHearts ? 5 : 3;
+    set({
+      gameMode: "level",
+      levelId,
+      campaignLevelId: levelId,
+      campaignIndex,
+      currentLevelData: levelData,
+      score: 0,
+      lives: maxHearts,
+      coins: 0,
+      levelCoins: 0,
+      levelBones: 0,
+      deaths: 0,
+      lastCheckpoint: null,
+      levelCompleting: false,
+      scene: "playing",
+      paused: false,
+      testMode: false,
+      dailyMode: false,
+      dailySeed: 0,
+      isFlying: false,
+      flyTimeRemaining: 5,
+      levelStartTime: Date.now(),
+    });
+  },
 }));

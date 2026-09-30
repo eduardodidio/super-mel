@@ -7,7 +7,7 @@ import * as THREE from "three";
 // ---------------------------------------------------------------------------
 
 export interface EffectSpriteProps {
-  type: "dust" | "stars" | "heart" | "exclamation" | "zzz";
+  type: "dust" | "stars" | "heart" | "exclamation" | "zzz" | "bark_ring" | "dig_dust";
   position: [number, number, number];
   onComplete: () => void;
   scale?: number;
@@ -28,6 +28,8 @@ const EFFECT_CONFIGS: Record<EffectSpriteProps["type"], EffectConfig> = {
   heart: { duration: 0.8 },
   exclamation: { duration: 1.0 },
   zzz: { duration: 2.0 },
+  bark_ring: { duration: 0.4 },
+  dig_dust: { duration: 0.5 },
 };
 
 // ---------------------------------------------------------------------------
@@ -335,6 +337,100 @@ function ZzzEffect({
   );
 }
 
+/** BarkRing: golden ring that expands and fades */
+function BarkRingEffect({
+  position,
+  onComplete,
+  scale = 1,
+}: Omit<EffectSpriteProps, "type">) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const matRef = useRef<THREE.MeshBasicMaterial>(null);
+  const elapsed = useRef(0);
+
+  useFrame((_, delta) => {
+    elapsed.current += delta;
+    const t = elapsed.current / 0.4;
+
+    if (t >= 1) {
+      onComplete();
+      return;
+    }
+
+    if (meshRef.current) {
+      const r = THREE.MathUtils.lerp(0.3, 3, t) * scale;
+      meshRef.current.scale.set(r, r, 1);
+    }
+    if (matRef.current) {
+      matRef.current.opacity = THREE.MathUtils.lerp(0.7, 0, t);
+    }
+  });
+
+  return (
+    <mesh ref={meshRef} position={position}>
+      <ringGeometry args={[0.9, 1.0, 24]} />
+      <meshBasicMaterial
+        ref={matRef}
+        color={0xffd700}
+        transparent
+        opacity={0.7}
+        depthWrite={false}
+      />
+    </mesh>
+  );
+}
+
+/** DigDust: brown particles rising from dig point */
+function DigDustEffect({
+  position,
+  onComplete,
+  scale = 1,
+}: Omit<EffectSpriteProps, "type">) {
+  const groupRef = useRef<THREE.Group>(null);
+  const elapsed = useRef(0);
+  const particles = useRef([
+    { dx: -0.2, dy: 0 },
+    { dx: 0.2, dy: 0 },
+    { dx: -0.1, dy: 0.1 },
+    { dx: 0.15, dy: 0.05 },
+  ]);
+
+  useFrame((_, delta) => {
+    elapsed.current += delta;
+    const t = elapsed.current / 0.5;
+    if (t >= 1) {
+      onComplete();
+      return;
+    }
+
+    if (groupRef.current) {
+      const children = groupRef.current.children;
+      for (let i = 0; i < particles.current.length && i < children.length; i++) {
+        const p = particles.current[i];
+        children[i].position.set(
+          p.dx * (1 + t * 2),
+          p.dy + t * 0.8,
+          0.1,
+        );
+        const s = THREE.MathUtils.lerp(0.1, 0.02, t) * scale;
+        children[i].scale.setScalar(s);
+        const mat = (children[i] as THREE.Mesh).material as THREE.MeshBasicMaterial;
+        mat.opacity = THREE.MathUtils.lerp(0.8, 0, t);
+      }
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={position}>
+      {particles.current.map((_, i) => (
+        <mesh key={i}>
+          <sphereGeometry args={[0.15, 6, 4]} />
+          <meshBasicMaterial color={0x8b4513} transparent opacity={0.8} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main EffectSprite Component
 // ---------------------------------------------------------------------------
@@ -353,6 +449,10 @@ export function EffectSprite({ type, position, onComplete, scale }: EffectSprite
       return <ExclamationEffect {...props} />;
     case "zzz":
       return <ZzzEffect {...props} />;
+    case "bark_ring":
+      return <BarkRingEffect {...props} />;
+    case "dig_dust":
+      return <DigDustEffect {...props} />;
     default:
       return null;
   }

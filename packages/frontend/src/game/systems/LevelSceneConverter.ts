@@ -1,9 +1,16 @@
-import type { LevelDataV2, EntityData, BlockType } from "@super-mel/shared";
+import type { LevelDataV2, EntityData, BlockType, EnemySubtype, CustomAsset } from "@super-mel/shared";
 import type { BlockData, HeartData, CoinData, Chunk } from "./ChunkGenerator";
 
 // -----------------------------------------------------------------------
 // Output types
 // -----------------------------------------------------------------------
+
+export interface SceneEnemyData {
+  id: string;
+  subtype: EnemySubtype;
+  x: number;
+  y: number;
+}
 
 export interface SceneObjects {
   /** All blocks from the grid (non-empty cells) */
@@ -20,8 +27,18 @@ export interface SceneObjects {
   checkpoints: { x: number; y: number }[];
   /** item_block content mapping: "x,y" -> content type */
   itemBlockContents: Map<string, string>;
-  /** All remaining entities not handled above (signs, bones, enemies, etc.) */
+  /** Enemies extracted from entities */
+  enemies: SceneEnemyData[];
+  /** Bone collectibles extracted from entities */
+  bones: { x: number; y: number; id: string }[];
+  /** Sign entities with text and optional icon */
+  signs: { x: number; y: number; text: string; icon?: string }[];
+  /** All remaining entities not handled above */
   otherEntities: EntityData[];
+  /** Map of "x,y" -> customAssetId for custom blocks (Galeria do Rafa) */
+  customBlockAssets: Map<string, string>;
+  /** All custom assets from the level data */
+  customAssets: CustomAsset[];
 }
 
 // -----------------------------------------------------------------------
@@ -42,7 +59,11 @@ export function levelToSceneObjects(level: LevelDataV2): SceneObjects {
   let goal: { x: number; y: number } | null = null;
   const checkpoints: { x: number; y: number }[] = [];
   const itemBlockContents = new Map<string, string>();
+  const enemies: SceneEnemyData[] = [];
+  const bones: SceneObjects["bones"] = [];
+  const signs: SceneObjects["signs"] = [];
   const otherEntities: EntityData[] = [];
+  const customBlockAssets = new Map<string, string>();
 
   // --- Extract blocks from grid ---
   for (let row = 0; row < level.grid.length; row++) {
@@ -84,8 +105,44 @@ export function levelToSceneObjects(level: LevelDataV2): SceneObjects {
           (entity.props?.content as string) ?? "coin"
         );
         break;
+      case "enemy": {
+        const subtype = (entity.props?.subtype as EnemySubtype) ?? "vacuum";
+        enemies.push({
+          id: `enemy-${entity.x}-${entity.y}`,
+          subtype,
+          x: entity.x,
+          y: entity.y,
+        });
+        break;
+      }
+      case "bone":
+        bones.push({
+          x: entity.x,
+          y: entity.y,
+          id: `bone-${entity.x}-${entity.y}`,
+        });
+        break;
+      case "sign":
+        // Custom signs (Galeria do Rafa) with customAssetId go to otherEntities
+        if (entity.props?.customAssetId) {
+          otherEntities.push(entity);
+        } else {
+          signs.push({
+            x: entity.x,
+            y: entity.y,
+            text: (entity.props?.text as string) ?? "",
+            icon: entity.props?.icon as string | undefined,
+          });
+        }
+        break;
+      case "custom_block_asset":
+        customBlockAssets.set(
+          `${entity.x},${entity.y}`,
+          (entity.props?.customAssetId as string) ?? ""
+        );
+        break;
       default:
-        // sign, bone, enemy, or future types
+        // future entity types
         otherEntities.push(entity);
         break;
     }
@@ -99,7 +156,12 @@ export function levelToSceneObjects(level: LevelDataV2): SceneObjects {
     goal,
     checkpoints,
     itemBlockContents,
+    enemies,
+    bones,
+    signs,
     otherEntities,
+    customBlockAssets,
+    customAssets: level.customAssets ?? [],
   };
 }
 
@@ -119,6 +181,11 @@ export function sceneObjectsToChunks(scene: SceneObjects): Chunk[] {
       blocks: scene.blocks,
       hearts: scene.hearts,
       coins: scene.coins,
+      enemies: scene.enemies.map(e => ({
+        subtype: e.subtype,
+        x: e.x,
+        y: e.y,
+      })),
     },
   ];
 }

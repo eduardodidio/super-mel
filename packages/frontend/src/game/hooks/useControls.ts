@@ -8,13 +8,14 @@ export interface Controls {
   shoot: boolean;
   down: boolean;
   up: boolean;
+  bark: boolean;
 }
 
 const DEADZONE = 0.2;
 
 // Separate keyboard and gamepad states to avoid conflicts
-const kbState: Controls = { left: false, right: false, jump: false, shoot: false, down: false, up: false };
-const gpState: Controls = { left: false, right: false, jump: false, shoot: false, down: false, up: false };
+const kbState: Controls = { left: false, right: false, jump: false, shoot: false, down: false, up: false, bark: false };
+const gpState: Controls = { left: false, right: false, jump: false, shoot: false, down: false, up: false, bark: false };
 
 // Start button edge detection
 let prevStartPressed = false;
@@ -35,6 +36,7 @@ export function pollGamepad(): boolean {
     gpState.shoot = false;
     gpState.down = false;
     gpState.up = false;
+    gpState.bark = false;
     prevStartPressed = false;
     return false;
   }
@@ -58,9 +60,11 @@ export function pollGamepad(): boolean {
   gpState.jump = gp.buttons[0]?.pressed ?? false;
   // X/Square = button 2 = shoot
   gpState.shoot = gp.buttons[2]?.pressed ?? false;
+  // Y/Triangle = button 3 = bark
+  gpState.bark = gp.buttons[3]?.pressed ?? false;
 
   // Track last input type
-  const hasGamepadInput = gpState.left || gpState.right || gpState.up || gpState.down || gpState.jump || gpState.shoot;
+  const hasGamepadInput = gpState.left || gpState.right || gpState.up || gpState.down || gpState.jump || gpState.shoot || gpState.bark;
   if (hasGamepadInput) {
     const state = useGameState.getState();
     if (state.lastInputType !== "gamepad") {
@@ -86,10 +90,11 @@ function mergeControls(merged: Controls): void {
   merged.shoot = kbState.shoot || gpState.shoot;
   merged.down = kbState.down || gpState.down;
   merged.up = kbState.up || gpState.up;
+  merged.bark = kbState.bark || gpState.bark;
 }
 
 export function useControls(): React.MutableRefObject<Controls> {
-  const controls = useRef<Controls>({ left: false, right: false, jump: false, shoot: false, down: false, up: false });
+  const controls = useRef<Controls>({ left: false, right: false, jump: false, shoot: false, down: false, up: false, bark: false });
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -126,6 +131,10 @@ export function useControls(): React.MutableRefObject<Controls> {
         case "KeyJ":
           kbState.shoot = true;
           break;
+        case "KeyX":
+        case "KeyK":
+          kbState.bark = true;
+          break;
       }
       mergeControls(controls.current);
     };
@@ -154,6 +163,10 @@ export function useControls(): React.MutableRefObject<Controls> {
         case "KeyZ":
         case "KeyJ":
           kbState.shoot = false;
+          break;
+        case "KeyX":
+        case "KeyK":
+          kbState.bark = false;
           break;
       }
       mergeControls(controls.current);

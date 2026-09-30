@@ -1,6 +1,6 @@
 # Feature F50 -- Galeria do Rafa
 
-**Status:** planned
+**Status:** done
 **Owner:** @architect
 **PRD:** inline (B-35)
 **Backlog:** B-35 (Galeria do Rafa: blocos, placas e inimigos com desenhos importados)

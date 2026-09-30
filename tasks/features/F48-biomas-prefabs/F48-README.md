@@ -1,6 +1,6 @@
 # Feature F48 -- Biomas por distancia + Chunks prefab
 
-**Status:** planned
+**Status:** done
 **Owner:** @architect
 **PRD:** inline (B-23)
 **Backlog:** B-23 (Biomas por distancia + chunks prefab feitos no editor)

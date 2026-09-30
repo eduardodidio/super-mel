@@ -78,6 +78,13 @@ export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
       {/* Action buttons right side */}
       <div style={styles.actions}>
         <button
+          style={styles.btnC}
+          onTouchStart={set("bark", true)}
+          onTouchEnd={set("bark", false)}
+        >
+          C
+        </button>
+        <button
           style={styles.btnB}
           onTouchStart={set("shoot", true)}
           onTouchEnd={set("shoot", false)}
@@ -175,5 +182,14 @@ const styles: Record<string, React.CSSProperties> = {
     background: "rgba(255,120,80,0.2)",
     border: "2px solid rgba(255,120,80,0.4)",
     marginBottom: 20,
+  },
+  btnC: {
+    ...btnBase,
+    width: 56,
+    height: 56,
+    background: "rgba(218,165,32,0.2)",
+    border: "2px solid rgba(218,165,32,0.4)",
+    marginBottom: 30,
+    fontSize: "18px",
   },
 };

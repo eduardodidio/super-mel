@@ -1,6 +1,6 @@
 # Feature F45 -- Missoes por Fase + Missoes do Modo Infinito
 
-**Status:** planned
+**Status:** done
 **Owner:** @architect
 **PRD:** inline (B-04 + B-22)
 **Backlog:** B-04 (Missoes escondidas por fase, estilo Kirby), B-22 (Missoes do modo infinito, 3 ativas por vez)

@@ -1,6 +1,6 @@
 # F46 -- Clear Check + Comunidade Kid-Safe
 
-**Status:** planned
+**Status:** done
 **Owner:** @architect
 **PRD:** inline (B-26 + B-28)
 **Backlog:** B-26 (Clear check + codigo de fase + estatisticas), B-28 (Comunidade kid-safe)

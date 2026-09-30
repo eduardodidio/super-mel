@@ -13,6 +13,18 @@ export interface Score {
   createdAt: Date;
 }
 
+// --- Custom Assets (Galeria do Rafa) ---
+
+export interface CustomAsset {
+  id: string;           // unique ID within the level, e.g. "custom-1695000000"
+  name: string;         // user-given name, max 20 chars
+  dataUri: string;      // base64 data URI, e.g. "data:image/png;base64,..."
+}
+
+// --- Enemy subtypes ---
+// Enemy entities use EntityData with type: "enemy" and props: { subtype: EnemySubtype }
+export type EnemySubtype = "vacuum" | "pigeon" | "bee";
+
 // --- Entity System ---
 
 export type EntityType =
@@ -24,7 +36,8 @@ export type EntityType =
   | "item_block_content"
   | "sign"
   | "bone"
-  | "enemy";
+  | "enemy"
+  | "custom_block_asset";
 
 export interface EntityData {
   type: EntityType;
@@ -33,10 +46,28 @@ export interface EntityData {
   props?: Record<string, unknown>;
 }
 
+// --- Mission System ---
+
+export type MissionConditionType =
+  | "collect_coins"       // params: { count: number }
+  | "no_damage"           // params: {} -- complete run/level without taking damage
+  | "find_bone"           // params: {} -- collect at least one bone entity
+  | "time_limit"          // params: { seconds: number } -- finish under N seconds
+  | "break_blocks"        // params: { blockType?: BlockType; count: number }
+  | "fly_duration"        // params: { seconds: number } -- cumulative fly time in run
+  | "reach_distance"      // params: { meters: number }
+  | "no_damage_distance"  // params: { meters: number } -- reach distance without any damage
+  | "stomp_enemies";      // params: { count: number }
+
+export interface MissionCondition {
+  type: MissionConditionType;
+  params: Record<string, unknown>;
+}
+
 export interface Mission {
   id: string;
   description: string;
-  condition: Record<string, unknown>;
+  condition: MissionCondition;
 }
 
 // --- LevelData v1 (original, no version field) ---
@@ -62,6 +93,8 @@ export interface LevelDataV2 {
   entities: EntityData[];
   theme?: BackgroundTheme;
   missions?: Mission[];
+  customAssets?: CustomAsset[];  // max 10 per level (Galeria do Rafa)
+  difficulty?: number;  // 1-10, used for prefab chunk selection in infinite mode
 }
 
 // Union for migration input
@@ -79,6 +112,7 @@ export const ENTITY_TYPES: readonly EntityType[] = [
   "sign",
   "bone",
   "enemy",
+  "custom_block_asset",
 ] as const;
 
 export interface BlockCell {
@@ -99,7 +133,8 @@ export type BlockType =
   | "leaf"
   | "water"
   | "lava"
-  | "item_block";
+  | "item_block"
+  | "custom";
 
 export interface Level {
   id: string;
@@ -137,19 +172,20 @@ export type PowerType =
 
 export const BLOCK_PROPERTIES: Record<
   Exclude<BlockType, "empty">,
-  { solid: boolean; destructible: boolean; dangerous: boolean; platform: boolean }
+  { solid: boolean; destructible: boolean; dangerous: boolean; platform: boolean; diggable: boolean }
 > = {
-  stone: { solid: true, destructible: false, dangerous: false, platform: false },
-  sand: { solid: true, destructible: false, dangerous: false, platform: false },
-  wood: { solid: true, destructible: true, dangerous: false, platform: false },
-  iron: { solid: true, destructible: false, dangerous: false, platform: false },
-  dirt: { solid: true, destructible: false, dangerous: false, platform: false },
-  brick: { solid: true, destructible: false, dangerous: false, platform: false },
-  glass: { solid: true, destructible: true, dangerous: false, platform: false },
-  leaf: { solid: false, destructible: false, dangerous: false, platform: true },
-  water: { solid: false, destructible: false, dangerous: false, platform: false },
-  lava: { solid: false, destructible: false, dangerous: true, platform: false },
-  item_block: { solid: true, destructible: false, dangerous: false, platform: false },
+  stone:      { solid: true,  destructible: false, dangerous: false, platform: false, diggable: false },
+  sand:       { solid: true,  destructible: false, dangerous: false, platform: false, diggable: true  },
+  wood:       { solid: true,  destructible: true,  dangerous: false, platform: false, diggable: false },
+  iron:       { solid: true,  destructible: false, dangerous: false, platform: false, diggable: false },
+  dirt:       { solid: true,  destructible: false, dangerous: false, platform: false, diggable: true  },
+  brick:      { solid: true,  destructible: false, dangerous: false, platform: false, diggable: false },
+  glass:      { solid: true,  destructible: true,  dangerous: false, platform: false, diggable: false },
+  leaf:       { solid: false, destructible: false, dangerous: false, platform: true,  diggable: false },
+  water:      { solid: false, destructible: false, dangerous: false, platform: false, diggable: false },
+  lava:       { solid: false, destructible: false, dangerous: true,  platform: false, diggable: false },
+  item_block: { solid: true,  destructible: false, dangerous: false, platform: false, diggable: false },
+  custom:     { solid: true,  destructible: false, dangerous: false, platform: false, diggable: false },
 };
 
 export const GAME_CONFIG = {

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { BlockType } from "@super-mel/shared";
+import { getCustomTexture, disposeCustomTextures } from "./CustomTextureCache";
 
 interface BlockVisual {
   color: string;
@@ -24,6 +25,7 @@ const BLOCK_VISUALS: Record<Exclude<BlockType, "empty">, BlockVisual> = {
   water: { color: "#1E90FF", transparent: true, opacity: 0.5, roughness: 0.2, emissive: "#0a2a6a", emissiveIntensity: 0.1 },
   lava: { color: "#FF4500", emissive: "#FF4500", emissiveIntensity: 0.8, roughness: 0.3 },
   item_block: { color: "#DC143C", emissive: "#FF4444", emissiveIntensity: 0.3, roughness: 0.5 },
+  custom: { color: "#CC88FF", roughness: 0.8 },
 };
 
 const textureCache = new Map<string, THREE.CanvasTexture>();
@@ -160,4 +162,46 @@ export function disposeBlockMaterials(): void {
     texture.dispose();
   }
   textureCache.clear();
+  // Also dispose custom textures and materials
+  disposeCustomBlockMaterials();
+  disposeCustomTextures();
+}
+
+// --- Custom block materials (Galeria do Rafa) ---
+
+const customMaterialCache = new Map<string, THREE.MeshStandardMaterial[]>();
+
+/**
+ * Create or get materials for a custom block that uses a data URI texture.
+ * Falls back to the default "custom" visual if the texture is not available.
+ */
+export function getCustomBlockMaterials(dataUri: string): THREE.MeshStandardMaterial[] {
+  if (customMaterialCache.has(dataUri)) return customMaterialCache.get(dataUri)!;
+
+  const texture = getCustomTexture(dataUri);
+  if (!texture) return getBlockMaterials("custom");
+
+  const mat = new THREE.MeshStandardMaterial({
+    map: texture,
+    roughness: 0.8,
+    metalness: 0,
+  });
+
+  // All 6 faces use the same texture
+  const materials = [mat, mat, mat, mat, mat, mat];
+  customMaterialCache.set(dataUri, materials);
+  return materials;
+}
+
+/**
+ * Dispose custom block materials. Called by disposeBlockMaterials().
+ */
+export function disposeCustomBlockMaterials(): void {
+  for (const materials of customMaterialCache.values()) {
+    // Materials share the same instance, dispose once
+    if (materials[0]) {
+      materials[0].dispose();
+    }
+  }
+  customMaterialCache.clear();
 }

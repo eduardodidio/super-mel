@@ -1,10 +1,10 @@
 # Feature F49 -- Campanha Mundo 1 + Ossinhos + Placas de Tutorial
 
-**Status:** planned
+**Status:** done
 **Owner:** @architect
 **PRD:** inline (B-03 + B-05 + B-10)
 **Backlog:** B-03 (Campanha 8-10 fases + mapa de mundo + tutorial 1-1), B-05 (Colecionavel ossinho), B-10 (Placas de tutorial)
-**Depends on:** F42 (Fim de fase + Checkpoints -- DONE), F43 (Inimigos v1 -- NOT YET DONE)
+**Depends on:** F42 (Fim de fase + Checkpoints -- DONE), F43 (Inimigos v1 -- DONE)
 
 ## Dependency Note on F43
 
