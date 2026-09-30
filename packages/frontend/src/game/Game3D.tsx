@@ -9,13 +9,17 @@ import { GameOverOverlay } from "./scenes/GameOverScene3D";
 import { EditorWrapper } from "./scenes/EditorWrapper";
 import { LevelSelectOverlay } from "./scenes/LevelSelectScene3D";
 import { useGameState } from "./hooks/useGameState";
+import { useAssistMode } from "./hooks/useAssistMode";
 import { TouchControls3D } from "./systems/TouchControls3D";
+import { PauseOverlay } from "./systems/PauseOverlay";
+import { ComoJogarScreen } from "./systems/ComoJogarScreen";
+import { AssistModeUI } from "./systems/AssistModeUI";
 import { useControls } from "./hooks/useControls";
 import { playTrack, toggleMute, isMuted } from "./systems/AudioManager3D";
 import { LeaderboardView } from "../components/LeaderboardView";
 import { usePWAInstall } from "../hooks/usePWAInstall";
 import type { BackgroundTheme } from "@super-mel/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
 
@@ -47,9 +51,13 @@ export function Game3D() {
   const resetGame = useGameState((s) => s.resetGame);
   const testMode = useGameState((s) => s.testMode);
   const startTestMode = useGameState((s) => s.startTestMode);
+  const paused = useGameState((s) => s.paused);
+  const setPaused = useGameState((s) => s.setPaused);
+  const gameSpeed = useAssistMode((s) => s.gameSpeed);
   const controlsRef = useControls();
   const { canInstall, triggerInstall, isInstalled } = usePWAInstall();
   const [muted, setMuted] = useState(isMuted());
+  const [pauseSubScreen, setPauseSubScreen] = useState<"main" | "comojogar" | "opcoes">("main");
 
   // Audio: maintheme on menu, comeco on playing
   useEffect(() => {
@@ -59,6 +67,65 @@ export function Game3D() {
       playTrack("comeco", true);
     }
   }, [scene]);
+
+  // Esc key handler for pause toggle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Escape" && scene === "playing") {
+        e.preventDefault();
+        const state = useGameState.getState();
+        state.setPaused(!state.paused);
+        if (state.paused) {
+          // Was paused, now resuming — reset sub-screen
+          setPauseSubScreen("main");
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [scene]);
+
+  // Gamepad Start button polling for pause toggle (outside Canvas, uses RAF)
+  const prevStartRef = useRef(false);
+  useEffect(() => {
+    let rafId: number;
+    const pollStart = () => {
+      const gamepads = navigator.getGamepads();
+      const gp = gamepads[0];
+      if (gp) {
+        const startPressed = gp.buttons[9]?.pressed ?? false;
+        if (startPressed && !prevStartRef.current && scene === "playing") {
+          const state = useGameState.getState();
+          state.setPaused(!state.paused);
+          if (state.paused) {
+            setPauseSubScreen("main");
+          }
+        }
+        prevStartRef.current = startPressed;
+      }
+      rafId = requestAnimationFrame(pollStart);
+    };
+    rafId = requestAnimationFrame(pollStart);
+    return () => cancelAnimationFrame(rafId);
+  }, [scene]);
+
+  // Pause handlers
+  const handleResume = () => {
+    setPaused(false);
+    setPauseSubScreen("main");
+  };
+
+  const handleRestart = () => {
+    setPaused(false);
+    setPauseSubScreen("main");
+    resetGame();
+  };
+
+  const handleMainMenu = () => {
+    setPaused(false);
+    setPauseSubScreen("main");
+    setScene("menu");
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("supermel_token");
@@ -80,6 +147,9 @@ export function Game3D() {
     return <EditorWrapper />;
   }
 
+  // Compute Physics timeStep scaled by game speed
+  const physicsTimeStep = (1 / 60) * gameSpeed;
+
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
       <Canvas
@@ -87,7 +157,7 @@ export function Game3D() {
         camera={{ position: [0, 2, 15], fov: 60 }}
         style={{ background: "#1a1a2e" }}
       >
-        <Physics gravity={[0, -15, 0]}>
+        <Physics gravity={[0, -15, 0]} paused={paused} timeStep={physicsTimeStep}>
           <SceneContent />
         </Physics>
       </Canvas>
@@ -155,6 +225,23 @@ export function Game3D() {
         {scene === "gameover" && <GameOverOverlay />}
         {scene === "levelselect" && <LevelSelectOverlay />}
       </div>
+
+      {/* Pause overlay and sub-screens */}
+      {paused && scene === "playing" && pauseSubScreen === "main" && (
+        <PauseOverlay
+          onResume={handleResume}
+          onRestart={handleRestart}
+          onMainMenu={handleMainMenu}
+          onComoJogar={() => setPauseSubScreen("comojogar")}
+          onOpcoes={() => setPauseSubScreen("opcoes")}
+        />
+      )}
+      {paused && scene === "playing" && pauseSubScreen === "comojogar" && (
+        <ComoJogarScreen onBack={() => setPauseSubScreen("main")} />
+      )}
+      {paused && scene === "playing" && pauseSubScreen === "opcoes" && (
+        <AssistModeUI onBack={() => setPauseSubScreen("main")} />
+      )}
 
       {/* Mobile touch controls */}
       <TouchControls3D controlsRef={controlsRef} scene={scene} />

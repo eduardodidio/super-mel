@@ -1,6 +1,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
+import { useGameState } from "../hooks/useGameState";
 
 interface CameraRigProps {
   targetRef: React.RefObject<THREE.Object3D | null>;
@@ -25,6 +26,7 @@ export function CameraRig({
   const lookOffsetRef = useRef(0);
 
   useFrame(() => {
+    if (useGameState.getState().paused) return;
     if (!targetRef.current) return;
     const target = targetRef.current.position;
 

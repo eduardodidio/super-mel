@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useState } from "react";
-import { useFrame } from "@react-three/fiber";
 import { Projectile } from "../entities/Projectile";
 import type { Controls } from "../hooks/useControls";
+import { useGameFrame } from "../hooks/useGameFrame";
 
 interface ProjectileManagerProps {
   controlsRef: React.RefObject<Controls>;
@@ -24,7 +24,7 @@ export function ProjectileManager({ controlsRef, playerPosRef, facingRightRef, o
 
   const cooldownMs = 300;
 
-  useFrame((_, delta) => {
+  useGameFrame((_, delta) => {
     cooldownRef.current = Math.max(0, cooldownRef.current - delta * 1000);
 
     const wantsShoot = controlsRef.current?.shoot ?? false;

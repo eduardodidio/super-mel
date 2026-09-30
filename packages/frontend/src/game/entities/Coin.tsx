@@ -2,6 +2,7 @@ import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
+import { useGameState } from "../hooks/useGameState";
 
 interface CoinProps {
   position: [number, number, number];
@@ -32,6 +33,7 @@ export function Coin({ position, onCollect }: CoinProps) {
   const texture = useMemo(() => getCoinTexture(), []);
 
   useFrame((_, delta) => {
+    if (useGameState.getState().paused) return;
     if (!meshRef.current || collected.current) return;
     timeRef.current += delta;
     // Spin and bob

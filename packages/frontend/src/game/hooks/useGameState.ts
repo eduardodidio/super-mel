@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import type { BackgroundTheme } from "@super-mel/shared";
+import { useAssistMode } from "./useAssistMode";
 
 export type GameScene = "menu" | "playing" | "gameover" | "editor" | "levelselect" | "leaderboard";
+export type InputType = "keyboard" | "touch" | "gamepad";
 
 interface GameState {
   scene: GameScene;
@@ -14,6 +16,8 @@ interface GameState {
   testMode: boolean;
   isFlying: boolean;
   flyTimeRemaining: number;
+  lastInputType: InputType;
+  gamepadConnected: boolean;
 
   setScene: (scene: GameScene) => void;
   setScore: (score: number) => void;
@@ -27,6 +31,8 @@ interface GameState {
   resetGame: () => void;
   startTestMode: () => void;
   setFlyState: (isFlying: boolean, flyTimeRemaining: number) => void;
+  setLastInputType: (type: InputType) => void;
+  setGamepadConnected: (connected: boolean) => void;
 }
 
 export const useGameState = create<GameState>((set) => ({
@@ -39,6 +45,8 @@ export const useGameState = create<GameState>((set) => ({
   testMode: false,
   isFlying: false,
   flyTimeRemaining: 5,
+  lastInputType: "keyboard" as InputType,
+  gamepadConnected: false,
   totalCoins: (() => {
     try {
       return parseInt(localStorage.getItem("supermel_total_coins") || "0", 10);
@@ -55,13 +63,16 @@ export const useGameState = create<GameState>((set) => ({
     set((s) => {
       const lives = s.lives - 1;
       if (lives <= 0) {
-        return { lives, scene: "gameover", testMode: false };
+        return { lives, scene: "gameover", testMode: false, paused: false };
       }
       return { lives };
     }),
   setTheme: (theme) => set({ theme }),
   setPaused: (paused) => set({ paused }),
-  healLife: () => set((s) => ({ lives: Math.min(s.lives + 1, 3) })),
+  healLife: () => set((s) => {
+    const maxHearts = useAssistMode.getState().fiveHearts ? 5 : 3;
+    return { lives: Math.min(s.lives + 1, maxHearts) };
+  }),
   addCoin: () =>
     set((s) => {
       const totalCoins = s.totalCoins + 1;
@@ -71,6 +82,14 @@ export const useGameState = create<GameState>((set) => ({
       return { coins: s.coins + 1, totalCoins };
     }),
   setFlyState: (isFlying, flyTimeRemaining) => set({ isFlying, flyTimeRemaining }),
-  resetGame: () => set({ score: 0, lives: 3, coins: 0, scene: "playing", paused: false, testMode: false, isFlying: false, flyTimeRemaining: 5 }),
-  startTestMode: () => set({ score: 0, lives: 3, coins: 0, scene: "playing", paused: false, testMode: true, isFlying: false, flyTimeRemaining: 5 }),
+  setLastInputType: (type) => set({ lastInputType: type }),
+  setGamepadConnected: (connected) => set({ gamepadConnected: connected }),
+  resetGame: () => {
+    const maxHearts = useAssistMode.getState().fiveHearts ? 5 : 3;
+    set({ score: 0, lives: maxHearts, coins: 0, scene: "playing", paused: false, testMode: false, isFlying: false, flyTimeRemaining: 5 });
+  },
+  startTestMode: () => {
+    const maxHearts = useAssistMode.getState().fiveHearts ? 5 : 3;
+    set({ score: 0, lives: maxHearts, coins: 0, scene: "playing", paused: false, testMode: true, isFlying: false, flyTimeRemaining: 5 });
+  },
 }));

@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
+import { useGameState } from "../hooks/useGameState";
 
 interface HeartProps {
   position: [number, number, number];
@@ -14,6 +15,7 @@ export function Heart({ position, onCollect }: HeartProps) {
   const timeRef = useRef(Math.random() * Math.PI * 2);
 
   useFrame((_, delta) => {
+    if (useGameState.getState().paused) return;
     if (!meshRef.current || collected.current) return;
     timeRef.current += delta;
     // Float and rotate

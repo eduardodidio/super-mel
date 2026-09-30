@@ -4,6 +4,7 @@ import { Block } from "../entities/Block";
 import { Heart } from "../entities/Heart";
 import { Coin } from "../entities/Coin";
 import { generateChunk, getVisibleChunkIndices, type Chunk } from "./ChunkGenerator";
+import { useGameState } from "../hooks/useGameState";
 
 interface ChunkRendererProps {
   playerPosRef: React.RefObject<{ x: number; y: number }>;
@@ -54,6 +55,7 @@ export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>
     }));
 
     useFrame(() => {
+      if (useGameState.getState().paused) return;
       if (testChunks) return;
       const now = performance.now();
       if (now - lastUpdate.current < 200) return;
