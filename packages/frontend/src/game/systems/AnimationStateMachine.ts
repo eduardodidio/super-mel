@@ -21,7 +21,12 @@ export type AnimState =
   | "lie_down"
   | "crouch"
   | "look_up"
-  | "fly";
+  | "fly"
+  | "wait"
+  | "affection"
+  | "bark"
+  | "dig"
+  | "sniff";
 
 export interface AnimInput {
   velX: number;
@@ -35,6 +40,11 @@ export interface AnimInput {
   crouching: boolean;
   lookingUp: boolean;
   flying: boolean;
+  lookUpTime: number;
+  heartCollected: boolean;
+  barkPressed: boolean;
+  digging: boolean;
+  sniffing: boolean;
 }
 
 // Duration map for one-shot states (seconds).
@@ -48,6 +58,9 @@ const ONE_SHOT_DURATIONS: Partial<Record<AnimState, number>> = {
   attack_2: 0.17,
   attack_end: 0.17,
   jump_land: 0.15,
+  affection: 0.6,
+  bark: 0.35,
+  dig: 0.5,
 };
 
 // Maps one-shot states to their default next state.
@@ -60,6 +73,9 @@ const ONE_SHOT_NEXT: Partial<Record<AnimState, AnimState>> = {
   attack_2: "attack_end",
   attack_end: "idle",
   jump_land: "idle",
+  affection: "idle",
+  bark: "idle",
+  dig: "crouch",
 };
 
 // States that cannot be interrupted by lower-priority input.
@@ -72,6 +88,9 @@ const NON_INTERRUPTIBLE: Set<AnimState> = new Set([
   "attack_2",
   "attack_end",
   "death",
+  "affection",
+  "bark",
+  "dig",
 ]);
 
 // Maps AnimState to the animation name used by SpriteAnimator.
@@ -96,6 +115,11 @@ const ANIM_NAME_MAP: Record<AnimState, string> = {
   crouch: "crouch",
   look_up: "look_up",
   fly: "fly",
+  wait: "wait",
+  affection: "affection",
+  bark: "bark",
+  dig: "dig",
+  sniff: "sniff",
 };
 
 export class AnimationStateMachine {
@@ -132,6 +156,12 @@ export class AnimationStateMachine {
       return this.state;
     }
 
+    // --- Priority 2.5: Affection (heart collected, one-shot) ---
+    if (input.heartCollected && !NON_INTERRUPTIBLE.has(this.state)) {
+      this.transition("affection");
+      return this.state;
+    }
+
     // --- Handle one-shot state auto-transitions ---
     if (this.isOneShot() && this.isOneShotFinished()) {
       const next = this.getOneShotNext(input);
@@ -145,9 +175,21 @@ export class AnimationStateMachine {
       return this.state;
     }
 
+    // --- Priority 2.7: Bark (one-shot, non-interruptible) ---
+    if (input.barkPressed && !NON_INTERRUPTIBLE.has(this.state)) {
+      this.transition("bark");
+      return this.state;
+    }
+
     // --- Priority 3: Attack ---
     if (input.attackPressed && this.canStartAttack()) {
       this.transition("attack_prep");
+      return this.state;
+    }
+
+    // --- Priority 3.5: Dig (one-shot, requires crouching) ---
+    if (input.digging && this.canStartAttack()) {
+      this.transition("dig");
       return this.state;
     }
 
@@ -188,23 +230,33 @@ export class AnimationStateMachine {
 
     // --- Priority 7.5: Crouch (grounded + holding down) ---
     if (input.crouching && input.grounded) {
+      // --- Priority 7.55: Sniff (holding down while still for 1s+) ---
+      if (input.sniffing && input.grounded && Math.abs(input.velX) < 0.5) {
+        this.transitionIfDifferent("sniff");
+        return this.state;
+      }
       this.transitionIfDifferent("crouch");
       return this.state;
     }
 
     // --- Priority 7.6: Look up (grounded + holding up + not moving) ---
     if (input.lookingUp && input.grounded && Math.abs(input.velX) < 0.5) {
+      // --- Priority 7.7: Wait (looking up for >3s) ---
+      if (input.lookUpTime > 3) {
+        this.transitionIfDifferent("wait");
+        return this.state;
+      }
       this.transitionIfDifferent("look_up");
       return this.state;
     }
 
-    // --- Priority 8: Sit (idle > 8s) ---
-    if (input.idleTime > 16 && (this.state === "sit" || this.state === "lie_down")) {
+    // --- Priority 8: Sit (idle > 5s) ---
+    if (input.idleTime > 12 && (this.state === "sit" || this.state === "lie_down")) {
       this.transitionIfDifferent("lie_down");
       return this.state;
     }
 
-    if (input.idleTime > 8) {
+    if (input.idleTime > 5) {
       this.transitionIfDifferent("sit");
       return this.state;
     }
@@ -293,6 +345,7 @@ export class AnimationStateMachine {
       this.state === "run" ||
       this.state === "sit" ||
       this.state === "lie_down" ||
+      this.state === "wait" ||
       this.state === "crouch" ||
       this.state === "jump_land"
     );

@@ -4,7 +4,8 @@ import { RigidBody, type RapierRigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 import type { BlockType } from "@super-mel/shared";
 import { BLOCK_PROPERTIES } from "@super-mel/shared";
-import { getBlockMaterials } from "../systems/BlockTextures3D";
+import { getBlockMaterials, getCustomBlockMaterials } from "../systems/BlockTextures3D";
+import { getCustomBlockDataUri } from "../systems/CustomTextureCache";
 
 interface BlockProps {
   type: Exclude<BlockType, "empty">;
@@ -17,7 +18,50 @@ interface BlockProps {
 export function Block({ type, position, onDestroy, isBackground = false, activated = false }: BlockProps) {
   const [destroyed, setDestroyed] = useState(false);
   const props = BLOCK_PROPERTIES[type];
-  const materials = getBlockMaterials(type);
+
+  // For custom blocks, look up the data URI and use custom materials
+  let materials: THREE.MeshStandardMaterial[];
+  if (type === "custom") {
+    const dataUri = getCustomBlockDataUri(position[0], position[1]);
+    materials = dataUri ? getCustomBlockMaterials(dataUri) : getBlockMaterials("custom");
+  } else {
+    materials = getBlockMaterials(type);
+  }
+
+  // Item block bump animation refs
+  const bumpMeshRef = useRef<THREE.Mesh>(null);
+  const bumpRef = useRef({ active: false, timer: 0 });
+  const prevActivated = useRef(activated);
+
+  useFrame((_, delta) => {
+    // Only animate item_block bump
+    if (type !== "item_block") return;
+
+    // Detect activation edge
+    if (activated && !prevActivated.current) {
+      bumpRef.current = { active: true, timer: 0 };
+    }
+    prevActivated.current = activated;
+
+    // Animate bump
+    if (bumpRef.current.active && bumpMeshRef.current) {
+      bumpRef.current.timer += delta;
+      const t = bumpRef.current.timer;
+      const UP_DURATION = 0.06;
+      const DOWN_DURATION = 0.12;
+      const BUMP_HEIGHT = 0.15;
+
+      if (t < UP_DURATION) {
+        bumpMeshRef.current.position.y = THREE.MathUtils.lerp(0, BUMP_HEIGHT, t / UP_DURATION);
+      } else if (t < UP_DURATION + DOWN_DURATION) {
+        const dt = (t - UP_DURATION) / DOWN_DURATION;
+        bumpMeshRef.current.position.y = THREE.MathUtils.lerp(BUMP_HEIGHT, 0, dt);
+      } else {
+        bumpMeshRef.current.position.y = 0;
+        bumpRef.current.active = false;
+      }
+    }
+  });
 
   if (destroyed) {
     return <BlockParticles position={position} type={type} />;
@@ -33,7 +77,7 @@ export function Block({ type, position, onDestroy, isBackground = false, activat
         name={`block-${type}`}
         userData={{ blockType: type, destructible: false, dangerous: false }}
       >
-        <mesh castShadow receiveShadow>
+        <mesh ref={bumpMeshRef} castShadow receiveShadow>
           <boxGeometry args={[1, 1, 1]} />
           <meshStandardMaterial color="#555555" roughness={0.9} metalness={0} />
         </mesh>

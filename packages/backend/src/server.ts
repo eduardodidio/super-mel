@@ -4,6 +4,8 @@ import { PrismaClient } from "@prisma/client";
 import { authRoutes } from "./routes/auth.js";
 import { scoreRoutes } from "./routes/scores.js";
 import { levelRoutes } from "./routes/levels.js";
+import { dailyRoutes } from "./routes/daily.js";
+import { progressRoutes } from "./routes/progress.js";
 
 const prisma = new PrismaClient();
 
@@ -22,6 +24,8 @@ app.get("/api/health", async () => ({ status: "ok", timestamp: new Date().toISOS
 await app.register(authRoutes, { prefix: "/api/auth" });
 await app.register(scoreRoutes, { prefix: "/api/scores" });
 await app.register(levelRoutes, { prefix: "/api/levels" });
+await app.register(dailyRoutes, { prefix: "/api/daily" });
+await app.register(progressRoutes, { prefix: "/api/progress" });
 
 const port = Number(process.env.PORT) || 3001;
 const host = process.env.HOST || "0.0.0.0";

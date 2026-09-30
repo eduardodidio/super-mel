@@ -1,0 +1,92 @@
+%% F43 — Inimigos v1: User Journey Diagram
+%% Player encounters enemies, stomps or shoots them, or takes damage
+
+flowchart TD
+    START(["Player progresses through level"])
+
+    START --> ENCOUNTER{"Encounter enemy?"}
+    ENCOUNTER -->|"No"| CONTINUE["Continue playing<br/>(existing gameplay)"]
+    CONTINUE --> START
+
+    ENCOUNTER -->|"Yes"| IDENTIFY{"Which enemy type?"}
+
+    %% Enemy type identification
+    IDENTIFY -->|"Aspirador-robo<br/>(ground patrol)"| VACUUM_ENCOUNTER["Vacuum patrols platform<br/>Turns at edges<br/>Speed: 2 u/s"]
+    IDENTIFY -->|"Pombo<br/>(sine wave flyer)"| PIGEON_ENCOUNTER["Pigeon flies in sine wave<br/>Amplitude: 2u, Period: 3s<br/>Speed: 3 u/s"]
+    IDENTIFY -->|"Abelha<br/>(chase AI)"| BEE_ENCOUNTER["Bee detects Mel within 6u<br/>Chases at 2.5 u/s<br/>Gives up at 10u"]
+
+    %% Player decision
+    VACUUM_ENCOUNTER --> DECIDE{"Player action?"}
+    PIGEON_ENCOUNTER --> DECIDE
+    BEE_ENCOUNTER --> DECIDE
+
+    DECIDE -->|"Jump on top<br/>(stomp)"| STOMP_CHECK{"Mel vel.y < -1<br/>AND above enemy?"}
+    DECIDE -->|"Shoot Bola<br/>do Infinito"| PROJECTILE_HIT["Projectile collides<br/>with enemy RigidBody<br/>(name: enemy-*)"]
+    DECIDE -->|"Walk/fly into<br/>from side/below"| LATERAL_CONTACT["Lateral contact detected<br/>(not a stomp)"]
+    DECIDE -->|"Avoid entirely<br/>(jump over/fly past)"| AVOID["Enemy avoided<br/>No interaction"]
+
+    %% Stomp path
+    STOMP_CHECK -->|"Yes - valid stomp"| STOMP_SUCCESS["Stomp registered!"]
+    STOMP_CHECK -->|"No - wrong angle"| LATERAL_CONTACT
+
+    STOMP_SUCCESS --> BOUNCE["Mel bounces upward<br/>stompBounce(): vel.y = 7<br/>(~70% of jump force)"]
+    STOMP_SUCCESS --> DEFEAT_ANIM
+
+    %% Projectile path
+    PROJECTILE_HIT --> PROJ_EXPLODE["Projectile explodes<br/>(same as block hit animation)"]
+    PROJECTILE_HIT --> DEFEAT_ANIM
+
+    %% Defeat animation
+    DEFEAT_ANIM["Kid-friendly defeat:<br/>Enemy flies away with sparkles<br/>Scale shrinks to 0 over 0.5-0.6s"]
+    DEFEAT_ANIM --> COIN_DROP["Coins drop!<br/>Vacuum: 1-2 coins<br/>Pigeon: 2-3 coins<br/>Bee: 2-3 coins"]
+    COIN_DROP --> COLLECT{"Collect<br/>dropped coins?"}
+    COLLECT -->|"Yes"| COIN_ADD["Coins added to total<br/>(existing DroppedCoin system)"]
+    COLLECT -->|"No / expire"| COINS_FADE["Coins blink and expire<br/>after 8 seconds"]
+
+    %% Damage path
+    LATERAL_CONTACT --> INVINCIBLE_CHECK{"Mel invincible<br/>or assist mode?"}
+    INVINCIBLE_CHECK -->|"Yes"| NO_DAMAGE["No damage taken<br/>Enemy stays alive"]
+    INVINCIBLE_CHECK -->|"No"| TAKE_DAMAGE["Mel takes 1 damage<br/>loseLife() called"]
+    TAKE_DAMAGE --> HURT_ANIM["Hurt animation plays<br/>(hurt_light from ASM)<br/>Screen shake + hit-stop"]
+    HURT_ANIM --> INVINCIBLE["Invincible for 1.5s<br/>(blink effect)"]
+    INVINCIBLE --> LIVES_CHECK{"Lives remaining?"}
+    LIVES_CHECK -->|"Infinite mode:<br/>lives > 0"| CONTINUE_PLAY["Continue playing"]
+    LIVES_CHECK -->|"Infinite mode:<br/>lives = 0"| GAME_OVER(["Game Over screen"])
+    LIVES_CHECK -->|"Level mode"| RESPAWN["Respawn at checkpoint<br/>with full hearts"]
+
+    %% Avoid path
+    AVOID --> START
+
+    %% Continue paths
+    BOUNCE --> CHAIN{"Another enemy<br/>below?"}
+    CHAIN -->|"Yes"| STOMP_CHECK
+    CHAIN -->|"No"| START
+    COIN_ADD --> START
+    COINS_FADE --> START
+    NO_DAMAGE --> START
+    CONTINUE_PLAY --> START
+    RESPAWN --> START
+    PROJ_EXPLODE --> START
+
+    %% Infinite mode spawning
+    subgraph "Enemy Spawn (Infinite Mode)"
+        CHUNK["ChunkGenerator produces<br/>enemies per chunk"]
+        DIFF{"Difficulty<br/>(chunkIndex / 25)"}
+        DIFF -->|"d >= 0.12<br/>(chunk 3+)"| SPAWN_V["Spawn Aspirador-robo<br/>on ground segments"]
+        DIFF -->|"d >= 0.32<br/>(chunk 8+)"| SPAWN_P["Spawn Pombo<br/>3-5 units above ground"]
+        DIFF -->|"d >= 0.60<br/>(chunk 15+)"| SPAWN_B["Spawn Abelha<br/>2-4 units above ground"]
+        CHUNK --> DIFF
+        SPAWN_V --> MAX["Max 3 enemies<br/>per chunk"]
+        SPAWN_P --> MAX
+        SPAWN_B --> MAX
+    end
+
+    classDef positive fill:#4CAF50,stroke:#333,color:white
+    classDef negative fill:#f44336,stroke:#333,color:white
+    classDef neutral fill:#2196F3,stroke:#333,color:white
+    classDef special fill:#FF9800,stroke:#333,color:white
+
+    class STOMP_SUCCESS,BOUNCE,DEFEAT_ANIM,COIN_DROP,COIN_ADD positive
+    class LATERAL_CONTACT,TAKE_DAMAGE,HURT_ANIM,GAME_OVER negative
+    class VACUUM_ENCOUNTER,PIGEON_ENCOUNTER,BEE_ENCOUNTER neutral
+    class CHAIN,PROJ_EXPLODE special

@@ -1,0 +1,95 @@
+flowchart LR
+    subgraph MenuPhase [Menu]
+        M1[Abrir Menu]
+        M2{Clica LOJA}
+        M3[ShopOverlay abre]
+        M4{Moedas suficientes?}
+        M5[Compra upgrade<br/>moedas descontadas]
+        M6{Equipar?}
+        M7[Equipa em slot 1 ou 2]
+        M8[Volta ao Menu]
+        M9[Clica JOGAR]
+    end
+
+    subgraph PlayPhase [Gameplay]
+        P1[Jogo inicia<br/>config resolvido com upgrades]
+        P2[Mel se move com<br/>constantes do GAME_CONFIG<br/>modificadas por upgrades]
+        P3{Mel bate item_block}
+        P4{Roll aleatorio}
+        P5[Moedas caem<br/>60%]
+        P6[Coracao aparece<br/>10%]
+        P7[Power-up spawna<br/>30%]
+        P8[Power-up flutuando<br/>bob + glow + blink]
+        P9{Mel coleta power-up}
+        P10[usePowerUpState<br/>activate tipo + duracao]
+    end
+
+    subgraph EffectPhase [Efeito Ativo]
+        E1[HUD mostra timer bar<br/>icone + contagem regressiva]
+        E2{Qual tipo?}
+        E3[Estrela: invencivel<br/>tint dourado em Mel]
+        E4[Ima: moedas atraidas<br/>raio aumentado]
+        E5[Bola de Fogo: projetil<br/>atravessa blocos]
+        E6[Asas: voo ilimitado]
+        E7{Timer < 3s}
+        E8[Bar pisca aviso]
+        E9{Timer = 0}
+        E10[Efeito desativa<br/>HUD some]
+    end
+
+    subgraph PersistPhase [Persistencia]
+        PR1[Shop state salva<br/>localStorage imediato]
+        PR2{Logado?}
+        PR3[Sync debounced<br/>PUT /api/progress data]
+        PR4[Proximo login:<br/>hydrate do backend]
+    end
+
+    M1 --> M2
+    M2 -->|Sim| M3
+    M3 --> M4
+    M4 -->|Sim| M5
+    M4 -->|Nao| M3
+    M5 --> M6
+    M6 -->|Sim| M7
+    M6 -->|Nao| M3
+    M7 --> M3
+    M3 -->|VOLTAR| M8
+    M8 --> M9
+
+    M9 --> P1
+    P1 --> P2
+    P2 --> P3
+    P3 --> P4
+    P4 --> P5
+    P4 --> P6
+    P4 --> P7
+    P7 --> P8
+    P8 --> P9
+    P9 -->|Sim| P10
+
+    P10 --> E1
+    E1 --> E2
+    E2 -->|star| E3
+    E2 -->|coin_magnet_temp| E4
+    E2 -->|fire_ball| E5
+    E2 -->|wings| E6
+    E3 & E4 & E5 & E6 --> E7
+    E7 -->|Sim| E8
+    E8 --> E9
+    E7 -->|Nao| E9
+    E9 -->|Sim| E10
+    E9 -->|Nao| E7
+
+    M5 --> PR1
+    M7 --> PR1
+    PR1 --> PR2
+    PR2 -->|Sim| PR3
+    PR3 --> PR4
+
+    style M5 fill:#4a8a4a,color:#fff
+    style P7 fill:#FFD700,color:#000
+    style E3 fill:#FFD700,color:#000
+    style E4 fill:#FF4444,color:#fff
+    style E5 fill:#FF6600,color:#fff
+    style E6 fill:#FFFFFF,color:#000
+    style E10 fill:#888,color:#fff

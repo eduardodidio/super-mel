@@ -1,4 +1,6 @@
-import type { BlockType } from "@super-mel/shared";
+import type { BackgroundTheme, BlockType, EnemySubtype } from "@super-mel/shared";
+import { getBlockPalette, type BlockPalette } from "./BiomeManager";
+import { selectPrefab, repositionPrefab, type PrefabEntry } from "./PrefabLibrary";
 
 export interface BlockData {
   type: Exclude<BlockType, "empty">;
@@ -18,11 +20,18 @@ export interface CoinData {
   y: number;
 }
 
+export interface EnemyChunkData {
+  subtype: EnemySubtype;
+  x: number;
+  y: number;
+}
+
 export interface Chunk {
   startX: number;
   blocks: BlockData[];
   hearts: HeartData[];
   coins: CoinData[];
+  enemies: EnemyChunkData[];
 }
 
 const CHUNK_WIDTH = 16;
@@ -35,9 +44,46 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-export function generateChunk(chunkIndex: number): Chunk {
+export function dailySeed(dateStr: string): number {
+  // dateStr format: "YYYYMMDD" e.g. "20260930"
+  // Simple numeric hash: sum of (charCode * position * prime)
+  let hash = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    hash = (hash * 31 + dateStr.charCodeAt(i)) & 0x7fffffff;
+  }
+  return hash;
+}
+
+export function getTodaySeed(): number {
+  const d = new Date();
+  const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  return dailySeed(dateStr);
+}
+
+// Default forest palette (used by the original generateChunk for backward compat)
+const DEFAULT_PALETTE: BlockPalette = {
+  surface: "dirt",
+  underground: "stone",
+  platform: "brick",
+  wall: "stone",
+  hazard: "lava",
+  background: "stone",
+  tree: "wood",
+  canopy: "leaf",
+};
+
+/**
+ * Internal chunk generation with configurable block palette.
+ * Both generateChunk and generateChunkBiome delegate to this.
+ */
+function generateChunkInternal(
+  chunkIndex: number,
+  baseSeed: number,
+  palette: BlockPalette,
+  hasTrees: boolean,
+): Chunk {
   const startX = chunkIndex * CHUNK_WIDTH;
-  const rand = seededRandom(chunkIndex * 7919 + 31);
+  const rand = seededRandom(chunkIndex * 7919 + 31 + baseSeed);
   const blocks: BlockData[] = [];
   const hearts: HeartData[] = [];
   const coins: CoinData[] = [];
@@ -45,10 +91,8 @@ export function generateChunk(chunkIndex: number): Chunk {
   const difficulty = Math.min(chunkIndex / 25, 1);
 
   // --- GROUND LAYER ---
-  // Generate terrain height map for this chunk
   const heights: number[] = [];
   for (let x = 0; x < CHUNK_WIDTH; x++) {
-    // Base height with some variation
     const noise = Math.sin((startX + x) * 0.15) * 1.5 + Math.sin((startX + x) * 0.05) * 2;
     heights.push(Math.round(noise));
   }
@@ -73,14 +117,12 @@ export function generateChunk(chunkIndex: number): Chunk {
     const worldX = startX + x;
     const surfaceY = heights[x] - 2;
 
-    // Surface block
-    blocks.push({ type: "dirt", x: worldX, y: surfaceY, z: 0, isBackground: false });
-    // Underground
-    blocks.push({ type: "stone", x: worldX, y: surfaceY - 1, z: 0, isBackground: false });
-    blocks.push({ type: "stone", x: worldX, y: surfaceY - 2, z: 0, isBackground: false });
+    blocks.push({ type: palette.surface, x: worldX, y: surfaceY, z: 0, isBackground: false });
+    blocks.push({ type: palette.underground, x: worldX, y: surfaceY - 1, z: 0, isBackground: false });
+    blocks.push({ type: palette.underground, x: worldX, y: surfaceY - 2, z: 0, isBackground: false });
   }
 
-  // Spawn area — place a few easy coins for the player
+  // Spawn area
   if (chunkIndex <= 0) {
     for (let x = 2; x < CHUNK_WIDTH - 2; x++) {
       if (rand() < 0.25) {
@@ -91,7 +133,7 @@ export function generateChunk(chunkIndex: number): Chunk {
         }
       }
     }
-    return { startX, blocks, hearts, coins };
+    return { startX, blocks, hearts, coins, enemies: [] };
   }
 
   // --- PLATFORMS ---
@@ -99,7 +141,10 @@ export function generateChunk(chunkIndex: number): Chunk {
     if (rand() < 0.35 + difficulty * 0.15) {
       const platY = heights[x] + 1 + Math.floor(rand() * 3);
       const platLen = 2 + Math.floor(rand() * 3);
-      const platType: Exclude<BlockType, "empty"> = rand() < 0.4 ? "brick" : rand() < 0.7 ? "wood" : "stone";
+      // 60% palette platform, 40% original random variety
+      const platType: Exclude<BlockType, "empty"> = rand() < 0.6
+        ? palette.platform
+        : rand() < 0.5 ? "wood" : "stone";
 
       for (let px = 0; px < platLen && x + px < CHUNK_WIDTH; px++) {
         blocks.push({
@@ -111,7 +156,6 @@ export function generateChunk(chunkIndex: number): Chunk {
         });
       }
 
-      // Item block on platform
       if (rand() < 0.3) {
         blocks.push({
           type: "item_block",
@@ -122,7 +166,6 @@ export function generateChunk(chunkIndex: number): Chunk {
         });
       }
 
-      // Heart on platform occasionally
       if (rand() < 0.15) {
         hearts.push({
           x: startX + x + Math.floor(platLen / 2),
@@ -136,7 +179,10 @@ export function generateChunk(chunkIndex: number): Chunk {
   for (let x = 2; x < CHUNK_WIDTH - 2; x += 5 + Math.floor(rand() * 4)) {
     if (rand() < 0.25 + difficulty * 0.15) {
       const wallHeight = 2 + Math.floor(rand() * (2 + difficulty * 2));
-      const wallType: Exclude<BlockType, "empty"> = rand() < 0.3 ? "iron" : rand() < 0.6 ? "stone" : "brick";
+      // 60% palette wall, 40% original random
+      const wallType: Exclude<BlockType, "empty"> = rand() < 0.6
+        ? palette.wall
+        : rand() < 0.5 ? "iron" : "brick";
       const baseY = (heights[x] || 0) - 1;
 
       for (let y = 0; y < wallHeight; y++) {
@@ -149,11 +195,10 @@ export function generateChunk(chunkIndex: number): Chunk {
         });
       }
 
-      // Staircase next to wall
       if (rand() < 0.5 && x + 3 < CHUNK_WIDTH) {
         for (let s = 0; s < Math.min(wallHeight, 3); s++) {
           blocks.push({
-            type: "stone",
+            type: palette.underground,
             x: startX + x + 1 + s,
             y: baseY + s,
             z: 0,
@@ -177,14 +222,14 @@ export function generateChunk(chunkIndex: number): Chunk {
     }
   }
 
-  // --- LAVA PITS ---
+  // --- HAZARD PITS ---
   if (chunkIndex > 3) {
     for (let x = 3; x < CHUNK_WIDTH - 3; x += 6 + Math.floor(rand() * 4)) {
       if (rand() < 0.1 * difficulty) {
-        const lavaLen = 2 + Math.floor(rand() * 2);
-        const lavaY = Math.min(...heights.slice(x, x + lavaLen).map(h => h)) - 2;
-        for (let lx = 0; lx < lavaLen && x + lx < CHUNK_WIDTH; lx++) {
-          blocks.push({ type: "lava", x: startX + x + lx, y: lavaY, z: 0, isBackground: false });
+        const hazardLen = 2 + Math.floor(rand() * 2);
+        const hazardY = Math.min(...heights.slice(x, x + hazardLen).map(h => h)) - 2;
+        for (let lx = 0; lx < hazardLen && x + lx < CHUNK_WIDTH; lx++) {
+          blocks.push({ type: palette.hazard, x: startX + x + lx, y: hazardY, z: 0, isBackground: false });
         }
       }
     }
@@ -197,19 +242,16 @@ export function generateChunk(chunkIndex: number): Chunk {
       const bgZ = -3 - Math.floor(rand() * 3);
       const bgY = (heights[x] || 0) - 2;
 
-      // Background terrain
-      blocks.push({ type: "stone", x: worldX, y: bgY, z: bgZ, isBackground: true });
-      blocks.push({ type: "dirt", x: worldX, y: bgY + 1, z: bgZ, isBackground: true });
+      blocks.push({ type: palette.background, x: worldX, y: bgY, z: bgZ, isBackground: true });
+      blocks.push({ type: palette.surface, x: worldX, y: bgY + 1, z: bgZ, isBackground: true });
 
-      // Trees in background
-      if (rand() < 0.3) {
+      if (hasTrees && rand() < 0.3) {
         for (let ty = 0; ty < 3; ty++) {
-          blocks.push({ type: "wood", x: worldX, y: bgY + 2 + ty, z: bgZ, isBackground: true });
+          blocks.push({ type: palette.tree, x: worldX, y: bgY + 2 + ty, z: bgZ, isBackground: true });
         }
-        // Canopy
         for (let cx = -1; cx <= 1; cx++) {
           for (let cy = 0; cy <= 1; cy++) {
-            blocks.push({ type: "leaf", x: worldX + cx, y: bgY + 5 + cy, z: bgZ, isBackground: true });
+            blocks.push({ type: palette.canopy, x: worldX + cx, y: bgY + 5 + cy, z: bgZ, isBackground: true });
           }
         }
       }
@@ -217,7 +259,6 @@ export function generateChunk(chunkIndex: number): Chunk {
   }
 
   // --- COINS ---
-  // Build a set of occupied positions so coins never overlap solid blocks
   const occupied = new Set<string>();
   for (const b of blocks) {
     if (!b.isBackground) {
@@ -225,12 +266,11 @@ export function generateChunk(chunkIndex: number): Chunk {
     }
   }
 
-  // Line / cluster coins on ground and platforms
   for (let x = 0; x < CHUNK_WIDTH; x++) {
-    if (gapPositions.has(x)) continue; // gaps handled separately for arcs
+    if (gapPositions.has(x)) continue;
     if (rand() < 0.3) {
       const groundY = heights[x];
-      const count = 1 + Math.floor(rand() * 3); // 1-3 coins stacked
+      const count = 1 + Math.floor(rand() * 3);
       for (let i = 0; i < count; i++) {
         const cx = startX + x;
         const cy = groundY + 2 + i;
@@ -241,8 +281,7 @@ export function generateChunk(chunkIndex: number): Chunk {
     }
   }
 
-  // Arcs of coins over gaps — reward jumping
-  // Find contiguous gap runs
+  // Arcs of coins over gaps
   const gapRuns: { start: number; length: number }[] = [];
   {
     let runStart = -1;
@@ -262,19 +301,16 @@ export function generateChunk(chunkIndex: number): Chunk {
   }
 
   for (const gap of gapRuns) {
-    const arcCount = Math.min(3 + Math.floor(rand() * 3), gap.length + 2); // 3-5 coins
-    // Heights at edges of the gap for arc reference
+    const arcCount = Math.min(3 + Math.floor(rand() * 3), gap.length + 2);
     const leftX = Math.max(gap.start - 1, 0);
     const rightX = Math.min(gap.start + gap.length, CHUNK_WIDTH - 1);
     const edgeY = Math.max(heights[leftX] || 0, heights[rightX] || 0);
-    const arcPeak = edgeY + 3 + Math.floor(rand() * 2); // peak 3-4 above edge
+    const arcPeak = edgeY + 3 + Math.floor(rand() * 2);
 
     for (let i = 0; i < arcCount; i++) {
-      // Distribute coins across the gap span (including one position outside each edge)
       const t = arcCount > 1 ? i / (arcCount - 1) : 0.5;
       const coinLocalX = (gap.start - 0.5) + t * (gap.length + 1);
       const coinX = startX + Math.round(coinLocalX);
-      // Parabola: y = peak - 4*(t-0.5)^2 * drop  (highest at center)
       const drop = arcPeak - edgeY;
       const coinY = Math.round(arcPeak - 4 * (t - 0.5) * (t - 0.5) * drop);
       if (!occupied.has(`${coinX},${coinY}`)) {
@@ -283,8 +319,6 @@ export function generateChunk(chunkIndex: number): Chunk {
     }
   }
 
-  // Ensure minimum coins per chunk (5-15 target)
-  // If we have fewer than 5, add a few more on safe ground
   if (coins.length < 5) {
     for (let x = 0; x < CHUNK_WIDTH && coins.length < 5; x++) {
       if (gapPositions.has(x)) continue;
@@ -296,12 +330,99 @@ export function generateChunk(chunkIndex: number): Chunk {
     }
   }
 
-  // Cap at 15 to stay in range
   if (coins.length > 15) {
     coins.length = 15;
   }
 
-  return { startX, blocks, hearts, coins };
+  // --- ENEMIES ---
+  const enemies: EnemyChunkData[] = [];
+
+  // No enemies in safe zone (chunks 0-2)
+  if (chunkIndex >= 3) {
+    // --- VACUUM (Aspirador-robo) ---
+    // Appears from chunk 3+ (difficulty >= 0.12)
+    for (let x = 2; x < CHUNK_WIDTH - 2; x += 5 + Math.floor(rand() * 4)) {
+      if (gapPositions.has(x)) continue;
+      const vacuumChance = 0.08 + difficulty * 0.12; // 8%-20%
+      if (rand() < vacuumChance) {
+        enemies.push({
+          subtype: "vacuum",
+          x: startX + x,
+          y: (heights[x] || 0) - 1, // on top of ground (surface is heights[x]-2, so -2+1 = -1)
+        });
+      }
+    }
+
+    // --- PIGEON (Pombo) ---
+    // Appears from chunk 8+ (difficulty >= 0.32)
+    if (difficulty > 0.3) {
+      for (let x = 3; x < CHUNK_WIDTH - 3; x += 7 + Math.floor(rand() * 5)) {
+        const pigeonChance = 0.05 + (difficulty - 0.3) * 0.15;
+        if (rand() < pigeonChance) {
+          const flyY = (heights[x] || 0) + 3 + Math.floor(rand() * 3); // 3-5 above ground
+          enemies.push({
+            subtype: "pigeon",
+            x: startX + x,
+            y: flyY,
+          });
+        }
+      }
+    }
+
+    // --- BEE (Abelha) ---
+    // Appears from chunk 15+ (difficulty >= 0.6)
+    if (difficulty > 0.6) {
+      for (let x = 4; x < CHUNK_WIDTH - 4; x += 10 + Math.floor(rand() * 6)) {
+        const beeChance = 0.04 + (difficulty - 0.6) * 0.1;
+        if (rand() < beeChance) {
+          const beeY = (heights[x] || 0) + 2 + Math.floor(rand() * 2);
+          enemies.push({
+            subtype: "bee",
+            x: startX + x,
+            y: beeY,
+          });
+        }
+      }
+    }
+
+    // Cap enemies per chunk (max 3)
+    if (enemies.length > 3) enemies.length = 3;
+  }
+
+  return { startX, blocks, hearts, coins, enemies };
+}
+
+/**
+ * Original chunk generator (backward-compatible). Uses the default forest palette.
+ */
+export function generateChunk(chunkIndex: number, baseSeed: number = 0): Chunk {
+  return generateChunkInternal(chunkIndex, baseSeed, DEFAULT_PALETTE, true);
+}
+
+/**
+ * Biome-aware chunk generator. Uses the biome's block palette and
+ * optionally injects a prefab chunk from the pool.
+ */
+export function generateChunkBiome(
+  chunkIndex: number,
+  baseSeed: number,
+  biome: BackgroundTheme,
+  prefabPool: PrefabEntry[],
+): Chunk {
+  // Prefab injection: after chunk 10, every 5th chunk has 50% chance of being a prefab
+  if (chunkIndex >= 10 && chunkIndex % 5 === 0 && prefabPool.length > 0) {
+    const prefabRand = seededRandom(chunkIndex * 7919 + baseSeed);
+    if (prefabRand() < 0.5) {
+      const selected = selectPrefab(prefabPool, chunkIndex * 7919 + baseSeed);
+      if (selected) {
+        return repositionPrefab(selected, chunkIndex * CHUNK_WIDTH);
+      }
+    }
+  }
+
+  const palette = getBlockPalette(biome);
+  const hasTrees = biome !== "desert" && biome !== "space";
+  return generateChunkInternal(chunkIndex, baseSeed, palette, hasTrees);
 }
 
 export function getVisibleChunkIndices(cameraX: number, viewDistance: number = 3): number[] {

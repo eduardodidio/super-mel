@@ -3,13 +3,19 @@ import { FastifyInstance } from "fastify";
 export async function scoreRoutes(app: FastifyInstance) {
   const prisma = (app as any).prisma;
 
-  app.post<{ Body: { playerId: string; distance: number; levelId?: string } }>(
+  app.post<{ Body: { playerId: string; distance: number; levelId?: string; mode?: string; seed?: number } }>(
     "/",
     async (request) => {
-      const { playerId, distance, levelId } = request.body;
+      const { playerId, distance, levelId, mode, seed } = request.body;
       try {
         const score = await prisma.score.create({
-          data: { playerId, distance, levelId: levelId || null },
+          data: {
+            playerId,
+            distance,
+            levelId: levelId || null,
+            mode: mode || "infinite",
+            seed: seed ?? null,
+          },
         });
         return score;
       } catch {

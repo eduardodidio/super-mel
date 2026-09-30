@@ -50,6 +50,7 @@ export function EffectManager({
   // Refs for tracking state transitions and spawn timing
   const prevStateRef = useRef<string>(playerState);
   const runDustTimerRef = useRef(0);
+  const zzzTimerRef = useRef(0);
 
   // Stable callback for removing a completed effect
   const removeEffect = useCallback((id: number) => {
@@ -104,6 +105,37 @@ export function EffectManager({
       (playerState === "affection" || playerState === "jump_on_owner")
     ) {
       spawnEffect("heart", [playerX, playerY + 0.6, 0.1]);
+    }
+
+    // --- Zzz: when entering lie_down ---
+    if (stateChanged && playerState === "lie_down") {
+      spawnEffect("zzz", [playerX, playerY + 0.8, 0.1]);
+    }
+
+    // --- Zzz: recurring while in lie_down (every 2.5s) ---
+    if (playerState === "lie_down") {
+      zzzTimerRef.current += delta;
+      if (zzzTimerRef.current >= 2.5) {
+        zzzTimerRef.current = 0;
+        spawnEffect("zzz", [playerX, playerY + 0.8, 0.1]);
+      }
+    } else {
+      zzzTimerRef.current = 0;
+    }
+
+    // --- Bark ring: when entering bark state ---
+    if (stateChanged && playerState === "bark") {
+      spawnEffect("bark_ring", [playerX, playerY, 0.1]);
+    }
+
+    // --- Dig dust: when entering dig state ---
+    if (stateChanged && playerState === "dig") {
+      spawnEffect("dig_dust", [playerX, playerY - 0.4, 0.1]);
+    }
+
+    // --- Sniff dust: when entering sniff state (small puff at nose) ---
+    if (stateChanged && playerState === "sniff") {
+      spawnEffect("dust", [playerX + 0.3, playerY - 0.2, 0.1], 0.5);
     }
 
     // Update prev state

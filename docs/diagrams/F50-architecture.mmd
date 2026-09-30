@@ -1,0 +1,82 @@
+flowchart TD
+    subgraph Client["Frontend (Browser)"]
+        subgraph Editor["Editor"]
+            EU[EditorUI.tsx - Custom Tab]
+            CAP[CustomAssetPalette.tsx]
+            IU[ImageUploader.tsx]
+            EW[EditorWrapper.tsx]
+            ES3D[EditorScene3D.tsx]
+        end
+
+        subgraph GamePlay["Gameplay"]
+            GS3D[GameScene3D.tsx]
+            LSC[LevelSceneConverter.ts]
+            CS[CustomSign.tsx]
+        end
+
+        subgraph Systems["Texture Systems"]
+            BT3D[BlockTextures3D.ts]
+            CTC[CustomTextureCache.ts]
+        end
+    end
+
+    subgraph Shared["@super-mel/shared"]
+        Types[types.ts - CustomAsset + BlockType custom]
+        Mig[levelMigration.ts]
+    end
+
+    subgraph Backend["Backend (Fastify)"]
+        LR[routes/levels.ts]
+        LV[levelValidation.ts]
+        CAV[customAssetValidation.ts]
+        Auth[Auth Check - isGuest?]
+    end
+
+    subgraph Storage["Storage"]
+        DB[(PostgreSQL - levels.data JSONB)]
+    end
+
+    %% Upload flow
+    EU --> CAP
+    CAP -->|"+ UPLOAD"| IU
+    IU -->|"File input PNG/JPG"| IU
+    IU -->|"Canvas 64x64 pixelate"| IU
+    IU -->|"CustomAsset{id,name,dataUri}"| EW
+
+    %% Editor placement flow
+    EW -->|"customAssets[]"| CAP
+    EW -->|"customAssets[]"| ES3D
+    CAP -->|"select asset + mode"| EU
+    EU -->|"tool: custom_block/custom_sign"| ES3D
+    ES3D -->|"render custom block"| CTC
+    CTC -->|"THREE.CanvasTexture"| BT3D
+
+    %% Save flow
+    EW -->|"buildLevelDataV2 with customAssets"| LR
+    LR -->|"migrate"| Mig
+    LR -->|"validate"| LV
+    LV -->|"customAssets present?"| CAV
+    LR -->|"guest check"| Auth
+    Auth -->|"403 if guest"| LR
+    CAV -->|"max 10, max 15KB each"| LV
+    LR -->|"store"| DB
+
+    %% Play flow
+    DB -->|"GET level"| LR
+    LR -->|"LevelDataV2 + customAssets"| LSC
+    LSC -->|"SceneObjects + customBlockAssets Map"| GS3D
+    GS3D -->|"preloadCustomTextures"| CTC
+    GS3D -->|"custom block"| BT3D
+    GS3D -->|"sign with customAssetId"| CS
+    CS -->|"getCustomTexture"| CTC
+    BT3D -->|"getCustomBlockMaterials"| CTC
+
+    %% Types flow
+    Types -.->|"CustomAsset, BlockType"| EW
+    Types -.->|"LevelDataV2"| LSC
+    Types -.->|"EntityType"| ES3D
+
+    style IU fill:#CC88FF,color:#000
+    style CTC fill:#CC88FF,color:#000
+    style CAV fill:#4488FF,color:#fff
+    style DB fill:#228B22,color:#fff

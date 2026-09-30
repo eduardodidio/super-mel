@@ -1,0 +1,128 @@
+%%{ init: { "theme": "dark" } }%%
+flowchart TD
+    Start(["Player starts playing"])
+
+    subgraph BarkFlow["Bark / Latido (X key / C touch / Y gamepad)"]
+        B1["Player presses X"]
+        B2{"Cooldown\nexpired?"}
+        B3["Mel plays bark animation"]
+        B4["Golden ring expands from Mel"]
+        B5{"Enemies\nin radius?"}
+        B6["Enemies stunned 1.5s"]
+        B7{"item_blocks\nin radius?"}
+        B8["item_blocks shake\n(hint: they have content)"]
+        B9["Cooldown starts (1s)"]
+    end
+
+    subgraph DigFlow["Dig / Cavar (Down + Z on dirt/sand)"]
+        D1["Player holds Down + presses Z"]
+        D2{"Grounded +\ncrouching?"}
+        D3{"Block below\nis diggable?"}
+        D4["Mel plays dig animation"]
+        D5["Block removed"]
+        D6["Brown dust effect"]
+        D7{"Random drop\nroll"}
+        D8["Bone drop\n(+50 score)"]
+        D9["Coin drop"]
+        D10["Nothing"]
+        D11["Bola fires instead\n(normal attack)"]
+    end
+
+    subgraph SniffFlow["Sniff / Farejar (hold Down 1s while still)"]
+        S1["Player holds Down\nwhile standing still"]
+        S2{"Held for\n1 second?"}
+        S3["Mel plays sniff animation"]
+        S4["Golden rings appear on\nnearby item_blocks"]
+        S5["Bone entities glow\n(level mode only)"]
+        S6["Player moves or\nreleases Down"]
+        S7["Highlights fade out"]
+    end
+
+    subgraph FetchFlow["Fetch / Buscar (Z key - ball returns)"]
+        F1["Player presses Z (standing)"]
+        F2["Bola fires forward"]
+        F3{"Hits a\nblock?"}
+        F4["Explodes + destroys block\n(existing behavior)"]
+        F5["Reaches max range (10 blocks)"]
+        F6["Ball reverses direction"]
+        F7["Ball homes toward Mel"]
+        F8{"Passes through\ncoins?"}
+        F9["Coins collected\nautomatically"]
+        F10["Ball reaches Mel"]
+        F11["Ball disappears\n(Mel 'catches' it)"]
+    end
+
+    Start --> B1
+    Start --> D1
+    Start --> S1
+    Start --> F1
+
+    B1 --> B2
+    B2 -->|"No"| B1
+    B2 -->|"Yes"| B3
+    B3 --> B4
+    B4 --> B5
+    B5 -->|"Yes"| B6
+    B5 -->|"No"| B7
+    B6 --> B7
+    B7 -->|"Yes"| B8
+    B7 -->|"No"| B9
+    B8 --> B9
+
+    D1 --> D2
+    D2 -->|"No"| D11
+    D2 -->|"Yes"| D3
+    D3 -->|"No (stone, brick...)"| D11
+    D3 -->|"Yes (dirt, sand)"| D4
+    D4 --> D5
+    D5 --> D6
+    D6 --> D7
+    D7 -->|"30%"| D8
+    D7 -->|"30%"| D9
+    D7 -->|"40%"| D10
+
+    S1 --> S2
+    S2 -->|"No, keep holding"| S1
+    S2 -->|"Yes"| S3
+    S3 --> S4
+    S4 --> S5
+    S5 --> S6
+    S6 --> S7
+
+    F1 --> F2
+    F2 --> F3
+    F3 -->|"Yes"| F4
+    F3 -->|"No"| F5
+    F5 --> F6
+    F6 --> F7
+    F7 --> F8
+    F8 -->|"Yes"| F9
+    F9 --> F10
+    F8 -->|"No"| F10
+    F10 --> F11
+
+    subgraph CombinedPlay["Combined Gameplay Loop"]
+        CP1["Bark to stun enemies"]
+        CP2["Dig through dirt to find underground area"]
+        CP3["Sniff to locate hidden item_blocks"]
+        CP4["Shoot item_block with Bola"]
+        CP5["Ball returns, collecting scattered coins"]
+        CP6["Collect bone drops for score bonus"]
+    end
+
+    B6 -.->|"safe to approach"| CP1
+    D5 -.->|"new path"| CP2
+    S4 -.->|"found secrets"| CP3
+    CP3 -.->|"shoot them"| CP4
+    CP4 -.->|"coins scatter"| CP5
+    D8 -.->|"score bonus"| CP6
+
+    classDef action fill:#2d5a2d,stroke:#4a8a4a,color:#fff
+    classDef decision fill:#5a5a2d,stroke:#8a8a4a,color:#fff
+    classDef effect fill:#2d2d5a,stroke:#4a4a8a,color:#fff
+    classDef combined fill:#3a2d3a,stroke:#6a4a6a,color:#fff
+
+    class B1,D1,S1,F1,B3,D4,S3,F2 action
+    class B2,B5,B7,D2,D3,D7,S2,F3,F8 decision
+    class B4,B6,B8,B9,D5,D6,D8,D9,D10,D11,S4,S5,S7,F4,F5,F6,F7,F9,F10,F11 effect
+    class CP1,CP2,CP3,CP4,CP5,CP6 combined

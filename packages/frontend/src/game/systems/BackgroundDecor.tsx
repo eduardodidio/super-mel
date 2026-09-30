@@ -6,6 +6,8 @@ import type { BackgroundTheme } from "@super-mel/shared";
 interface BackgroundDecorProps {
   theme: BackgroundTheme;
   playerXRef: React.RefObject<{ x: number; y: number }>;
+  nextTheme?: BackgroundTheme | null;
+  transitionFactor?: number;
 }
 
 interface CloudData {
@@ -47,9 +49,11 @@ const THEME_DECOR: Record<BackgroundTheme, {
   ocean: { cloudColor: "#c8d8f0", cloudCount: 10, mountainColor: "#1a4a6a", mountainDarkColor: "#0a3050", hasMountains: true },
 };
 
-export function BackgroundDecor({ theme, playerXRef }: BackgroundDecorProps) {
+export function BackgroundDecor({ theme, playerXRef, nextTheme, transitionFactor = 0 }: BackgroundDecorProps) {
   const cloudsRef = useRef<THREE.Group>(null);
   const decor = THEME_DECOR[theme];
+  const transitioning = nextTheme != null && transitionFactor > 0;
+  const nextDecor = transitioning ? THEME_DECOR[nextTheme!] : decor;
 
   const clouds = useMemo<CloudData[]>(() => {
     const rand = seededRandom(42);
@@ -91,11 +95,23 @@ export function BackgroundDecor({ theme, playerXRef }: BackgroundDecorProps) {
     }));
   }, [theme]);
 
+  // Compute lerped colors for transitions
+  const _lerpColor = new THREE.Color();
+  const _targetColor = new THREE.Color();
+
   // Move clouds slowly + update parallax positions each frame from ref
   useFrame((_, delta) => {
     const playerX = playerXRef.current?.x ?? 0;
+    const t = transitioning ? transitionFactor : 0;
 
     if (cloudsRef.current) {
+      // Compute blended cloud color
+      if (transitioning) {
+        _lerpColor.set(decor.cloudColor);
+        _targetColor.set(nextDecor.cloudColor);
+        _lerpColor.lerp(_targetColor, t);
+      }
+
       cloudsRef.current.children.forEach((child, i) => {
         const c = clouds[i];
         child.position.x += c.speed * delta;
@@ -103,15 +119,52 @@ export function BackgroundDecor({ theme, playerXRef }: BackgroundDecorProps) {
         const relX = child.position.x - playerX;
         if (relX > 70) child.position.x -= 140;
         if (relX < -70) child.position.x += 140;
+
+        // Update cloud material colors during transitions
+        if (transitioning) {
+          const group = child as THREE.Group;
+          group.traverse((obj) => {
+            if ((obj as THREE.Mesh).isMesh) {
+              const mat = (obj as THREE.Mesh).material as THREE.MeshStandardMaterial;
+              mat.color.copy(_lerpColor);
+            }
+          });
+        }
       });
     }
 
-    // Update mountain parallax
+    // Update mountain parallax + transition opacity/color
     if (mountainsRef.current) {
+      // Compute mountain opacity for cross-fade
+      const mountainOpacity = transitioning
+        ? (decor.hasMountains && !nextDecor.hasMountains ? 1 - t
+          : !decor.hasMountains && nextDecor.hasMountains ? t
+          : 1)
+        : 1;
+
       mountainsRef.current.children.forEach((child, i) => {
         const m = mountains[i];
         if (m) {
           child.position.x = m.x + playerX * 0.05;
+        }
+
+        if (transitioning) {
+          const group = child as THREE.Group;
+          group.traverse((obj) => {
+            if ((obj as THREE.Mesh).isMesh) {
+              const mat = (obj as THREE.Mesh).material as THREE.MeshStandardMaterial;
+              if (mountainOpacity < 1) {
+                mat.transparent = true;
+                mat.opacity = mountainOpacity;
+              }
+              if (m && decor.hasMountains && nextDecor.hasMountains) {
+                _lerpColor.set(decor.mountainColor);
+                _targetColor.set(nextDecor.mountainColor);
+                _lerpColor.lerp(_targetColor, t);
+                mat.color.copy(_lerpColor);
+              }
+            }
+          });
         }
       });
     }

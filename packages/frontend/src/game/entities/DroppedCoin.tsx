@@ -1,6 +1,7 @@
 import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { useGameState } from "../hooks/useGameState";
 
 interface DroppedCoinProps {
   id: string;
@@ -38,6 +39,7 @@ export function DroppedCoin({ id, position, velocity, playerPosRef, onCollect, o
   const texture = useMemo(() => getDropCoinTexture(), []);
 
   useFrame((_, delta) => {
+    if (useGameState.getState().paused) return;
     if (collected.current || !meshRef.current) return;
     lifeRef.current += delta;
 

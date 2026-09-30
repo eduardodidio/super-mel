@@ -6,16 +6,28 @@ import { HUD3D } from "./systems/HUD3D";
 import { MenuScene3D } from "./scenes/MenuScene3D";
 import { GameScene3D } from "./scenes/GameScene3D";
 import { GameOverOverlay } from "./scenes/GameOverScene3D";
+import { LevelClearOverlay } from "./scenes/LevelClearOverlay";
 import { EditorWrapper } from "./scenes/EditorWrapper";
 import { LevelSelectOverlay } from "./scenes/LevelSelectScene3D";
+import { WorldMapScene } from "./scenes/WorldMapScene";
 import { useGameState } from "./hooks/useGameState";
+import { useAssistMode } from "./hooks/useAssistMode";
 import { TouchControls3D } from "./systems/TouchControls3D";
+import { PauseOverlay } from "./systems/PauseOverlay";
+import { ComoJogarScreen } from "./systems/ComoJogarScreen";
+import { AssistModeUI } from "./systems/AssistModeUI";
 import { useControls } from "./hooks/useControls";
+import { useProgressSync, flushProgress } from "./hooks/useProgressSync";
 import { playTrack, toggleMute, isMuted } from "./systems/AudioManager3D";
 import { LeaderboardView } from "../components/LeaderboardView";
 import { usePWAInstall } from "../hooks/usePWAInstall";
+import { getTodaySeed } from "./systems/ChunkGenerator";
 import type { BackgroundTheme } from "@super-mel/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CoinPopupLayer, type CoinPopupHandle } from "./systems/CoinPopup";
+import { useLevelMissions } from "./hooks/useLevelMissions";
+import { useInfiniteMissions } from "./hooks/useInfiniteMissions";
+import { MissionToast } from "./systems/MissionToast";
 
 const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
 
@@ -23,13 +35,34 @@ function SceneContent() {
   const scene = useGameState((s) => s.scene);
   const theme = useGameState((s) => s.theme);
   const testMode = useGameState((s) => s.testMode);
+  const currentLevelData = useGameState((s) => s.currentLevelData);
+  const levelId = useGameState((s) => s.levelId);
+  const gameMode = useGameState((s) => s.gameMode);
+
+  // In infinite playing mode (not test, not level), BiomeTransition inside
+  // GameScene3D manages Skybox+Lighting+BackgroundDecor. Skip them here.
+  const biomeHandledByScene =
+    scene === "playing" &&
+    gameMode === "infinite" &&
+    !testMode &&
+    !currentLevelData;
 
   return (
     <>
-      <Skybox theme={theme} />
-      <Lighting theme={theme} />
+      {!biomeHandledByScene && (
+        <>
+          <Skybox theme={theme} />
+          <Lighting theme={theme} />
+        </>
+      )}
       {scene === "menu" && <MenuScene3D />}
-      {scene === "playing" && <GameScene3D testMode={testMode} />}
+      {scene === "playing" && (
+        <GameScene3D
+          key={levelId ?? "infinite"}
+          testMode={testMode}
+          levelData={currentLevelData ?? undefined}
+        />
+      )}
     </>
   );
 }
@@ -47,20 +80,130 @@ export function Game3D() {
   const resetGame = useGameState((s) => s.resetGame);
   const testMode = useGameState((s) => s.testMode);
   const startTestMode = useGameState((s) => s.startTestMode);
+  const paused = useGameState((s) => s.paused);
+  const setPaused = useGameState((s) => s.setPaused);
+  const startDailyMode = useGameState((s) => s.startDailyMode);
+  const gameSpeed = useAssistMode((s) => s.gameSpeed);
   const controlsRef = useControls();
+  useProgressSync();
   const { canInstall, triggerInstall, isInstalled } = usePWAInstall();
   const [muted, setMuted] = useState(isMuted());
+  const coinPopupRef = useRef<CoinPopupHandle | null>(null);
+  const [pauseSubScreen, setPauseSubScreen] = useState<"main" | "comojogar" | "opcoes">("main");
+  const [canPlayDaily, setCanPlayDaily] = useState<boolean | null>(null);
+  const [checkingDaily, setCheckingDaily] = useState(false);
 
-  // Audio: maintheme on menu, comeco on playing
+  // Mission system hooks
+  const gameMode = useGameState((s) => s.gameMode);
+  const currentLevelData = useGameState((s) => s.currentLevelData);
+  const melLevel = useGameState((s) => s.melLevel);
+
+  // Campaign bone tracking (F49)
+  const levelBones = useGameState((s) => s.levelBones);
+  const totalBones = useMemo(() => {
+    if (!currentLevelData) return 0;
+    return currentLevelData.entities.filter((e) => e.type === "bone").length;
+  }, [currentLevelData]);
+
+  const levelMissions = useLevelMissions(
+    currentLevelData?.missions,
+    scene === "playing" && gameMode === "level",
+  );
+
+  const infiniteMissions = useInfiniteMissions(
+    scene === "playing" && gameMode === "infinite",
+  );
+
+  // Check daily eligibility when on menu
   useEffect(() => {
-    if (scene === "menu" || scene === "gameover") {
-      playTrack("maintheme", true);
-    } else if (scene === "playing") {
-      playTrack("comeco", true);
+    if (scene === "menu") {
+      const playerId = localStorage.getItem("supermel_player_id");
+      if (playerId) {
+        setCheckingDaily(true);
+        fetch(`/api/daily/can-play?playerId=${playerId}`)
+          .then(r => r.json())
+          .then(data => setCanPlayDaily(data.canPlay))
+          .catch(() => setCanPlayDaily(true))
+          .finally(() => setCheckingDaily(false));
+      } else {
+        setCanPlayDaily(true);
+      }
     }
   }, [scene]);
 
+  // Audio: maintheme on menu, comeco on playing
+  useEffect(() => {
+    if (scene === "menu" || scene === "gameover" || scene === "worldmap") {
+      playTrack("maintheme", true);
+    } else if (scene === "playing") {
+      playTrack("comeco", true);
+    } else if (scene === "levelclear") {
+      // TODO: play victory fanfare SFX when available
+      playTrack("maintheme", true);
+    }
+  }, [scene]);
+
+  // Esc key handler for pause toggle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Escape" && scene === "playing") {
+        e.preventDefault();
+        const state = useGameState.getState();
+        state.setPaused(!state.paused);
+        if (state.paused) {
+          // Was paused, now resuming — reset sub-screen
+          setPauseSubScreen("main");
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [scene]);
+
+  // Gamepad Start button polling for pause toggle (outside Canvas, uses RAF)
+  const prevStartRef = useRef(false);
+  useEffect(() => {
+    let rafId: number;
+    const pollStart = () => {
+      const gamepads = navigator.getGamepads();
+      const gp = gamepads[0];
+      if (gp) {
+        const startPressed = gp.buttons[9]?.pressed ?? false;
+        if (startPressed && !prevStartRef.current && scene === "playing") {
+          const state = useGameState.getState();
+          state.setPaused(!state.paused);
+          if (state.paused) {
+            setPauseSubScreen("main");
+          }
+        }
+        prevStartRef.current = startPressed;
+      }
+      rafId = requestAnimationFrame(pollStart);
+    };
+    rafId = requestAnimationFrame(pollStart);
+    return () => cancelAnimationFrame(rafId);
+  }, [scene]);
+
+  // Pause handlers
+  const handleResume = () => {
+    setPaused(false);
+    setPauseSubScreen("main");
+  };
+
+  const handleRestart = () => {
+    setPaused(false);
+    setPauseSubScreen("main");
+    resetGame();
+  };
+
+  const handleMainMenu = () => {
+    setPaused(false);
+    setPauseSubScreen("main");
+    setScene("menu");
+  };
+
   const handleLogout = () => {
+    flushProgress(); // Sync progress to backend before clearing session
     localStorage.removeItem("supermel_token");
     localStorage.removeItem("supermel_player_id");
     localStorage.removeItem("supermel_player_name");
@@ -80,6 +223,9 @@ export function Game3D() {
     return <EditorWrapper />;
   }
 
+  // Compute Physics timeStep scaled by game speed
+  const physicsTimeStep = (1 / 60) * gameSpeed;
+
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
       <Canvas
@@ -87,13 +233,29 @@ export function Game3D() {
         camera={{ position: [0, 2, 15], fov: 60 }}
         style={{ background: "#1a1a2e" }}
       >
-        <Physics gravity={[0, -15, 0]}>
+        <Physics gravity={[0, -15, 0]} paused={paused} timeStep={physicsTimeStep}>
           <SceneContent />
         </Physics>
       </Canvas>
 
       {/* HUD */}
-      <HUD3D lives={lives} score={score} coins={coins} scene={scene} isFlying={isFlying} flyTimeRemaining={flyTimeRemaining} />
+      <HUD3D
+        lives={lives}
+        score={score}
+        coins={coins}
+        scene={scene}
+        isFlying={isFlying}
+        flyTimeRemaining={flyTimeRemaining}
+        infiniteMissions={gameMode === "infinite" ? infiniteMissions.activeMissions : undefined}
+        levelBones={levelBones}
+        totalBones={totalBones}
+      />
+
+      {/* Coin popup overlay */}
+      {scene === "playing" && <CoinPopupLayer popupRef={coinPopupRef} />}
+
+      {/* Mission toast overlay */}
+      {scene === "playing" && <MissionToast />}
 
       {/* Mute button */}
       <button
@@ -110,11 +272,27 @@ export function Game3D() {
             <h1 style={styles.title}>SUPER MEL</h1>
             <p style={styles.subtitle}>A Yorkshire Micro Heroina — 3D Edition</p>
             <p style={styles.playerName}>
-              Jogador: {localStorage.getItem("supermel_player_name") || "???"}
+              Jogador: {localStorage.getItem("supermel_player_name") || "???"}{" | "}Mel Lv.{melLevel}
             </p>
             <div style={styles.buttonGroup}>
               <button style={styles.btn} onClick={() => resetGame()}>
                 JOGAR
+              </button>
+              <button
+                style={{
+                  ...styles.btnDaily,
+                  opacity: canPlayDaily === false ? 0.4 : 1,
+                }}
+                disabled={canPlayDaily === false || checkingDaily}
+                onClick={() => {
+                  const seed = getTodaySeed();
+                  startDailyMode(seed);
+                }}
+              >
+                {canPlayDaily === false ? "JA JOGOU HOJE" : checkingDaily ? "VERIFICANDO..." : "DESAFIO DO DIA"}
+              </button>
+              <button style={styles.btn} onClick={() => setScene("worldmap")}>
+                CAMPANHA
               </button>
               <button style={styles.btnTest} onClick={() => startTestMode()}>
                 FASE TESTE
@@ -153,8 +331,27 @@ export function Game3D() {
         )}
 
         {scene === "gameover" && <GameOverOverlay />}
+        {scene === "levelclear" && <LevelClearOverlay missionStatus={levelMissions.missions} />}
         {scene === "levelselect" && <LevelSelectOverlay />}
+        {scene === "worldmap" && <WorldMapScene />}
       </div>
+
+      {/* Pause overlay and sub-screens */}
+      {paused && scene === "playing" && pauseSubScreen === "main" && (
+        <PauseOverlay
+          onResume={handleResume}
+          onRestart={handleRestart}
+          onMainMenu={handleMainMenu}
+          onComoJogar={() => setPauseSubScreen("comojogar")}
+          onOpcoes={() => setPauseSubScreen("opcoes")}
+        />
+      )}
+      {paused && scene === "playing" && pauseSubScreen === "comojogar" && (
+        <ComoJogarScreen onBack={() => setPauseSubScreen("main")} />
+      )}
+      {paused && scene === "playing" && pauseSubScreen === "opcoes" && (
+        <AssistModeUI onBack={() => setPauseSubScreen("main")} />
+      )}
 
       {/* Mobile touch controls */}
       <TouchControls3D controlsRef={controlsRef} scene={scene} />
@@ -211,6 +408,17 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#4a8a4a",
     color: "#fff",
     border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontFamily: "monospace",
+    fontWeight: "bold",
+  },
+  btnDaily: {
+    padding: "14px",
+    fontSize: "18px",
+    background: "#8a6a2a",
+    color: "#fff",
+    border: "2px solid #ffcc00",
     borderRadius: 4,
     cursor: "pointer",
     fontFamily: "monospace",

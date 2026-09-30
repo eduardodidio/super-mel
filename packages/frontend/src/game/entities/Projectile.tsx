@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { RigidBody, type RapierRigidBody, type CollisionPayload } from "@react-three/rapier";
 import * as THREE from "three";
 import { getFrame, ANIMATIONS } from "../systems/SpriteAnimator";
+import { useGameState } from "../hooks/useGameState";
 
 interface ProjectileProps {
   id: string;
@@ -10,6 +11,10 @@ interface ProjectileProps {
   direction?: number;
   onHit: (id: string, targetName?: string, blockPos?: { x: number; y: number; z: number }) => void;
   onExpire: (id: string) => void;
+  onEnemyHit?: (id: string, enemyName: string) => void;
+  returnMode?: boolean;
+  playerPosRef?: React.RefObject<{ x: number; y: number }>;
+  onReturnCoinCollect?: (id: string) => void;
 }
 
 const SPEED = 15;
@@ -18,8 +23,20 @@ const SPEED = 15;
 const SCALE_START = 0.8;
 const SCALE_END = 1.5;
 const LIFETIME = 10 / SPEED; // ~0.667s = 10 blocks range
+const RETURN_SPEED = SPEED * 0.8;
+const RETURN_CATCH_DISTANCE = 1.5;
 
-export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }: ProjectileProps) {
+export function Projectile({
+  id,
+  startPosition,
+  direction = 1,
+  onHit,
+  onExpire,
+  onEnemyHit,
+  returnMode = false,
+  playerPosRef,
+  onReturnCoinCollect,
+}: ProjectileProps) {
   const rbRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const lightRef = useRef<THREE.PointLight>(null);
@@ -27,18 +44,21 @@ export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }
   const [exploding, setExploding] = useState(false);
   const explodeRef = useRef(0);
   const explodePosRef = useRef(new THREE.Vector3(...startPosition));
+  const returning = useRef(false);
+  const returnLifeRef = useRef(0);
 
   // Check if bark_wave sprites are available
   const hasBarkSprites = useMemo(() => {
     const barkAnim = ANIMATIONS["bark_wave"];
     if (!barkAnim || barkAnim.frames.length === 0) return false;
-    // Try to get the first frame texture — if its image is loaded, sprites exist
+    // Try to get the first frame texture -- if its image is loaded, sprites exist
     const tex = getFrame("bark_wave", 0);
     const img = tex?.image as HTMLImageElement | undefined;
     return !!(img && img.width > 0);
   }, []);
 
   useFrame((_, delta) => {
+    if (useGameState.getState().paused) return;
     if (exploding) {
       explodeRef.current += delta;
       if (meshRef.current) {
@@ -58,6 +78,64 @@ export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }
 
     if (!rbRef.current) return;
 
+    // --- Return phase ---
+    if (returning.current) {
+      returnLifeRef.current += delta;
+
+      const ballPos = rbRef.current.translation();
+      const playerX = playerPosRef?.current?.x ?? ballPos.x;
+      const playerY = playerPosRef?.current?.y ?? ballPos.y;
+
+      const dx = playerX - ballPos.x;
+      const dy = playerY - ballPos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Self-destruct when reaching Mel
+      if (dist < RETURN_CATCH_DISTANCE) {
+        onExpire(id);
+        return;
+      }
+
+      // Expire after second lifetime
+      if (returnLifeRef.current > LIFETIME * 2) {
+        onExpire(id);
+        return;
+      }
+
+      // Home toward Mel
+      if (dist > 0.5) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        rbRef.current.setLinvel({ x: nx * RETURN_SPEED, y: ny * RETURN_SPEED, z: 0 }, true);
+      }
+
+      // Visual: return color shift
+      if (lightRef.current) {
+        lightRef.current.color.set("#87CEEB"); // light blue
+        lightRef.current.intensity = 2 + Math.sin(returnLifeRef.current * 15) * 1;
+      }
+
+      if (meshRef.current) {
+        if (hasBarkSprites) {
+          const texture = getFrame("bark_wave", returnLifeRef.current);
+          const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+          if (mat.map !== texture) {
+            mat.map = texture;
+            mat.needsUpdate = true;
+          }
+          mat.emissive.set("#87CEEB");
+        } else {
+          meshRef.current.rotation.x += delta * 10;
+          meshRef.current.rotation.z += delta * 8;
+          const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+          mat.emissive.set("#87CEEB");
+        }
+      }
+
+      return;
+    }
+
+    // --- Outbound phase ---
     lifeRef.current += delta;
     rbRef.current.setLinvel({ x: SPEED * direction, y: 0, z: 0 }, true);
 
@@ -86,8 +164,14 @@ export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }
       lightRef.current.intensity = 2 + Math.sin(lifeRef.current * 15) * 1;
     }
 
+    // Lifetime expired: return or expire
     if (lifeRef.current > LIFETIME) {
-      onExpire(id);
+      if (returnMode) {
+        returning.current = true;
+        returnLifeRef.current = 0;
+      } else {
+        onExpire(id);
+      }
     }
   });
 
@@ -95,6 +179,19 @@ export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }
     if (exploding) return;
     const otherName = payload.other.rigidBodyObject?.name || "";
 
+    // --- Return phase: ignore blocks, collect coins ---
+    if (returning.current) {
+      // Ignore blocks on return
+      if (otherName.startsWith("block-")) return;
+
+      // Collect coins on return path
+      if (otherName === "coin" || otherName.startsWith("dropped-coin")) {
+        onReturnCoinCollect?.(id);
+      }
+      return;
+    }
+
+    // --- Outbound phase ---
     if (otherName.startsWith("block-")) {
       const pos = rbRef.current?.translation();
       if (pos) explodePosRef.current.set(pos.x, pos.y, pos.z);
@@ -102,6 +199,14 @@ export function Projectile({ id, startPosition, direction = 1, onHit, onExpire }
       const blockPos = bp ? { x: Math.round(bp.x), y: Math.round(bp.y), z: Math.round(bp.z) } : undefined;
       setExploding(true);
       onHit(id, otherName, blockPos);
+    }
+
+    // Enemy hit
+    if (otherName.startsWith("enemy-")) {
+      const pos = rbRef.current?.translation();
+      if (pos) explodePosRef.current.set(pos.x, pos.y, pos.z);
+      setExploding(true);
+      onEnemyHit?.(id, otherName);
     }
   };
 

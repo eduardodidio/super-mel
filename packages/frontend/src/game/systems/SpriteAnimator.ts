@@ -134,6 +134,37 @@ const ANIMATIONS: Record<string, SpriteAnimationDef> = {
     fps: 10,
     loop: true,
   },
+  wait: {
+    name: "wait",
+    frames: ["wait"],
+    fps: 4,
+    loop: true,
+  },
+  affection: {
+    name: "affection",
+    frames: ["affection"],
+    fps: 6,
+    loop: false,
+  },
+  bark: {
+    name: "bark",
+    frames: ["attack_prep", "attack_1", "attack_2"],
+    fps: 10,
+    loop: false,
+    events: { 1: "bark_fire" },
+  },
+  dig: {
+    name: "dig",
+    frames: ["crouch", "crouch"],
+    fps: 6,
+    loop: false,
+  },
+  sniff: {
+    name: "sniff",
+    frames: ["sit"],
+    fps: 4,
+    loop: true,
+  },
 };
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,66 @@
+flowchart TB
+    subgraph SharedTypes["@super-mel/shared"]
+        BT["BackgroundTheme<br/>forest | desert | night | space | ocean"]
+        LDV2["LevelDataV2<br/>+ difficulty?: number"]
+        BlockType["BlockType"]
+    end
+
+    subgraph BiomeSystem["Biome System (new)"]
+        BM["BiomeManager.ts<br/>getBiomeForChunk(chunkIndex)<br/>getBlockPalette(biome)<br/>BIOME_SEQUENCE, CHUNKS_PER_BIOME"]
+        PL["PrefabLibrary.ts<br/>PREFAB_REGISTRY<br/>getPrefabCandidates(min,max,biome)<br/>selectPrefab(candidates,seed)<br/>repositionPrefab(entry,startX)"]
+        BTR["BiomeTransition.tsx<br/>Wraps Skybox+Lighting+BackgroundDecor<br/>drives lerp via BiomeState"]
+    end
+
+    subgraph ChunkPipeline["Chunk Generation Pipeline"]
+        CG["ChunkGenerator.ts<br/>generateChunk() -- unchanged<br/>+ generateChunkBiome() -- new"]
+        CR["ChunkRenderer.tsx<br/>+ biomeEnabled prop<br/>Calls generateChunkBiome when enabled"]
+    end
+
+    subgraph VisualSystems["Visual Systems (modified)"]
+        SKY["Skybox.tsx<br/>+ nextTheme? + transitionFactor?<br/>Lerps sky gradient + fog"]
+        LIG["Lighting.tsx<br/>+ nextTheme? + transitionFactor?<br/>Lerps light colors + intensity"]
+        BGD["BackgroundDecor.tsx<br/>+ nextTheme? + transitionFactor?<br/>Lerps cloud/mountain colors"]
+    end
+
+    subgraph GameLayer["Game Layer"]
+        GS3D["GameScene3D.tsx<br/>Tracks biome via playerPosRef<br/>Renders BiomeTransition in infinite mode<br/>Passes biomeEnabled to ChunkRenderer"]
+        G3D["Game3D.tsx<br/>Static theme for menu/level/test<br/>Auto biome for infinite mode"]
+        UGS["useGameState.ts<br/>+ currentBiome<br/>+ setCurrentBiome"]
+    end
+
+    subgraph DataSources["Data Sources"]
+        TLD["TestLevelData.ts<br/>generateTestLevel() -- 5 chunks<br/>Becomes first prefab set"]
+    end
+
+    %% Data flow
+    BT --> BM
+    BT --> SKY
+    BT --> LIG
+    BT --> BGD
+    BlockType --> BM
+
+    BM -->|"BiomeState"| BTR
+    BM -->|"BlockPalette"| CG
+    BM -->|"getBiomeForChunk"| CR
+
+    TLD -->|"5 test chunks"| PL
+    PL -->|"prefab candidates"| CR
+    PL -->|"repositioned chunk"| CG
+
+    CG -->|"Chunk data"| CR
+
+    BTR --> SKY
+    BTR --> LIG
+    BTR --> BGD
+
+    GS3D -->|"biomeEnabled"| CR
+    GS3D -->|"biomeState"| BTR
+    GS3D -->|"playerPosRef"| BGD
+    GS3D -->|"setCurrentBiome"| UGS
+
+    G3D -->|"static theme"| SKY
+    G3D -->|"static theme"| LIG
+    G3D --> GS3D
+    UGS -->|"currentBiome"| G3D
+
+    LDV2 -.->|"future: difficulty tag"| PL

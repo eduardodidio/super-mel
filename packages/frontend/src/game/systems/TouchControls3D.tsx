@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Controls } from "../hooks/useControls";
-import type { GameScene } from "../hooks/useGameState";
+import { useGameState, type GameScene } from "../hooks/useGameState";
 
 interface TouchControls3DProps {
   controlsRef: React.RefObject<Controls>;
@@ -9,17 +9,25 @@ interface TouchControls3DProps {
 
 export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const gamepadConnected = useGameState((s) => s.gamepadConnected);
 
   useEffect(() => {
     setIsMobile("ontouchstart" in window || navigator.maxTouchPoints > 0);
   }, []);
 
-  if (!isMobile || scene !== "playing") return null;
+  if (!isMobile || scene !== "playing" || gamepadConnected) return null;
 
   const set = (key: keyof Controls, value: boolean) => (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (controlsRef.current) controlsRef.current[key] = value;
+    // Track touch input type
+    if (value) {
+      const state = useGameState.getState();
+      if (state.lastInputType !== "touch") {
+        state.setLastInputType("touch");
+      }
+    }
   };
 
   return (
@@ -69,6 +77,13 @@ export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
 
       {/* Action buttons right side */}
       <div style={styles.actions}>
+        <button
+          style={styles.btnC}
+          onTouchStart={set("bark", true)}
+          onTouchEnd={set("bark", false)}
+        >
+          C
+        </button>
         <button
           style={styles.btnB}
           onTouchStart={set("shoot", true)}
@@ -167,5 +182,14 @@ const styles: Record<string, React.CSSProperties> = {
     background: "rgba(255,120,80,0.2)",
     border: "2px solid rgba(255,120,80,0.4)",
     marginBottom: 20,
+  },
+  btnC: {
+    ...btnBase,
+    width: 56,
+    height: 56,
+    background: "rgba(218,165,32,0.2)",
+    border: "2px solid rgba(218,165,32,0.4)",
+    marginBottom: 30,
+    fontSize: "18px",
   },
 };
