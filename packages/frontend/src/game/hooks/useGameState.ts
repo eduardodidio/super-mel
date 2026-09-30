@@ -12,6 +12,8 @@ interface GameState {
   coins: number;
   totalCoins: number;
   testMode: boolean;
+  isFlying: boolean;
+  flyTimeRemaining: number;
 
   setScene: (scene: GameScene) => void;
   setScore: (score: number) => void;
@@ -24,6 +26,7 @@ interface GameState {
   healLife: () => void;
   resetGame: () => void;
   startTestMode: () => void;
+  setFlyState: (isFlying: boolean, flyTimeRemaining: number) => void;
 }
 
 export const useGameState = create<GameState>((set) => ({
@@ -34,6 +37,8 @@ export const useGameState = create<GameState>((set) => ({
   paused: false,
   coins: 0,
   testMode: false,
+  isFlying: false,
+  flyTimeRemaining: 5,
   totalCoins: (() => {
     try {
       return parseInt(localStorage.getItem("supermel_total_coins") || "0", 10);
@@ -65,6 +70,7 @@ export const useGameState = create<GameState>((set) => ({
       } catch {}
       return { coins: s.coins + 1, totalCoins };
     }),
-  resetGame: () => set({ score: 0, lives: 3, coins: 0, scene: "playing", paused: false, testMode: false }),
-  startTestMode: () => set({ score: 0, lives: 3, coins: 0, scene: "playing", paused: false, testMode: true }),
+  setFlyState: (isFlying, flyTimeRemaining) => set({ isFlying, flyTimeRemaining }),
+  resetGame: () => set({ score: 0, lives: 3, coins: 0, scene: "playing", paused: false, testMode: false, isFlying: false, flyTimeRemaining: 5 }),
+  startTestMode: () => set({ score: 0, lives: 3, coins: 0, scene: "playing", paused: false, testMode: true, isFlying: false, flyTimeRemaining: 5 }),
 }));

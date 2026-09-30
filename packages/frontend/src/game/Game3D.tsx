@@ -38,6 +38,8 @@ export function Game3D() {
   const lives = useGameState((s) => s.lives);
   const score = useGameState((s) => s.score);
   const coins = useGameState((s) => s.coins);
+  const isFlying = useGameState((s) => s.isFlying);
+  const flyTimeRemaining = useGameState((s) => s.flyTimeRemaining);
   const theme = useGameState((s) => s.theme);
   const setScene = useGameState((s) => s.setScene);
   const setTheme = useGameState((s) => s.setTheme);
@@ -89,7 +91,7 @@ export function Game3D() {
       </Canvas>
 
       {/* HUD */}
-      <HUD3D lives={lives} score={score} coins={coins} scene={scene} />
+      <HUD3D lives={lives} score={score} coins={coins} scene={scene} isFlying={isFlying} flyTimeRemaining={flyTimeRemaining} />
 
       {/* Mute button */}
       <button

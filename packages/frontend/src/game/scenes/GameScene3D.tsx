@@ -36,6 +36,7 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
   const theme = useGameState((s) => s.theme);
   const addCoin = useGameState((s) => s.addCoin);
   const healLife = useGameState((s) => s.healLife);
+  const setFlyState = useGameState((s) => s.setFlyState);
   const invincibleRef = useRef(false);
   const lastX = useRef(0);
   const maxX = useRef(0);
@@ -65,6 +66,10 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
     }
     lastX.current = x;
   }, [addScore]);
+
+  const handleFlyStateUpdate = useCallback((isFlying: boolean, timeRemaining: number) => {
+    setFlyState(isFlying, timeRemaining);
+  }, [setFlyState]);
 
   const handleDamage = useCallback(() => {
     if (invincibleRef.current) return;
@@ -142,6 +147,7 @@ export function GameScene3D({ testMode = false }: GameScene3DProps) {
         invincible={invincibleRef.current}
         dead={lives <= 0}
         onLookUp={setIsLookingUp}
+        onFlyStateUpdate={handleFlyStateUpdate}
       />
 
       <ProjectileManager
