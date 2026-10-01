@@ -1,0 +1,70 @@
+%% F52 - Fix Destroyed Blocks Cleanup - User Journey
+%% BPMN-style flow of block destruction from player action to visual result
+
+graph LR
+    subgraph Player_Action[Player Action]
+        A1[Mel shoots<br>Bola do Infinito]
+        A2[Mel digs<br>Down + Z]
+    end
+
+    subgraph Collision_Detection[Collision Detection]
+        B1[Projectile<br>onIntersectionEnter]
+        B2[tryDig checks<br>block below]
+        B3{Block is<br>destructible?}
+    end
+
+    subgraph Destruction_Flow[Destruction Flow]
+        C1[handleBlockHit<br>in GameScene3D]
+        C2[chunkRef.destroyBlock<br>x, y, z]
+        C3[Add key to<br>destroyedKeysRef]
+        C4[setDestroyedBlocks<br>new Set with key]
+        C5[Spawn BlockParticles<br>at position]
+    end
+
+    subgraph React_Render[React Re-render]
+        D1[ChunkRenderer<br>re-renders]
+        D2[.filter excludes<br>destroyed block key]
+        D3[Block component<br>unmounts]
+    end
+
+    subgraph Physics_Cleanup[Physics Cleanup]
+        E1[RigidBody unmounts]
+        E2[Rapier removes<br>collider from world]
+        E3[Mel can walk<br>through position]
+    end
+
+    subgraph Visual_Effect[Visual Effect]
+        F1[BlockParticles<br>renders at position]
+        F2[8 cubes burst<br>with physics]
+        F3[Particles fade<br>over 1 second]
+        F4[onComplete fires<br>effect removed]
+    end
+
+    A1 --> B1
+    A2 --> B2
+    B1 --> B3
+    B2 --> B3
+    B3 -->|Yes| C1
+    B3 -->|No| Z1[Block stays<br>Projectile explodes]
+
+    C1 --> C2
+    C2 --> C3
+    C2 --> C4
+    C2 --> C5
+
+    C4 --> D1
+    D1 --> D2
+    D2 --> D3
+
+    D3 --> E1
+    E1 --> E2
+    E2 --> E3
+
+    C5 --> F1
+    F1 --> F2
+    F2 --> F3
+    F3 --> F4
+
+    style C4 fill:#4CAF50,color:#fff
+    style E2 fill:#f44336,color:#fff
+    style F2 fill:#FF9800,color:#fff

@@ -1,0 +1,56 @@
+%% F52 - Fix Destroyed Blocks Cleanup - Architecture Diagram
+%% Shows the block destruction data flow after the fix
+
+graph TD
+    subgraph GameScene3D
+        PM[ProjectileManager]
+        DS[DigSystem]
+        HBH[handleBlockHit]
+    end
+
+    subgraph ChunkRenderer
+        DB_REF[destroyedKeysRef<br>Set - synchronous guard]
+        DB_STATE[destroyedBlocks<br>useState - triggers re-render]
+        FX_STATE[destroyEffects<br>useState - particle effects]
+        HANDLE[destroyBlock<br>imperative handle]
+        FILTER[.filter excludes<br>destroyed blocks]
+        FX_RENDER[BlockParticles<br>render loop]
+    end
+
+    subgraph Block_tsx[Block Component]
+        RB[RigidBody type=fixed<br>colliders=cuboid]
+        MESH[Mesh + BoxGeometry]
+    end
+
+    subgraph BlockParticles
+        PFX[8 cube particles<br>physics + fade]
+        OC[onComplete callback<br>cleanup after 1s]
+    end
+
+    subgraph Rapier[Rapier Physics World]
+        COL[Collider cuboid]
+        WORLD[Physics step]
+    end
+
+    PM -->|onHit with blockPos| HBH
+    DS -->|tryDig result| HBH
+    HBH -->|destroyBlock x,y,z| HANDLE
+
+    HANDLE -->|1. check + add key| DB_REF
+    HANDLE -->|2. setDestroyedBlocks| DB_STATE
+    HANDLE -->|3. spawn effect| FX_STATE
+
+    DB_STATE -->|re-render| FILTER
+    FILTER -->|block excluded| Block_tsx
+    Block_tsx -.->|unmounts| RB
+    RB -.->|cleanup| COL
+
+    FX_STATE -->|render| FX_RENDER
+    FX_RENDER --> PFX
+    PFX -->|after 1s| OC
+    OC -->|remove from array| FX_STATE
+
+    style DB_STATE fill:#4CAF50,color:#fff
+    style DB_REF fill:#2196F3,color:#fff
+    style FX_STATE fill:#FF9800,color:#fff
+    style HANDLE fill:#f44336,color:#fff
