@@ -4,7 +4,7 @@ import * as THREE from "three";
 import type { Controls } from "../hooks/useControls";
 import { useGameFrame } from "../hooks/useGameFrame";
 import { useAssistMode } from "../hooks/useAssistMode";
-import { loadSprites, getFrame, getFrameEvent, getFrameAspectRatio } from "../systems/SpriteAnimator";
+import { loadSprites, getFrame, getFrameEvent, getFrameNormalizedScale } from "../systems/SpriteAnimator";
 import { AnimationStateMachine, type AnimInput } from "../systems/AnimationStateMachine";
 
 const MOVE_SPEED = 6;
@@ -91,6 +91,10 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
   const wasHeartCollected = useRef(false);
   const lastBarkPressed = useRef(false);
   const sniffTimer = useRef(0);
+
+  // Smoothing refs for sprite scale transitions
+  const prevWorldW = useRef(SPRITE_HEIGHT);
+  const prevWorldH = useRef(SPRITE_HEIGHT);
 
   // Expose stomp bounce via imperative handle
   useImperativeHandle(ref, () => ({
@@ -317,13 +321,31 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
         mat.needsUpdate = true;
       }
 
-      const ratio = getFrameAspectRatio(animName, stateMachine.current.stateTime);
-      const frameWidth = SPRITE_HEIGHT * ratio;
+      // Use normalized scale from manifest frameSize for correct proportions
+      const { scaleX, scaleY } = getFrameNormalizedScale(
+        animName,
+        stateMachine.current.stateTime
+      );
+      const targetW = SPRITE_HEIGHT * scaleX;
+      const targetH = SPRITE_HEIGHT * scaleY;
+
+      // Smooth scale transitions to avoid jarring size jumps between animations
+      const smoothFactor = Math.min(1, delta * 15);
+      const smoothW = THREE.MathUtils.lerp(prevWorldW.current, targetW, smoothFactor);
+      const smoothH = THREE.MathUtils.lerp(prevWorldH.current, targetH, smoothFactor);
+      prevWorldW.current = smoothW;
+      prevWorldH.current = smoothH;
+
       spriteRef.current.scale.set(
-        facingRight.current ? frameWidth : -frameWidth,
-        SPRITE_HEIGHT,
+        facingRight.current ? smoothW : -smoothW,
+        smoothH,
         1
       );
+
+      // Anchor feet to collider bottom: offset sprite Y so bottom aligns with collider
+      // PlaneGeometry pivot is at center, so offset = halfHeight - collider half-height offset
+      const meshOffsetY = smoothH / 2 - 0.15;
+      spriteRef.current.position.y = meshOffsetY;
     }
 
     // --- Update facing direction ---

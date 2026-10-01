@@ -144,6 +144,7 @@ super-mel/
 - **F28** — Moedas + Drop: moedas usam sprite personalizado (moedaDoJogo.png), item_blocks vermelhos com "?" liberam 1-3 moedas ao serem atingidos, blocos destrutiveis dropam moedas (40% chance), HUD coin counter vermelho
 - **F29** — Sprites Completos: corrigido mapeamento de jump_land/hurt_heavy, animacoes crouch/look_up/fly agora usam sprites dedicados, timing de ataque e landing mais responsivos
 - **F30** — Docs & Arquitetura: README com secoes de Arquitetura e Tech Stack, docs/README.md como indice navegavel, Doc-Review Gate no CLAUDE.md, template de checklist de docs
+- **F51** — Fix Sprite Size Consistency: corrigido bug onde Mel aparecia gigante em animacoes como lie_down/death/hurt_heavy. Escala agora normalizada pelo frameSize do manifest (224x168) em vez de altura fixa. Sprites faltantes (crouch/fly/look_up) mapeados para poses existentes. Transicoes suavizadas com lerp e pes ancorados ao collider.
 
 ## Poderes Futuros (pos-MVP)
 

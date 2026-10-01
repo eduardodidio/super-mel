@@ -1,0 +1,42 @@
+%% F51 — Fix Sprite Size Consistency — Architecture
+%% Shows the data flow for normalized sprite scaling
+
+flowchart TD
+    subgraph Manifest["manifest.json"]
+        FS["frameSize: [224, 168]"]
+        SS["sprites[name].sourceSize"]
+        AN["sprites[name].anchor"]
+    end
+
+    subgraph SpriteAnimator["SpriteAnimator.ts"]
+        GNS["getFrameNormalizedScale(anim, elapsed)"]
+        GAO["getFrameAnchorOffset(anim, elapsed)"]
+        GAR["getFrameAspectRatio() — deprecated"]
+        ANIMS["ANIMATIONS map<br/>crouch->sit, fly->jump_air/rise,<br/>look_up->idle_right, dig->sit"]
+    end
+
+    subgraph MelTsx["Mel.tsx"]
+        UF["useFrame callback"]
+        SC["Scale calc:<br/>targetW = SPRITE_HEIGHT * scaleX<br/>targetH = SPRITE_HEIGHT * scaleY"]
+        LRP["Lerp smoothing:<br/>smoothFactor = delta * 15"]
+        POS["Position Y:<br/>meshOffsetY = smoothH/2 - 0.15"]
+        SPR["spriteRef.scale.set()"]
+    end
+
+    FS --> GNS
+    SS --> GNS
+    AN --> GAO
+    ANIMS --> GNS
+    ANIMS --> GAO
+
+    GNS -->|"{ scaleX, scaleY }"| UF
+    UF --> SC
+    SC --> LRP
+    LRP --> SPR
+    LRP --> POS
+    POS -->|"position.y"| SPR
+
+    style GAR stroke-dasharray: 5 5
+    style Manifest fill:#e8f4fd
+    style SpriteAnimator fill:#f0f8e8
+    style MelTsx fill:#fff3e0

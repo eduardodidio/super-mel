@@ -118,19 +118,19 @@ const ANIMATIONS: Record<string, SpriteAnimationDef> = {
   },
   crouch: {
     name: "crouch",
-    frames: ["crouch"],
+    frames: ["sit"],
     fps: 4,
     loop: true,
   },
   look_up: {
     name: "look_up",
-    frames: ["look_up"],
+    frames: ["idle_right"],
     fps: 4,
     loop: true,
   },
   fly: {
     name: "fly",
-    frames: ["fly_1", "fly_2"],
+    frames: ["jump_air", "jump_rise"],
     fps: 10,
     loop: true,
   },
@@ -155,7 +155,7 @@ const ANIMATIONS: Record<string, SpriteAnimationDef> = {
   },
   dig: {
     name: "dig",
-    frames: ["crouch", "crouch"],
+    frames: ["sit", "sit"],
     fps: 6,
     loop: false,
   },
@@ -391,6 +391,8 @@ export function getFrameEvent(
  * Get the aspect ratio (width / height) of the current frame's sprite
  * from the manifest data. Returns 1.0 if manifest is not loaded or
  * the sprite entry is not found.
+ *
+ * @deprecated Use getFrameNormalizedScale() instead for correct per-frame sizing.
  */
 export function getFrameAspectRatio(animName: string, elapsed: number): number {
   if (!spriteManifest) return 1.0;
@@ -400,6 +402,64 @@ export function getFrameAspectRatio(animName: string, elapsed: number): number {
   const entry = spriteManifest.sprites[spriteName];
   if (!entry) return 1.0;
   return entry.sourceSize[0] / entry.sourceSize[1];
+}
+
+/**
+ * Get the normalized scale (scaleX, scaleY) of the current frame's sprite,
+ * normalized by the manifest's frameSize height. This ensures all sprites
+ * render at proportionally correct sizes relative to each other.
+ *
+ * For example, idle_right (101x138) with frameSize [224, 168] returns:
+ *   scaleX = 101/168 = 0.601, scaleY = 138/168 = 0.821
+ *
+ * lie_down (130x68) returns:
+ *   scaleX = 130/168 = 0.774, scaleY = 68/168 = 0.405
+ *
+ * @param animName - The animation name (e.g. "walk", "idle")
+ * @param elapsed  - Seconds elapsed since the animation started
+ * @returns Normalized scale factors { scaleX, scaleY }
+ */
+export function getFrameNormalizedScale(
+  animName: string,
+  elapsed: number
+): { scaleX: number; scaleY: number } {
+  if (!spriteManifest) return { scaleX: 1, scaleY: 1 };
+  const anim = ANIMATIONS[animName] ?? ANIMATIONS.idle;
+  const frameIndex = resolveFrameIndex(anim, elapsed);
+  const spriteName = anim.frames[frameIndex];
+  const entry = spriteManifest.sprites[spriteName];
+  if (!entry) return { scaleX: 1, scaleY: 1 };
+
+  const refH = spriteManifest.frameSize[1]; // 168
+  const scaleX = entry.sourceSize[0] / refH;
+  const scaleY = entry.sourceSize[1] / refH;
+  return { scaleX, scaleY };
+}
+
+/**
+ * Get the Y anchor offset for the current frame, normalized by frameSize height.
+ * This returns how far the bottom of the sprite (feet) is from the anchor point,
+ * useful for keeping Mel's feet anchored to the ground across different sprite sizes.
+ *
+ * @param animName - The animation name
+ * @param elapsed  - Seconds elapsed since the animation started
+ * @returns Normalized anchor offset (0 = feet at bottom, positive = feet offset up)
+ */
+export function getFrameAnchorOffset(
+  animName: string,
+  elapsed: number
+): number {
+  if (!spriteManifest) return 0;
+  const anim = ANIMATIONS[animName] ?? ANIMATIONS.idle;
+  const frameIndex = resolveFrameIndex(anim, elapsed);
+  const spriteName = anim.frames[frameIndex];
+  const entry = spriteManifest.sprites[spriteName];
+  if (!entry) return 0;
+
+  const refH = spriteManifest.frameSize[1]; // 168
+  // Anchor Y is pixels from top. Distance from anchor to bottom of sprite:
+  const bottomOffset = (entry.sourceSize[1] - entry.anchor[1]) / refH;
+  return bottomOffset;
 }
 
 /**

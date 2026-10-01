@@ -298,6 +298,37 @@
       "anchor": [46, 127],
       "note": "Contains exclamation mark overlay"
     },
+    "crouch": {
+      "file": "sit.png",
+      "group": "special",
+      "sourceSize": [97, 115],
+      "anchor": [52, 114],
+      "note": "Alias: crouch uses sit pose until dedicated sprite is drawn"
+    },
+    "fly_1": {
+      "file": "jump_air.png",
+      "group": "jump",
+      "direction": "right",
+      "sourceSize": [139, 118],
+      "anchor": [70, 117],
+      "note": "Alias: fly_1 uses jump_air until dedicated sprite is drawn"
+    },
+    "fly_2": {
+      "file": "jump_rise.png",
+      "group": "jump",
+      "direction": "right",
+      "sourceSize": [134, 125],
+      "anchor": [68, 124],
+      "note": "Alias: fly_2 uses jump_rise until dedicated sprite is drawn"
+    },
+    "look_up": {
+      "file": "idle_right.png",
+      "group": "idle",
+      "direction": "right",
+      "sourceSize": [101, 138],
+      "anchor": [51, 137],
+      "note": "Alias: look_up uses idle_right until dedicated sprite is drawn"
+    },
     "ui_portrait": {
       "file": "ui_portrait.png",
       "group": "ui",
