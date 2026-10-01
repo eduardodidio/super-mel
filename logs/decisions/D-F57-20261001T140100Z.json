@@ -1,0 +1,28 @@
+{
+  "decision_id": "D-F57-20261001T140100Z",
+  "timestamp": "2026-10-01T14:01:00Z",
+  "type": "feature_start",
+  "context_summary": "F57 adds quality-of-life features to the level editor: undo/redo stack, rectangular selection tool, copy/paste/delete area, and drag-move entities. Currently the editor has ZERO undo capability — any mistake requires manual rebuilding. These features are essential for creating quality campaign levels efficiently. Backlog item B-08.",
+  "options_considered": [
+    {
+      "option": "A",
+      "description": "Implement undo/redo as snapshot stack (deep-clone blocks+entities arrays), selection as a new 'select' tool mode with rectangle overlay, copy/paste as clipboard of selected region.",
+      "pros": [
+        "Snapshot-based undo is simple and reliable — no need to track individual operations",
+        "Selection tool integrates naturally with existing tool/palette system",
+        "Copy/paste reuses the selection infrastructure"
+      ],
+      "cons": [
+        "Snapshot approach uses more memory than command-based undo for large levels",
+        "Max ~50 snapshots should be enough, with oldest dropped"
+      ]
+    }
+  ],
+  "decision": "A",
+  "rationale": "Snapshot-based undo is the right choice for this editor. Levels are small (typically <500 blocks + <100 entities), so memory is not a concern. The simplicity of deep-cloning state beats the complexity of a command pattern. Selection tool fits naturally into the existing tool system. Copy/paste is just 'store selected region, paste at cursor'.",
+  "actions": [
+    { "action": "spawn-architect", "feature": "F57" }
+  ],
+  "status": "executed",
+  "governance": null
+}

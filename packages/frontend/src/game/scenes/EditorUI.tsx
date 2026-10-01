@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { BlockType, BackgroundTheme, EntityData, CustomAsset } from "@super-mel/shared";
+import type { BlockType, BackgroundTheme, EntityData, CustomAsset, EnemySubtype } from "@super-mel/shared";
 import { useGameState } from "../hooks/useGameState";
 import { CustomAssetPalette } from "../editor/CustomAssetPalette";
 
@@ -17,6 +17,8 @@ export type EditorTool =
   | "entity_goal"
   | "entity_bone"
   | "entity_sign"
+  // Enemy tools (F56)
+  | "entity_enemy"
   // Custom tools (Galeria do Rafa)
   | "custom_block"
   | "custom_sign";
@@ -49,9 +51,15 @@ const SPECIAL_PALETTE: { tool: EditorTool; label: string; color: string; symbol:
   { tool: "entity_sign", label: "Placa", color: "#A0522D", symbol: "!" },
 ];
 
+const ENEMY_PALETTE: { subtype: EnemySubtype; label: string; symbol: string }[] = [
+  { subtype: "vacuum", label: "Aspirador", symbol: "A" },
+  { subtype: "pigeon", label: "Pombo", symbol: "P" },
+  { subtype: "bee", label: "Abelha", symbol: "B" },
+];
+
 const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
 
-type PaletteTab = "blocos" | "itens" | "especiais" | "custom";
+type PaletteTab = "blocos" | "itens" | "especiais" | "inimigos" | "custom";
 
 interface EditorBlock {
   type: Exclude<BlockType, "empty">;
@@ -80,6 +88,11 @@ interface EditorUIProps {
   onUploadCustomAsset: () => void;
   onRemoveCustomAsset: (assetId: string) => void;
   onSelectCustomAsset: (assetId: string, mode: "block" | "sign") => void;
+  // Enemy palette (F56)
+  enemySubtype: EnemySubtype;
+  onEnemySubtypeChange: (subtype: EnemySubtype) => void;
+  // Camera position display (F56)
+  cameraPos: { x: number; y: number; z: number };
   // Sign text (F49)
   signText: string;
   onSignTextChange: (text: string) => void;
@@ -110,6 +123,9 @@ export function EditorUI({
   onUploadCustomAsset,
   onRemoveCustomAsset,
   onSelectCustomAsset,
+  enemySubtype,
+  onEnemySubtypeChange,
+  cameraPos,
   signText,
   onSignTextChange,
   levelName,
@@ -134,18 +150,27 @@ export function EditorUI({
       <div style={styles.palette}>
         {/* Tab bar */}
         <div style={styles.tabBar}>
-          {(["blocos", "itens", "especiais", "custom"] as PaletteTab[]).map((tab) => (
-            <button
-              key={tab}
-              style={{
-                ...styles.tabBtn,
-                ...(activeTab === tab ? styles.tabBtnActive : styles.tabBtnInactive),
-              }}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab === "custom" ? "IMG" : tab.toUpperCase()}
-            </button>
-          ))}
+          {(["blocos", "itens", "especiais", "inimigos", "custom"] as PaletteTab[]).map((tab) => {
+            const tabLabels: Record<PaletteTab, string> = {
+              blocos: "BLOCOS",
+              itens: "ITENS",
+              especiais: "ESPECIAIS",
+              inimigos: "INIM",
+              custom: "IMG",
+            };
+            return (
+              <button
+                key={tab}
+                style={{
+                  ...styles.tabBtn,
+                  ...(activeTab === tab ? styles.tabBtnActive : styles.tabBtnInactive),
+                }}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tabLabels[tab]}
+              </button>
+            );
+          })}
         </div>
 
         {/* Tab content: BLOCOS */}
@@ -248,6 +273,32 @@ export function EditorUI({
           </>
         )}
 
+        {/* Tab content: INIMIGOS (F56) */}
+        {activeTab === "inimigos" && (
+          <>
+            {ENEMY_PALETTE.map((enemy) => (
+              <button
+                key={enemy.subtype}
+                style={{
+                  ...styles.paletteBtn,
+                  borderColor:
+                    selectedTool === "entity_enemy" && enemySubtype === enemy.subtype
+                      ? "#fff"
+                      : "#555",
+                  backgroundColor: "#CC2222",
+                }}
+                onClick={() => {
+                  onSelectTool("entity_enemy");
+                  onEnemySubtypeChange(enemy.subtype);
+                }}
+                title={enemy.label}
+              >
+                {enemy.symbol}
+              </button>
+            ))}
+          </>
+        )}
+
         {/* Tab content: CUSTOM (Galeria do Rafa) */}
         {activeTab === "custom" && (
           <CustomAssetPalette
@@ -288,7 +339,7 @@ export function EditorUI({
         />
 
         <div style={styles.info}>
-          Blocos: {blocks.length} | Entidades: {entities.length} | Spawn: ({spawnPoint.x}, {spawnPoint.y})
+          Blocos: {blocks.length} | Entidades: {entities.length} | Spawn: ({spawnPoint.x}, {spawnPoint.y}) | Cam: ({cameraPos.x.toFixed(0)}, {cameraPos.y.toFixed(0)}) Z:{cameraPos.z.toFixed(0)}
         </div>
 
         <div style={styles.actions}>

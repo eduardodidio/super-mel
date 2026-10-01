@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
-import type { BlockType, EntityData, LevelDataV2, BlockCell, CustomAsset } from "@super-mel/shared";
+import type { BlockType, EntityData, LevelDataV2, BlockCell, CustomAsset, EnemySubtype } from "@super-mel/shared";
 import { EditorScene3D } from "./EditorScene3D";
 import { EditorUI, type EditorTool } from "./EditorUI";
 import { ImageUploader } from "../editor/ImageUploader";
@@ -28,7 +28,11 @@ export function EditorWrapper() {
   const [selectedTool, setSelectedTool] = useState<EditorTool>("stone");
   const [itemBlockContent, setItemBlockContent] = useState<string>("coin");
   const [signText, setSignText] = useState<string>("Texto aqui");
+  const [enemySubtype, setEnemySubtype] = useState<EnemySubtype>("vacuum");
   const [currentZ, setCurrentZ] = useState(0);
+
+  // Camera state (F56-T02)
+  const [cameraPos, setCameraPos] = useState({ x: 15, y: 6, z: 25 });
   const [spawnPoint, setSpawnPoint] = useState({ x: 2, y: 2 });
   const [levelName, setLevelName] = useState("");
 
@@ -370,6 +374,8 @@ export function EditorWrapper() {
           theme={theme}
           customAssets={customAssets}
           selectedCustomAssetId={selectedCustomAssetId}
+          cameraPos={cameraPos}
+          onCameraChange={setCameraPos}
         />
       </Canvas>
 
@@ -392,6 +398,9 @@ export function EditorWrapper() {
         onUploadCustomAsset={handleCustomAssetUpload}
         onRemoveCustomAsset={handleRemoveCustomAsset}
         onSelectCustomAsset={handleSelectCustomAsset}
+        enemySubtype={enemySubtype}
+        onEnemySubtypeChange={setEnemySubtype}
+        cameraPos={cameraPos}
         signText={signText}
         onSignTextChange={setSignText}
         levelName={levelName}

@@ -1,0 +1,42 @@
+{
+  "decision_id": "D-F56-20261001T140000Z",
+  "timestamp": "2026-10-01T14:00:00Z",
+  "type": "feature_start",
+  "context_summary": "F56 transforms the level editor into a Mario Maker 2-style tool. Currently the editor has a fixed camera, no enemy placement, and basic test-from-spawn only. This feature adds: (1) enemy palette with vacuum/pigeon/bee subtypes, (2) camera controls (WASD pan, scroll zoom), (3) test-from-cursor ('TESTAR DAQUI'), (4) seamless edit-play-edit cycle preserving editor state, (5) level resize (expand width/height). Medium-high scope but all changes are editor-side only, no gameplay or backend changes.",
+  "options_considered": [
+    {
+      "option": "A",
+      "description": "Enhance existing editor incrementally: add enemy palette tab, camera controls, test-from-cursor, and resize to the current EditorScene3D/EditorUI/EditorWrapper architecture.",
+      "pros": [
+        "Builds on solid existing editor codebase (EditorWrapper state, EditorUI palette tabs, EditorScene3D grid)",
+        "Enemy entities already exist in shared types and LevelSceneConverter — just need editor palette entry",
+        "Camera controls are independent of palette changes — can parallelize",
+        "Preserve editor state on test return is a sessionStorage pattern already used for clear-check"
+      ],
+      "cons": [
+        "EditorWrapper state grows larger — may need to extract to a Zustand store eventually",
+        "Camera controls require refactoring the fixed camera setup in Canvas"
+      ]
+    },
+    {
+      "option": "B",
+      "description": "Rewrite editor as a Zustand-driven system with separate EditorStore, decoupled camera, and plugin-based palette.",
+      "pros": [
+        "Cleaner architecture long-term",
+        "Better state management for undo/redo (F57)"
+      ],
+      "cons": [
+        "Much larger scope — rewrites working code",
+        "High risk of regressions in existing editor functionality",
+        "Over-engineering for current needs"
+      ]
+    }
+  ],
+  "decision": "A",
+  "rationale": "Option A is the right approach. The existing editor architecture is solid and all additions are incremental. Enemy palette is trivial (copy existing entity palette pattern). Camera controls are a self-contained change to Canvas/EditorScene3D. Test-from-cursor extends the existing test flow. State preservation on return uses the sessionStorage pattern already proven for clear-check. Resize is a simple UI addition to change width/height bounds. Save the Zustand extraction for F57 (undo/redo) if needed.",
+  "actions": [
+    { "action": "spawn-architect", "feature": "F56" }
+  ],
+  "status": "executed",
+  "governance": null
+}

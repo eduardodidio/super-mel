@@ -1,9 +1,16 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { BlockType, BackgroundTheme, EntityData, EntityType, CustomAsset } from "@super-mel/shared";
 import type { EditorTool } from "./EditorUI";
 import { getBlockMaterials, getCustomBlockMaterials } from "../systems/BlockTextures3D";
+
+// --- Camera constants ---
+const CAMERA_PAN_SPEED = 15; // units per second
+const ZOOM_SPEED = 2; // Z units per scroll step
+const MIN_ZOOM = 8;
+const MAX_ZOOM = 50;
+const MIDDLE_DRAG_SCALE = 0.003; // pixels to world units factor (multiplied by camera Z)
 
 interface EditorBlock {
   type: Exclude<BlockType, "empty">;
@@ -29,6 +36,11 @@ interface EditorSceneProps {
   // Custom assets (Galeria do Rafa)
   customAssets: CustomAsset[];
   selectedCustomAssetId: string | null;
+  // Camera controls
+  cameraPos: { x: number; y: number; z: number };
+  onCameraChange: (pos: { x: number; y: number; z: number }) => void;
+  levelWidth?: number;
+  levelHeight?: number;
 }
 
 // --- Tool classification helpers ---
@@ -138,6 +150,14 @@ function getHoverColor(selectedTool: EditorTool): string {
   return "#ffffff";
 }
 
+// --- Helper: check if active element is an input ---
+function isInputFocused(): boolean {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea" || tag === "select";
+}
+
 // --- Main component ---
 
 export function EditorScene3D({
@@ -155,16 +175,162 @@ export function EditorScene3D({
   onRemoveEntity,
   customAssets,
   selectedCustomAssetId,
+  cameraPos,
+  onCameraChange,
+  levelWidth = 32,
+  levelHeight = 16,
 }: EditorSceneProps) {
-  const { camera, raycaster, pointer } = useThree();
+  const { camera, raycaster, pointer, gl } = useThree();
   const gridPlaneRef = useRef<THREE.Mesh>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const isDragging = useRef(false);
   const lastPlaced = useRef<string>("");
 
-  // Camera setup - orthographic-like view
-  useFrame(() => {
-    // Keep camera looking at grid center
+  // --- Camera control refs ---
+  const keysPressed = useRef<Set<string>>(new Set());
+  const initialSyncDone = useRef(false);
+  const middleButtonDown = useRef(false);
+  const lastPointerPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // --- Keyboard listeners for WASD/arrow pan ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      keysPressed.current.add(e.key.toLowerCase());
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keysPressed.current.delete(e.key.toLowerCase());
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
+  // --- Scroll zoom ---
+  useEffect(() => {
+    const domElement = gl.domElement;
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const direction = e.deltaY > 0 ? 1 : -1;
+      const newZ = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, camera.position.z + direction * ZOOM_SPEED));
+      camera.position.z = newZ;
+      onCameraChange({ x: camera.position.x, y: camera.position.y, z: newZ });
+    };
+
+    domElement.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      domElement.removeEventListener("wheel", handleWheel);
+    };
+  }, [camera, gl.domElement, onCameraChange]);
+
+  // --- Middle-click drag pan ---
+  useEffect(() => {
+    const domElement = gl.domElement;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.button === 1) {
+        e.preventDefault();
+        middleButtonDown.current = true;
+        lastPointerPos.current = { x: e.clientX, y: e.clientY };
+      }
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!middleButtonDown.current) return;
+
+      const deltaX = e.clientX - lastPointerPos.current.x;
+      const deltaY = e.clientY - lastPointerPos.current.y;
+      lastPointerPos.current = { x: e.clientX, y: e.clientY };
+
+      const scale = camera.position.z * MIDDLE_DRAG_SCALE;
+      let newX = camera.position.x - deltaX * scale;
+      let newY = camera.position.y + deltaY * scale;
+
+      // Clamp
+      newX = Math.min(levelWidth, Math.max(0, newX));
+      newY = Math.min(levelHeight, Math.max(0, newY));
+
+      camera.position.x = newX;
+      camera.position.y = newY;
+      onCameraChange({ x: newX, y: newY, z: camera.position.z });
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.button === 1) {
+        middleButtonDown.current = false;
+      }
+    };
+
+    domElement.addEventListener("pointerdown", handlePointerDown);
+    domElement.addEventListener("pointermove", handlePointerMove);
+    domElement.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      domElement.removeEventListener("pointerdown", handlePointerDown);
+      domElement.removeEventListener("pointermove", handlePointerMove);
+      domElement.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [camera, gl.domElement, levelWidth, levelHeight, onCameraChange]);
+
+  // --- Prevent context menu on middle-click ---
+  useEffect(() => {
+    const domElement = gl.domElement;
+    const handleContextMenu = (e: MouseEvent) => {
+      // Prevent context menu from middle-click (some browsers)
+      if (e.button === 1) {
+        e.preventDefault();
+      }
+    };
+    // Also prevent auxclick default (middle-click can trigger auto-scroll icon)
+    const handleAuxClick = (e: MouseEvent) => {
+      if (e.button === 1) {
+        e.preventDefault();
+      }
+    };
+
+    domElement.addEventListener("contextmenu", handleContextMenu);
+    domElement.addEventListener("auxclick", handleAuxClick);
+    return () => {
+      domElement.removeEventListener("contextmenu", handleContextMenu);
+      domElement.removeEventListener("auxclick", handleAuxClick);
+    };
+  }, [gl.domElement]);
+
+  // --- Camera frame loop: initial sync + keyboard pan ---
+  useFrame((_, delta) => {
+    // Initial sync from prop
+    if (!initialSyncDone.current) {
+      camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z);
+      initialSyncDone.current = true;
+    }
+
+    // Keyboard panning (only when no input is focused)
+    if (keysPressed.current.size > 0 && !isInputFocused()) {
+      const keys = keysPressed.current;
+      let dx = 0;
+      let dy = 0;
+
+      if (keys.has("a") || keys.has("arrowleft")) dx -= 1;
+      if (keys.has("d") || keys.has("arrowright")) dx += 1;
+      if (keys.has("w") || keys.has("arrowup")) dy += 1;
+      if (keys.has("s") || keys.has("arrowdown")) dy -= 1;
+
+      if (dx !== 0 || dy !== 0) {
+        const speed = CAMERA_PAN_SPEED * delta;
+        let newX = camera.position.x + dx * speed;
+        let newY = camera.position.y + dy * speed;
+
+        // Clamp
+        newX = Math.min(levelWidth, Math.max(0, newX));
+        newY = Math.min(levelHeight, Math.max(0, newY));
+
+        camera.position.x = newX;
+        camera.position.y = newY;
+        onCameraChange({ x: newX, y: newY, z: camera.position.z });
+      }
+    }
   });
 
   const getGridPos = useCallback((): { x: number; y: number } | null => {
@@ -254,18 +420,18 @@ export function EditorScene3D({
       {/* Invisible click plane */}
       <mesh
         ref={gridPlaneRef}
-        position={[15, 5, 0]}
+        position={[levelWidth / 2, levelHeight / 2, 0]}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
       >
-        <planeGeometry args={[60, 30]} />
+        <planeGeometry args={[levelWidth + 20, levelHeight + 20]} />
         <meshBasicMaterial visible={false} />
       </mesh>
 
       {/* Grid lines */}
-      <EditorGrid />
+      <EditorGrid levelWidth={levelWidth} levelHeight={levelHeight} />
 
       {/* Placed blocks */}
       {blocks.map((b) => {
@@ -361,11 +527,12 @@ export function EditorScene3D({
   );
 }
 
-function EditorGrid() {
+function EditorGrid({ levelWidth, levelHeight }: { levelWidth: number; levelHeight: number }) {
+  const gridSize = Math.max(levelWidth, levelHeight) + 5;
   return (
     <gridHelper
-      args={[35, 35, "#333355", "#222244"]}
-      position={[15, 6, 0.01]}
+      args={[gridSize, gridSize, "#333355", "#222244"]}
+      position={[levelWidth / 2, levelHeight / 2, 0.01]}
       rotation={[Math.PI / 2, 0, 0]}
     />
   );

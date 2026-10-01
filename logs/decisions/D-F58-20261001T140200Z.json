@@ -1,0 +1,29 @@
+{
+  "decision_id": "D-F58-20261001T140200Z",
+  "timestamp": "2026-10-01T14:02:00Z",
+  "type": "feature_start",
+  "context_summary": "F58 adds 3 new level elements from B-09 (first batch): Spring (bounces Mel upward), Moving Platform (horizontal or vertical, configurable speed/range), and Spikes (instant damage on contact). Each becomes a new EntityType, a new React component with Rapier physics, and a new entry in the editor palette. These elements are essential for interesting campaign level design.",
+  "options_considered": [
+    {
+      "option": "A",
+      "description": "Implement each element as an EntityType + React component + editor palette entry. Spring uses a sensor+impulse, Moving Platform uses a kinematic body with configurable props (direction, speed, range), Spikes use a sensor with damage callback.",
+      "pros": [
+        "Each element is independent — can be implemented in parallel",
+        "Follows existing entity pattern (Coin, Heart, Checkpoint, Goal, Enemy)",
+        "Props system in EntityData already supports configuration (direction, speed, range)",
+        "LevelSceneConverter already handles unknown entity types via otherEntities"
+      ],
+      "cons": [
+        "Moving Platform needs kinematic body which is a new physics pattern for this codebase",
+        "Need to extend EntityType union in shared/types.ts"
+      ]
+    }
+  ],
+  "decision": "A",
+  "rationale": "Standard entity pattern is the right approach. Each element follows the established Coin/Heart/Enemy pattern: EntityType + component + editor palette. The moving platform's kinematic body is a well-documented Rapier pattern. Props configuration keeps the editor simple (dropdowns for direction/speed). All 3 elements are independent and can be developed in parallel.",
+  "actions": [
+    { "action": "spawn-architect", "feature": "F58" }
+  ],
+  "status": "executed",
+  "governance": null
+}

@@ -37,7 +37,10 @@ export type EntityType =
   | "sign"
   | "bone"
   | "enemy"
-  | "custom_block_asset";
+  | "custom_block_asset"
+  | "spring"
+  | "moving_platform"
+  | "spikes";
 
 export interface EntityData {
   type: EntityType;
@@ -114,6 +117,9 @@ export const ENTITY_TYPES: readonly EntityType[] = [
   "bone",
   "enemy",
   "custom_block_asset",
+  "spring",
+  "moving_platform",
+  "spikes",
 ] as const;
 
 export interface BlockCell {
