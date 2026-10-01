@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { RigidBody, type RapierRigidBody } from "@react-three/rapier";
+import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 import type { BlockType } from "@super-mel/shared";
 import { BLOCK_PROPERTIES } from "@super-mel/shared";
@@ -10,13 +10,11 @@ import { getCustomBlockDataUri } from "../systems/CustomTextureCache";
 interface BlockProps {
   type: Exclude<BlockType, "empty">;
   position: [number, number, number];
-  onDestroy?: () => void;
   isBackground?: boolean;
   activated?: boolean;
 }
 
-export function Block({ type, position, onDestroy, isBackground = false, activated = false }: BlockProps) {
-  const [destroyed, setDestroyed] = useState(false);
+export function Block({ type, position, isBackground = false, activated = false }: BlockProps) {
   const props = BLOCK_PROPERTIES[type];
 
   // For custom blocks, look up the data URI and use custom materials
@@ -62,10 +60,6 @@ export function Block({ type, position, onDestroy, isBackground = false, activat
       }
     }
   });
-
-  if (destroyed) {
-    return <BlockParticles position={position} type={type} />;
-  }
 
   // Activated item_block: gray empty block (no "?", no glow)
   if (type === "item_block" && activated) {
@@ -115,7 +109,7 @@ export function Block({ type, position, onDestroy, isBackground = false, activat
   );
 }
 
-function BlockParticles({ position, type }: { position: [number, number, number]; type: Exclude<BlockType, "empty"> }) {
+export function BlockParticles({ position, type, onComplete }: { position: [number, number, number]; type: Exclude<BlockType, "empty">; onComplete?: () => void }) {
   const groupRef = useRef<THREE.Group>(null);
   const particlesRef = useRef(
     Array.from({ length: 8 }, () => ({
@@ -133,14 +127,17 @@ function BlockParticles({ position, type }: { position: [number, number, number]
     })),
   );
   const lifeRef = useRef(0);
+  const completedRef = useRef(false);
   const [visible, setVisible] = useState(true);
   const color = getBlockMaterials(type)[0].color ?? new THREE.Color("#888");
 
   useFrame((_, delta) => {
     if (!groupRef.current || !visible) return;
     lifeRef.current += delta;
-    if (lifeRef.current > 1) {
+    if (lifeRef.current > 1 && !completedRef.current) {
+      completedRef.current = true;
       setVisible(false);
+      onComplete?.();
       return;
     }
     const children = groupRef.current.children;

@@ -1,12 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Block } from "../entities/Block";
+import { Block, BlockParticles } from "../entities/Block";
 import { Heart } from "../entities/Heart";
 import { Coin } from "../entities/Coin";
 import { generateChunk, generateChunkBiome, getVisibleChunkIndices, type Chunk, type EnemyChunkData } from "./ChunkGenerator";
 import { getBiomeForChunk } from "./BiomeManager";
 import { getPrefabCandidates, chunkDifficultyRange } from "./PrefabLibrary";
 import { useGameState } from "../hooks/useGameState";
+import type { BlockType } from "@super-mel/shared";
 
 interface ChunkRendererProps {
   playerPosRef: React.RefObject<{ x: number; y: number }>;
@@ -22,8 +23,14 @@ interface ChunkRendererProps {
 export interface ChunkRendererHandle {
   destroyBlock: (x: number, y: number, z: number) => boolean;
   activateBlock: (x: number, y: number, z: number) => boolean;
-  getBlockAt: (x: number, y: number, z: number) => import("@super-mel/shared").BlockType | null;
+  getBlockAt: (x: number, y: number, z: number) => BlockType | null;
   isBlockActivated: (x: number, y: number, z: number) => boolean;
+}
+
+interface DestroyEffect {
+  key: string;
+  position: [number, number, number];
+  type: Exclude<BlockType, "empty">;
 }
 
 export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>(
@@ -37,31 +44,71 @@ export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>
       return new Map();
     });
     const lastUpdate = useRef(0);
-    const destroyedBlocks = useRef(new Set<string>());
-    const activatedBlocks = useRef(new Set<string>());
+
+    // Destroyed blocks: state drives re-renders, ref provides synchronous deduplication guard
+    const [destroyedBlocks, setDestroyedBlocks] = useState<Set<string>>(() => new Set());
+    const destroyedKeysRef = useRef(new Set<string>());
+
+    // Activated blocks: same dual pattern
+    const [activatedBlocks, setActivatedBlocks] = useState<Set<string>>(() => new Set());
+    const activatedKeysRef = useRef(new Set<string>());
+
     const collectedHearts = useRef(new Set<string>());
     const collectedCoins = useRef(new Set<string>());
-    const [renderTick, setRenderTick] = useState(0);
+
+    // Particle effects for destroyed blocks
+    const [destroyEffects, setDestroyEffects] = useState<DestroyEffect[]>([]);
 
     useImperativeHandle(ref, () => ({
       destroyBlock(x, y, z) {
         const key = `${x},${y},${z}`;
-        if (destroyedBlocks.current.has(key)) return false;
-        destroyedBlocks.current.add(key);
-        setRenderTick(t => t + 1);
+        if (destroyedKeysRef.current.has(key)) return false;
+
+        // Find block type for particle effect before marking destroyed
+        let blockType: Exclude<BlockType, "empty"> | null = null;
+        for (const chunk of chunks.values()) {
+          for (const b of chunk.blocks) {
+            if (b.x === x && b.y === y && b.z === z) {
+              blockType = b.type;
+              break;
+            }
+          }
+          if (blockType) break;
+        }
+
+        // Mark destroyed: ref for sync guard, state for re-render
+        destroyedKeysRef.current.add(key);
+        setDestroyedBlocks(prev => {
+          const next = new Set(prev);
+          next.add(key);
+          return next;
+        });
+
+        // Spawn particle effect
+        if (blockType) {
+          setDestroyEffects(prev => [
+            ...prev,
+            { key: `fx-${key}`, position: [x, y, z], type: blockType! }
+          ]);
+        }
+
         onBlockDestroyed?.(x, y);
         return true;
       },
       activateBlock(x, y, z) {
         const key = `${x},${y},${z}`;
-        if (activatedBlocks.current.has(key)) return false;
-        activatedBlocks.current.add(key);
-        setRenderTick(t => t + 1);
+        if (activatedKeysRef.current.has(key)) return false;
+        activatedKeysRef.current.add(key);
+        setActivatedBlocks(prev => {
+          const next = new Set(prev);
+          next.add(key);
+          return next;
+        });
         return true;
       },
       getBlockAt(x, y, z) {
         const key = `${x},${y},${z}`;
-        if (destroyedBlocks.current.has(key)) return null;
+        if (destroyedKeysRef.current.has(key)) return null;
         for (const chunk of chunks.values()) {
           for (const b of chunk.blocks) {
             if (b.x === x && b.y === y && b.z === z) {
@@ -73,9 +120,9 @@ export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>
       },
       isBlockActivated(x, y, z) {
         const key = `${x},${y},${z}`;
-        return activatedBlocks.current.has(key);
+        return activatedKeysRef.current.has(key);
       },
-    }));
+    }), [chunks, onBlockDestroyed]);
 
     useFrame(() => {
       if (useGameState.getState().paused) return;
@@ -115,11 +162,6 @@ export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>
       });
     });
 
-    const handleDestroy = useCallback((key: string, x: number, y: number) => {
-      destroyedBlocks.current.add(key);
-      onBlockDestroyed?.(x, y);
-    }, [onBlockDestroyed]);
-
     const handleHeartCollect = useCallback((key: string) => {
       collectedHearts.current.add(key);
       onHeartCollected?.();
@@ -148,22 +190,18 @@ export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>
       }
     }, [chunks, onEnemiesUpdate]);
 
-    // renderTick is used to force re-render when blocks are destroyed/activated externally
-    void renderTick;
-
     return (
       <>
         {Array.from(chunks.values()).flatMap((chunk) => [
           ...chunk.blocks
-            .filter((b) => !destroyedBlocks.current.has(`${b.x},${b.y},${b.z}`))
+            .filter((b) => !destroyedBlocks.has(`${b.x},${b.y},${b.z}`))
             .map((b) => (
               <Block
                 key={`${b.x},${b.y},${b.z}`}
                 type={b.type}
                 position={[b.x, b.y, b.z]}
                 isBackground={b.isBackground}
-                activated={activatedBlocks.current.has(`${b.x},${b.y},${b.z}`)}
-                onDestroy={() => handleDestroy(`${b.x},${b.y},${b.z}`, b.x, b.y)}
+                activated={activatedBlocks.has(`${b.x},${b.y},${b.z}`)}
               />
             )),
           ...chunk.hearts
@@ -185,6 +223,16 @@ export const ChunkRenderer = forwardRef<ChunkRendererHandle, ChunkRendererProps>
               />
             )),
         ])}
+        {destroyEffects.map(fx => (
+          <BlockParticles
+            key={fx.key}
+            position={fx.position}
+            type={fx.type}
+            onComplete={() => {
+              setDestroyEffects(prev => prev.filter(e => e.key !== fx.key));
+            }}
+          />
+        ))}
       </>
     );
   }
