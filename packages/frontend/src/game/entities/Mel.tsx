@@ -3,9 +3,9 @@ import { RigidBody, CuboidCollider, type RapierRigidBody, useRapier } from "@rea
 import * as THREE from "three";
 import type { Controls } from "../hooks/useControls";
 import { useGameFrame } from "../hooks/useGameFrame";
-import { useAssistMode } from "../hooks/useAssistMode";
 import { loadSprites, getFrame, getFrameEvent, getFrameAspectRatio } from "../systems/SpriteAnimator";
 import { AnimationStateMachine, type AnimInput } from "../systems/AnimationStateMachine";
+import { gameEventBus } from "../systems/GameEventBus";
 
 const MOVE_SPEED = 6;
 const MOVE_ACCEL = 25;
@@ -14,10 +14,7 @@ const JUMP_FORCE = 10;
 const JUMP_HOLD_FORCE = 6;
 const MAX_JUMP_HOLD = 0.25;
 const COYOTE_TIME = 0.1;
-const FLY_FORCE = 8;
-const FLY_GRAVITY_SCALE = 0.4;
-const FLY_MAX_VEL_Y = 4;
-const MAX_FLY_TIME = 5;
+const DOUBLE_JUMP_FORCE = 9;
 const CROUCH_SPEED_MULT = 0.4;
 const STOMP_BOUNCE_FORCE = 7;
 
@@ -36,7 +33,6 @@ interface MelProps {
   onAttackFrame?: () => void;
   onBarkFrame?: () => void;
   onLookUp?: (looking: boolean) => void;
-  onFlyStateUpdate?: (flying: boolean, timeRemaining: number) => void;
   heartJustCollected?: boolean;
   stateRef?: React.MutableRefObject<{ state: string; grounded: boolean; velX: number; sniffing: boolean }>;
   digActiveRef?: React.RefObject<boolean>;
@@ -53,7 +49,6 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
   onAttackFrame,
   onBarkFrame,
   onLookUp,
-  onFlyStateUpdate,
   heartJustCollected,
   stateRef,
   digActiveRef,
@@ -82,8 +77,7 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
   const lastJumpPressed = useRef(false);
   const attackTimer = useRef(0);
   const idleTime = useRef(0);
-  const flying = useRef(false);
-  const flyTimer = useRef(0);
+  const doubleJumpUsed = useRef(false);
   const crouching = useRef(false);
   const lookingUp = useRef(false);
   const lastLookingUp = useRef(false);
@@ -101,10 +95,9 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
         { x: vel.x, y: STOMP_BOUNCE_FORCE, z: 0 },
         true,
       );
-      // Reset fly/jump state so Mel can re-jump
+      // Reset jump state so Mel can re-jump
       jumping.current = false;
-      flying.current = false;
-      flyTimer.current = 0;
+      doubleJumpUsed.current = false;
     },
   }));
 
@@ -176,11 +169,20 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
     const jumpPressed = ctrl.jump;
 
     if (jumpPressed && !lastJumpPressed.current && canJump) {
+      // Normal ground jump (includes coyote time)
       jumping.current = true;
       jumpHoldTimer.current = 0;
       coyoteTimer.current = 0;
       rb.setLinvel({ x: newVelX, y: JUMP_FORCE, z: 0 }, true);
+    } else if (jumpPressed && !lastJumpPressed.current && !canJump && !doubleJumpUsed.current) {
+      // Double jump (airborne, not yet used)
+      doubleJumpUsed.current = true;
+      jumpHoldTimer.current = 0;
+      jumping.current = true;
+      rb.setLinvel({ x: newVelX, y: DOUBLE_JUMP_FORCE, z: 0 }, true);
+      gameEventBus.emit("double_jump", {} as Record<string, never>);
     } else if (jumpPressed && jumping.current && jumpHoldTimer.current < MAX_JUMP_HOLD) {
+      // Variable height hold (works for both normal and double jump)
       jumpHoldTimer.current += delta;
       const holdVel = vel.y + JUMP_HOLD_FORCE * delta;
       rb.setLinvel({ x: newVelX, y: Math.max(vel.y, holdVel), z: 0 }, true);
@@ -192,37 +194,12 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
 
     lastJumpPressed.current = jumpPressed;
 
-    // --- Fly (max 5s, or unlimited with assist mode) ---
-    const unlimitedFlight = useAssistMode.getState().unlimitedFlight;
-
-    if (ctrl.jump && !grounded.current && jumping.current && jumpHoldTimer.current >= MAX_JUMP_HOLD) {
-      flying.current = true;
-    }
-    if (flying.current) {
-      flyTimer.current += delta;
-    }
-    if (flyTimer.current >= MAX_FLY_TIME && !unlimitedFlight) {
-      flying.current = false;
-    }
-    if (flying.current && ctrl.jump && !grounded.current) {
-      const flyVelY = Math.min(vel.y + FLY_FORCE * delta, FLY_MAX_VEL_Y);
-      rb.setLinvel({ x: newVelX, y: flyVelY, z: 0 }, true);
-    }
-    if (!ctrl.jump) {
-      flying.current = false;
-    }
+    // --- Reset double jump on ground ---
     if (grounded.current) {
-      flying.current = false;
-      flyTimer.current = 0;
+      doubleJumpUsed.current = false;
     }
 
     onPositionUpdate?.(pos.x, pos.y);
-
-    // Report fly state — unlimited flight always shows full stamina bar
-    const reportedTime = unlimitedFlight
-      ? MAX_FLY_TIME
-      : Math.max(0, MAX_FLY_TIME - flyTimer.current);
-    onFlyStateUpdate?.(flying.current, reportedTime);
 
     // --- Attack timer ---
     if (ctrl.shoot && attackTimer.current <= 0) {
@@ -285,7 +262,8 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
       idleTime: idleTime.current,
       crouching: crouching.current,
       lookingUp: lookingUp.current,
-      flying: flying.current,
+      flying: false,  // Fly disabled (F53: replaced by double jump)
+      doubleJumping: doubleJumpUsed.current && !grounded.current,
       lookUpTime: lookUpTime.current,
       heartCollected: justCollectedHeart,
       barkPressed: justBarked,

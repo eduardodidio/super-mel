@@ -19,7 +19,7 @@ interface ControlRow {
 const KEYBOARD_CONTROLS: ControlRow[] = [
   { action: "MOVER", key: "A / D  ou  Setas" },
   { action: "PULAR", key: "Space" },
-  { action: "VOAR", key: "Segurar Space (no ar)" },
+  { action: "PULO DUPLO", key: "Space (2x no ar)" },
   { action: "ABAIXAR", key: "S / Seta Baixo" },
   { action: "OLHAR PRA CIMA", key: "W / Seta Cima" },
   { action: "ATIRAR", key: "Z / J" },
@@ -31,7 +31,8 @@ const KEYBOARD_CONTROLS: ControlRow[] = [
 
 const TOUCH_CONTROLS: ControlRow[] = [
   { action: "MOVER", key: "D-pad esquerdo" },
-  { action: "PULAR / VOAR", key: "Botao A (segurar = voar)" },
+  { action: "PULAR", key: "Botao A" },
+  { action: "PULO DUPLO", key: "Botao A (2x no ar)" },
   { action: "ATIRAR", key: "Botao B" },
   { action: "LATIR", key: "Botao C" },
   { action: "CAVAR", key: "Baixo + B (terra/areia)" },
@@ -41,7 +42,8 @@ const TOUCH_CONTROLS: ControlRow[] = [
 
 const GAMEPAD_CONTROLS: ControlRow[] = [
   { action: "MOVER", key: "D-pad / Analogico esquerdo" },
-  { action: "PULAR / VOAR", key: "A / X (segurar = voar)" },
+  { action: "PULAR", key: "A / X" },
+  { action: "PULO DUPLO", key: "A / X (2x no ar)" },
   { action: "ATIRAR", key: "X / Quadrado" },
   { action: "LATIR", key: "Y / Triangulo" },
   { action: "CAVAR", key: "Baixo + X (terra/areia)" },
@@ -56,7 +58,7 @@ const CONTROLS_MAP: Record<InputType, ControlRow[]> = {
 };
 
 const TIPS = [
-  "Segure Space para voar por ate 5 segundos!",
+  "Pule duas vezes para alcancar plataformas altas!",
   "Atire na Bola do Infinito para destruir blocos",
   "Colete coracoes para recuperar vida",
   "Moedas vermelhas valem pontos -- pegue todas!",

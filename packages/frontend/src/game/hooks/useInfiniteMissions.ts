@@ -65,9 +65,9 @@ const INFINITE_MISSION_POOL: InfinitePoolMission[] = [
     xp: 150,
   },
   {
-    id: "inf-fly-5s",
-    description: "Voe 5s sem tocar o chao",
-    condition: { type: "fly_duration", params: { seconds: 5 } },
+    id: "inf-djump-10",
+    description: "Faca 10 pulos duplos",
+    condition: { type: "double_jump_count", params: { count: 10 } },
     reward: 20,
     xp: 100,
   },
@@ -298,9 +298,9 @@ export function useInfiniteMissions(active: boolean): UseInfiniteMissionsResult 
         trackerRef.current?.onDistanceReached(d.distance);
         checkCompletion();
       }),
-      gameEventBus.on("fly_tick", (d) => {
-        trackerRef.current?.onFlyTick(d.deltaSeconds);
-        // Fly completion checked via time tick below
+      gameEventBus.on("double_jump", () => {
+        trackerRef.current?.onDoubleJump();
+        checkCompletion();
       }),
       gameEventBus.on("stomp_enemy", () => {
         trackerRef.current?.onEnemyStomped();

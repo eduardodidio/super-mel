@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { BackgroundTheme, LevelDataV2 } from "@super-mel/shared";
 import { useAssistMode } from "./useAssistMode";
 
-export type GameScene = "menu" | "playing" | "gameover" | "editor" | "levelselect" | "leaderboard" | "levelclear" | "worldmap";
+export type GameScene = "menu" | "playing" | "gameover" | "editor" | "levelselect" | "leaderboard" | "levelclear" | "worldmap" | "cutscene";
 export type InputType = "keyboard" | "touch" | "gamepad";
 
 interface GameState {
@@ -16,8 +16,6 @@ interface GameState {
   testMode: boolean;
   dailyMode: boolean;
   dailySeed: number;
-  isFlying: boolean;
-  flyTimeRemaining: number;
   lastInputType: InputType;
   gamepadConnected: boolean;
 
@@ -35,6 +33,10 @@ interface GameState {
   campaignLevelId: string | null;
   campaignIndex: number;
   levelBones: number;
+
+  // Cutscene fields (F54)
+  cutsceneType: "end_level" | null;
+  cutsceneSkipped: boolean;
 
   // Biome tracking (for infinite mode auto-cycling)
   currentBiome: BackgroundTheme;
@@ -54,7 +56,6 @@ interface GameState {
   resetGame: () => void;
   startTestMode: () => void;
   startDailyMode: (seed: number) => void;
-  setFlyState: (isFlying: boolean, flyTimeRemaining: number) => void;
   setLastInputType: (type: InputType) => void;
   setGamepadConnected: (connected: boolean) => void;
 
@@ -66,6 +67,11 @@ interface GameState {
   incrementDeaths: () => void;
   completeLevel: () => void;
   setLevelCompleting: (completing: boolean) => void;
+
+  // Cutscene actions (F54)
+  startCutscene: (type: "end_level") => void;
+  endCutscene: () => void;
+  skipCutscene: () => void;
 
   // Campaign actions (F49)
   addBone: () => void;
@@ -82,8 +88,6 @@ export const useGameState = create<GameState>((set) => ({
   testMode: false,
   dailyMode: false,
   dailySeed: 0,
-  isFlying: false,
-  flyTimeRemaining: 5,
   lastInputType: "keyboard" as InputType,
   gamepadConnected: false,
   totalCoins: (() => {
@@ -108,6 +112,10 @@ export const useGameState = create<GameState>((set) => ({
   campaignLevelId: null,
   campaignIndex: -1,
   levelBones: 0,
+
+  // Cutscene defaults (F54)
+  cutsceneType: null,
+  cutsceneSkipped: false,
 
   // Biome tracking
   currentBiome: "forest" as BackgroundTheme,
@@ -157,40 +165,39 @@ export const useGameState = create<GameState>((set) => ({
         levelCoins: s.gameMode === "level" ? s.levelCoins + 1 : s.levelCoins,
       };
     }),
-  setFlyState: (isFlying, flyTimeRemaining) => set({ isFlying, flyTimeRemaining }),
   setLastInputType: (type) => set({ lastInputType: type }),
   setGamepadConnected: (connected) => set({ gamepadConnected: connected }),
   resetGame: () => {
     const maxHearts = useAssistMode.getState().fiveHearts ? 5 : 3;
     set({
       score: 0, lives: maxHearts, coins: 0, scene: "playing", paused: false,
-      testMode: false, dailyMode: false, dailySeed: 0, isFlying: false, flyTimeRemaining: 5,
-      gameMode: "infinite", levelId: null, deaths: 0, lastCheckpoint: null,
+      testMode: false, dailyMode: false, dailySeed: 0,       gameMode: "infinite", levelId: null, deaths: 0, lastCheckpoint: null,
       levelCompleting: false, levelStartTime: 0, levelCoins: 0, currentLevelData: null,
       currentBiome: "forest" as BackgroundTheme,
       campaignLevelId: null, campaignIndex: -1, levelBones: 0,
+      cutsceneType: null, cutsceneSkipped: false,
     });
   },
   startTestMode: () => {
     const maxHearts = useAssistMode.getState().fiveHearts ? 5 : 3;
     set({
       score: 0, lives: maxHearts, coins: 0, scene: "playing", paused: false,
-      testMode: true, dailyMode: false, dailySeed: 0, isFlying: false, flyTimeRemaining: 5,
-      gameMode: "infinite", levelId: null, deaths: 0, lastCheckpoint: null,
+      testMode: true, dailyMode: false, dailySeed: 0,       gameMode: "infinite", levelId: null, deaths: 0, lastCheckpoint: null,
       levelCompleting: false, levelStartTime: 0, levelCoins: 0, currentLevelData: null,
       currentBiome: "forest" as BackgroundTheme,
       campaignLevelId: null, campaignIndex: -1, levelBones: 0,
+      cutsceneType: null, cutsceneSkipped: false,
     });
   },
   startDailyMode: (seed) => {
     const maxHearts = useAssistMode.getState().fiveHearts ? 5 : 3;
     set({
       score: 0, lives: maxHearts, coins: 0, scene: "playing", paused: false,
-      testMode: false, dailyMode: true, dailySeed: seed, isFlying: false, flyTimeRemaining: 5,
-      gameMode: "infinite", levelId: null, deaths: 0, lastCheckpoint: null,
+      testMode: false, dailyMode: true, dailySeed: seed,       gameMode: "infinite", levelId: null, deaths: 0, lastCheckpoint: null,
       levelCompleting: false, levelStartTime: 0, levelCoins: 0, currentLevelData: null,
       currentBiome: "forest" as BackgroundTheme,
       campaignLevelId: null, campaignIndex: -1, levelBones: 0,
+      cutsceneType: null, cutsceneSkipped: false,
     });
   },
 
@@ -213,17 +220,38 @@ export const useGameState = create<GameState>((set) => ({
       testMode: false,
       dailyMode: false,
       dailySeed: 0,
-      isFlying: false,
-      flyTimeRemaining: 5,
       levelStartTime: Date.now(),
       currentBiome: "forest" as BackgroundTheme,
       campaignLevelId: null, campaignIndex: -1, levelBones: 0,
+      cutsceneType: null, cutsceneSkipped: false,
     });
   },
   setLastCheckpoint: (x, y) => set({ lastCheckpoint: { x, y } }),
   incrementDeaths: () => set((s) => ({ deaths: s.deaths + 1 })),
-  completeLevel: () => set({ scene: "levelclear", levelCompleting: false }),
+  completeLevel: () => set({
+    scene: "cutscene",
+    cutsceneType: "end_level",
+    cutsceneSkipped: false,
+    levelCompleting: false,
+  }),
   setLevelCompleting: (completing) => set({ levelCompleting: completing }),
+
+  // Cutscene actions (F54)
+  startCutscene: (type) => set({
+    scene: "cutscene",
+    cutsceneType: type,
+    cutsceneSkipped: false,
+    levelCompleting: false,
+  }),
+  endCutscene: () => set({
+    scene: "levelclear",
+    cutsceneType: null,
+  }),
+  skipCutscene: () => set({
+    scene: "levelclear",
+    cutsceneType: null,
+    cutsceneSkipped: true,
+  }),
 
   // Campaign actions (F49)
   addBone: () => set((s) => ({ levelBones: s.levelBones + 1 })),
@@ -248,9 +276,8 @@ export const useGameState = create<GameState>((set) => ({
       testMode: false,
       dailyMode: false,
       dailySeed: 0,
-      isFlying: false,
-      flyTimeRemaining: 5,
       levelStartTime: Date.now(),
+      cutsceneType: null, cutsceneSkipped: false,
     });
   },
 }));

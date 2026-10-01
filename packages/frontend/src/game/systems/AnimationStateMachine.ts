@@ -22,6 +22,7 @@ export type AnimState =
   | "crouch"
   | "look_up"
   | "fly"
+  | "double_jump"
   | "wait"
   | "affection"
   | "bark"
@@ -40,6 +41,7 @@ export interface AnimInput {
   crouching: boolean;
   lookingUp: boolean;
   flying: boolean;
+  doubleJumping: boolean;
   lookUpTime: number;
   heartCollected: boolean;
   barkPressed: boolean;
@@ -115,6 +117,7 @@ const ANIM_NAME_MAP: Record<AnimState, string> = {
   crouch: "crouch",
   look_up: "look_up",
   fly: "fly",
+  double_jump: "jump",
   wait: "wait",
   affection: "affection",
   bark: "bark",
@@ -195,7 +198,12 @@ export class AnimationStateMachine {
 
     // --- Priority 4: Jump states (airborne) ---
     if (!input.grounded) {
-      // If flying and airborne, stay in fly state
+      // Double jump: show a brief rise animation
+      if (input.doubleJumping && input.velY > 0) {
+        this.transitionIfDifferent("double_jump");
+        return this.state;
+      }
+      // If flying and airborne, stay in fly state (currently never true)
       if (input.flying) {
         this.transitionIfDifferent("fly");
         return this.state;
@@ -308,7 +316,8 @@ export class AnimationStateMachine {
     return (
       this.state === "jump_rise" ||
       this.state === "jump_air" ||
-      this.state === "jump_fall"
+      this.state === "jump_fall" ||
+      this.state === "double_jump"
     );
   }
 

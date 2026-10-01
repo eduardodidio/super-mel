@@ -1,0 +1,29 @@
+%% F53 - Double Jump User Journey
+
+flowchart LR
+    A([Player on ground]) --> B[Press Space]
+    B --> C[Normal Jump<br/>JUMP_FORCE = 10]
+    C --> D([Airborne])
+    D --> E[Press Space again]
+    E --> F{doubleJumpUsed?}
+    F -- no --> G[Double Jump<br/>DOUBLE_JUMP_FORCE = 9]
+    G --> H[Dust puff effect]
+    G --> I[doubleJumpUsed = true]
+    G --> J[Mission counter++]
+    F -- yes --> K[Nothing happens]
+    I --> L([Still airborne])
+    L --> M[Press Space]
+    M --> N[Nothing happens<br/>already used]
+    L --> O([Land on ground])
+    O --> P[doubleJumpUsed = false]
+    P --> A
+
+    D --> Q([Stomp enemy])
+    Q --> R[doubleJumpUsed = false]
+    R --> S[Can double jump again]
+    S --> D
+
+    style G fill:#4a8a4a22,stroke:#4a8a4a
+    style H fill:#ffcc0022,stroke:#ffcc00
+    style K fill:#ff000022,stroke:#ff0000
+    style N fill:#ff000022,stroke:#ff0000

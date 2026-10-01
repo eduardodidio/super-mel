@@ -45,11 +45,9 @@ const SPEED_OPTIONS = [
 
 export function AssistModeUI({ onBack }: AssistModeUIProps) {
   const invincible = useAssistMode((s) => s.invincible);
-  const unlimitedFlight = useAssistMode((s) => s.unlimitedFlight);
   const fiveHearts = useAssistMode((s) => s.fiveHearts);
   const gameSpeed = useAssistMode((s) => s.gameSpeed);
   const setInvincible = useAssistMode((s) => s.setInvincible);
-  const setUnlimitedFlight = useAssistMode((s) => s.setUnlimitedFlight);
   const setFiveHearts = useAssistMode((s) => s.setFiveHearts);
   const setGameSpeed = useAssistMode((s) => s.setGameSpeed);
 
@@ -70,12 +68,6 @@ export function AssistModeUI({ onBack }: AssistModeUIProps) {
             onToggle={() => setInvincible(!invincible)}
             label="Invencivel"
             description="Mel nao perde vida"
-          />
-          <ToggleButton
-            active={unlimitedFlight}
-            onToggle={() => setUnlimitedFlight(!unlimitedFlight)}
-            label="Voo Infinito"
-            description="Sem limite de tempo voando"
           />
           <ToggleButton
             active={fiveHearts}

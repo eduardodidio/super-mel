@@ -19,7 +19,8 @@ export interface EventCounters {
   heartsCollected: number;
   bonesCollected: number;
   distanceReached: number;
-  flyTimeSeconds: number;
+  flyTimeSeconds: number;          // DEPRECATED (F53): kept for type compat, always 0
+  doubleJumpsPerformed: number;
   enemiesStomped: number;
   elapsedSeconds: number;
 }
@@ -45,6 +46,7 @@ function emptyCounters(): EventCounters {
     bonesCollected: 0,
     distanceReached: 0,
     flyTimeSeconds: 0,
+    doubleJumpsPerformed: 0,
     enemiesStomped: 0,
     elapsedSeconds: 0,
   };
@@ -91,6 +93,10 @@ export class MissionTracker {
 
   onFlyTick(deltaSeconds: number): void {
     this.counters.flyTimeSeconds += deltaSeconds;
+  }
+
+  onDoubleJump(): void {
+    this.counters.doubleJumpsPerformed++;
   }
 
   onEnemyStomped(): void {
@@ -178,12 +184,22 @@ export class MissionTracker {
       }
 
       case "fly_duration": {
-        const target = (params.seconds as number) || 5;
+        // DEPRECATED (F53): fly mechanic removed
         return {
           mission,
-          completed: c.flyTimeSeconds >= target,
-          progress: Math.min(1, c.flyTimeSeconds / target),
-          progressText: `${c.flyTimeSeconds.toFixed(1)}s/${target}s`,
+          completed: false,
+          progress: 0,
+          progressText: "0/0",
+        };
+      }
+
+      case "double_jump_count": {
+        const target = (params.count as number) || 10;
+        return {
+          mission,
+          completed: c.doubleJumpsPerformed >= target,
+          progress: Math.min(1, c.doubleJumpsPerformed / target),
+          progressText: `${c.doubleJumpsPerformed}/${target}`,
         };
       }
 

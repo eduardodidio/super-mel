@@ -94,6 +94,11 @@ export function EffectManager({
       spawnEffect("dust", [playerX, playerY - 0.4, 0.1], 1.5);
     }
 
+    // --- Dust (double jump): when entering double_jump state ---
+    if (stateChanged && playerState === "double_jump") {
+      spawnEffect("dust", [playerX, playerY - 0.4, 0.1], 1.2);
+    }
+
     // --- Stars: when entering hurt_medium ---
     if (stateChanged && playerState === "hurt_medium") {
       spawnEffect("stars", [playerX, playerY + 0.8, 0.1]);

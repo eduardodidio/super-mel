@@ -75,9 +75,9 @@ export function useLevelMissions(
         tracker.onDistanceReached(d.distance);
         checkCompletion();
       }),
-      gameEventBus.on("fly_tick", (d) => {
-        tracker.onFlyTick(d.deltaSeconds);
-        // Don't checkCompletion every fly_tick (performance) -- check periodically via time tick
+      gameEventBus.on("double_jump", () => {
+        tracker.onDoubleJump();
+        checkCompletion();
       }),
       gameEventBus.on("stomp_enemy", () => {
         tracker.onEnemyStomped();
@@ -100,7 +100,7 @@ export function useLevelMissions(
       const delta = (now - lastTime) / 1000;
       lastTime = now;
       tracker.onTimeTick(delta);
-      // Check fly_duration missions periodically (every time tick)
+      // Check time-based missions periodically (every time tick)
       checkCompletion();
       rafId = requestAnimationFrame(tickTime);
     };

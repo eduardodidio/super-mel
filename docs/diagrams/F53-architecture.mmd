@@ -1,0 +1,47 @@
+%% F53 - Double Jump Architecture
+%% Replaces fly mechanic with double jump in Mel.tsx
+
+flowchart TD
+    subgraph Mel.tsx
+        A[Space pressed] --> B{grounded or coyote?}
+        B -- yes --> C[Normal Jump<br/>JUMP_FORCE = 10]
+        B -- no --> D{doubleJumpUsed?}
+        D -- no --> E[Double Jump<br/>DOUBLE_JUMP_FORCE = 9]
+        D -- yes --> F[No action]
+        E --> G[emit double_jump event]
+        C --> H[grounded resets<br/>doubleJumpUsed = false]
+    end
+
+    subgraph AnimationStateMachine.ts
+        I[AnimInput.doubleJumping] --> J{airborne + velY > 0?}
+        J -- yes --> K[State: double_jump]
+        J -- no --> L[State: jump_fall]
+        K --> M[Maps to jump sprite]
+        K --> N[isJumpState = true]
+        N --> O[jump_land on landing]
+    end
+
+    subgraph GameEventBus.ts
+        G --> P[double_jump event]
+    end
+
+    subgraph MissionTracker.ts
+        P --> Q[onDoubleJump]
+        Q --> R[doubleJumpsPerformed++]
+        R --> S{double_jump_count}
+        S --> T[Mission progress]
+    end
+
+    subgraph EffectManager.tsx
+        K --> U[Dust puff effect<br/>scale 1.2]
+    end
+
+    subgraph Removed
+        V[FLY_FORCE / FLY_GRAVITY_SCALE<br/>FLY_MAX_VEL_Y / MAX_FLY_TIME]
+        W[StaminaBar component]
+        X[isFlying / flyTimeRemaining<br/>in useGameState]
+        Y[onFlyStateUpdate callback]
+        Z[Voo Infinito toggle]
+    end
+
+    style Removed fill:#ff000022,stroke:#ff0000

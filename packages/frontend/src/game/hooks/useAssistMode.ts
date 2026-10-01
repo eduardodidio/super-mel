@@ -71,7 +71,7 @@ export const useAssistMode = create<AssistModeState>((set, get) => {
     },
     isAnyAssistEnabled: () => {
       const s = get();
-      return s.invincible || s.unlimitedFlight || s.fiveHearts || s.gameSpeed !== 1.0;
+      return s.invincible || s.fiveHearts || s.gameSpeed !== 1.0;
     },
   };
 });

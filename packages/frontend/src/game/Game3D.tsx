@@ -28,8 +28,24 @@ import { CoinPopupLayer, type CoinPopupHandle } from "./systems/CoinPopup";
 import { useLevelMissions } from "./hooks/useLevelMissions";
 import { useInfiniteMissions } from "./hooks/useInfiniteMissions";
 import { MissionToast } from "./systems/MissionToast";
+import { EndLevelCutscene } from "./scenes/EndLevelCutscene";
 
 const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
+
+function CutsceneContent() {
+  const cutsceneType = useGameState((s) => s.cutsceneType);
+  const endCutscene = useGameState((s) => s.endCutscene);
+  const skipCutscene = useGameState((s) => s.skipCutscene);
+
+  if (cutsceneType !== "end_level") return null;
+
+  return (
+    <EndLevelCutscene
+      onComplete={endCutscene}
+      onSkip={skipCutscene}
+    />
+  );
+}
 
 function SceneContent() {
   const scene = useGameState((s) => s.scene);
@@ -63,6 +79,7 @@ function SceneContent() {
           levelData={currentLevelData ?? undefined}
         />
       )}
+      {scene === "cutscene" && <CutsceneContent />}
     </>
   );
 }
@@ -72,8 +89,6 @@ export function Game3D() {
   const lives = useGameState((s) => s.lives);
   const score = useGameState((s) => s.score);
   const coins = useGameState((s) => s.coins);
-  const isFlying = useGameState((s) => s.isFlying);
-  const flyTimeRemaining = useGameState((s) => s.flyTimeRemaining);
   const theme = useGameState((s) => s.theme);
   const setScene = useGameState((s) => s.setScene);
   const setTheme = useGameState((s) => s.setTheme);
@@ -137,6 +152,8 @@ export function Game3D() {
       playTrack("maintheme", true);
     } else if (scene === "playing") {
       playTrack("comeco", true);
+    } else if (scene === "cutscene") {
+      playTrack("maintheme", true);
     } else if (scene === "levelclear") {
       // TODO: play victory fanfare SFX when available
       playTrack("maintheme", true);
@@ -233,7 +250,7 @@ export function Game3D() {
         camera={{ position: [0, 2, 15], fov: 60 }}
         style={{ background: "#1a1a2e" }}
       >
-        <Physics gravity={[0, -15, 0]} paused={paused} timeStep={physicsTimeStep}>
+        <Physics gravity={[0, -15, 0]} paused={paused || scene === "cutscene"} timeStep={physicsTimeStep}>
           <SceneContent />
         </Physics>
       </Canvas>
@@ -244,8 +261,6 @@ export function Game3D() {
         score={score}
         coins={coins}
         scene={scene}
-        isFlying={isFlying}
-        flyTimeRemaining={flyTimeRemaining}
         infiniteMissions={gameMode === "infinite" ? infiniteMissions.activeMissions : undefined}
         levelBones={levelBones}
         totalBones={totalBones}

@@ -66,7 +66,6 @@ export function GameScene3D({ testMode = false, levelData }: GameScene3DProps) {
   const theme = useGameState((s) => s.theme);
   const addCoin = useGameState((s) => s.addCoin);
   const healLife = useGameState((s) => s.healLife);
-  const setFlyState = useGameState((s) => s.setFlyState);
   const assistInvincible = useAssistMode((s) => s.invincible);
   const dailyMode = useGameState((s) => s.dailyMode);
   const dailySeed = useGameState((s) => s.dailySeed);
@@ -336,7 +335,6 @@ export function GameScene3D({ testMode = false, levelData }: GameScene3DProps) {
 
   // --- GameEventBus: run lifecycle ---
   const lastEmittedDistance = useRef(0);
-  const wasFlyingRef = useRef(false);
 
   useEffect(() => {
     gameEventBus.emit("run_start", {
@@ -409,18 +407,6 @@ export function GameScene3D({ testMode = false, levelData }: GameScene3DProps) {
       lastEmittedDistance.current = currentMeters;
     }
   }, [addScore]);
-
-  const handleFlyStateUpdate = useCallback((isFlying: boolean, timeRemaining: number) => {
-    setFlyState(isFlying, timeRemaining);
-    // Emit fly_tick when Mel is flying (approximate delta from frame timing)
-    if (isFlying) {
-      gameEventBus.emit("fly_tick", {
-        deltaSeconds: 1 / 60, // approximate per-call delta
-        continuous: wasFlyingRef.current,
-      });
-    }
-    wasFlyingRef.current = isFlying;
-  }, [setFlyState]);
 
   const handleDamage = useCallback(() => {
     if (invincibleRef.current || assistInvincible) return;
@@ -585,7 +571,6 @@ export function GameScene3D({ testMode = false, levelData }: GameScene3DProps) {
         onAttackFrame={handleAttackFrame}
         onBarkFrame={handleBarkStart}
         onLookUp={setIsLookingUp}
-        onFlyStateUpdate={handleFlyStateUpdate}
         heartJustCollected={heartCollectedRef.current}
         stateRef={melStateRef}
         digActiveRef={digActiveRef}

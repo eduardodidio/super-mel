@@ -57,7 +57,8 @@ export type MissionConditionType =
   | "fly_duration"        // params: { seconds: number } -- cumulative fly time in run
   | "reach_distance"      // params: { meters: number }
   | "no_damage_distance"  // params: { meters: number } -- reach distance without any damage
-  | "stomp_enemies";      // params: { count: number }
+  | "stomp_enemies"        // params: { count: number }
+  | "double_jump_count";  // params: { count: number }
 
 export interface MissionCondition {
   type: MissionConditionType;

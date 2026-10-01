@@ -1,7 +1,7 @@
 # Super Mel
 
 Jogo web estilo Flappy Bird + Mario Maker com graficos Minecraft.
-Super Mel e uma yorkshire micro heroina que voa e dispara poderes
+Super Mel e uma yorkshire micro heroina que pula (com pulo duplo!) e dispara poderes
 com a Bola do Infinito.
 
 ## Stack
@@ -47,9 +47,9 @@ pnpm dev
 - **Setas Esq/Dir** — Mover esquerda/direita
 - **Seta Baixo** — Abaixar (crouch)
 - **Seta Cima** — Olhar pra cima (camera sobe)
-- **Espaco** — Pular (segurar = voar)
+- **Espaco** — Pular (pressionar 2x no ar = pulo duplo)
 - **Z** — Atacar (Bola do Infinito)
-- **Mobile:** D-pad 4 direcoes + A (pular/voar) + B (atacar)
+- **Mobile:** D-pad 4 direcoes + A (pular/pulo duplo) + B (atacar)
 
 ## Arquitetura
 
@@ -144,6 +144,8 @@ super-mel/
 - **F28** — Moedas + Drop: moedas usam sprite personalizado (moedaDoJogo.png), item_blocks vermelhos com "?" liberam 1-3 moedas ao serem atingidos, blocos destrutiveis dropam moedas (40% chance), HUD coin counter vermelho
 - **F29** — Sprites Completos: corrigido mapeamento de jump_land/hurt_heavy, animacoes crouch/look_up/fly agora usam sprites dedicados, timing de ataque e landing mais responsivos
 - **F30** — Docs & Arquitetura: README com secoes de Arquitetura e Tech Stack, docs/README.md como indice navegavel, Doc-Review Gate no CLAUDE.md, template de checklist de docs
+- **F53** — Double Jump: substituiu a mecanica de voo (fly) por pulo duplo. Pressionar Space duas vezes no ar executa um segundo pulo (DOUBLE_JUMP_FORCE = 9). StaminaBar removida do HUD, toggle "Voo Infinito" removido do Modo Assistido. Missao infinita "Voe 5s" substituida por "Faca 10 pulos duplos". Efeito de poeira no pulo duplo. Stomp bounce reseta o pulo duplo.
+- **F54** — Identidade Secreta da Mel: cutscene cinematica ao final de cada fase onde Mel volta para casa, esconde a capa de heroina atras de uma moita, e abraca seu dono Rafa (estilo Perry o Ornitorrinco). Cutscene pulavel (qualquer tecla/toque apos 1s). Sistema generico de cutscene reutilizavel (CutsceneEngine). Novo personagem: Rafa (dono da Mel, voxel-style).
 
 ## Poderes Futuros (pos-MVP)
 

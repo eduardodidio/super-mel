@@ -20,7 +20,9 @@ export interface GameEvents {
   heart_collected: { x: number; y: number };
   bone_collected: { x: number; y: number };
   distance_reached: { distance: number };
+  // DEPRECATED (F53): fly mechanic removed. Kept for type compat.
   fly_tick: { deltaSeconds: number; continuous: boolean };
+  double_jump: Record<string, never>;
   stomp_enemy: { enemyType?: string };
   level_complete: { levelId: string; timeSeconds: number; coins: number; deaths: number };
   item_block_activated: { x: number; y: number; coinCount: number };
