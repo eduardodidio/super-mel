@@ -39,6 +39,7 @@ Diagramas vivos mantidos em sincronia com o codigo. Dois por feature: arquitetur
 | F29 -- Sprites Completos | [architecture](diagrams/F29-architecture.mmd) | [journey](diagrams/F29-journey.mmd) |
 | F30 -- README & Docs | [architecture](diagrams/F30-architecture.mmd) | [journey](diagrams/F30-journey.mmd) |
 | F51 -- Fix Sprite Size Consistency | [architecture](diagrams/F51-architecture.mmd) | [journey](diagrams/F51-journey.mmd) |
+| F54 -- Identidade Secreta da Mel | [architecture](diagrams/F54-architecture.mmd) | [journey](diagrams/F54-journey.mmd) |
 
 ## Task Manifests
 
@@ -67,6 +68,7 @@ Diretorio de tasks por feature em [`tasks/features/`](../tasks/features/).
 | [F29 -- Sprites Completos Mel](../tasks/features/F29-sprites-completos-mel/) | Sprites completos da Mel |
 | [F30 -- README & Docs Arquitetura](../tasks/features/F30-readme-docs-arquitetura/) | Documentacao, README, indice de docs |
 | [F51 -- Fix Sprite Size Consistency](../tasks/features/F51-fix-sprite-size-consistency/) | Correcao escala normalizada de sprites, mapeamento sprites faltantes |
+| [F54 -- Identidade Secreta da Mel](../tasks/features/F54-identidade-secreta-mel/) | Cutscene end-of-level: Mel esconde a capa, abraca Rafa (Perry style) |
 
 ## Guias
 

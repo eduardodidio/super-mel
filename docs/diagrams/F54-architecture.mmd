@@ -1,0 +1,33 @@
+graph TB
+    subgraph GameFlow
+        A[GameScene3D] -->|goal collision| B[levelCompleting=true]
+        B -->|1.5s timeout| C[completeLevel]
+        C -->|sets scene| D["scene='cutscene'"]
+    end
+
+    subgraph CutsceneScene
+        D --> E[EndLevelCutscene]
+        E --> F[CutsceneEngine]
+        F --> G["Steps 0-8 timeline"]
+        E --> H[Rafa entity]
+        E --> I[HidingSpot bush]
+        E --> J[MelHouse]
+        E --> K[Mel Sprite + Cape overlay]
+    end
+
+    subgraph StateManagement
+        L[useGameState] -->|cutsceneType| E
+        E -->|endCutscene| M["scene='levelclear'"]
+        E -->|skipCutscene| M
+    end
+
+    subgraph Completion
+        M --> N[LevelClearOverlay]
+    end
+
+    subgraph Integration["Game3D Integration"]
+        O[SceneContent] -->|"scene=cutscene"| P[CutsceneContent]
+        P --> E
+        Q["Physics paused"] -.->|"scene=cutscene"| R[No physics during cutscene]
+        S[Audio] -->|maintheme| E
+    end

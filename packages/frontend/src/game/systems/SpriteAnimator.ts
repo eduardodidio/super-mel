@@ -165,6 +165,20 @@ const ANIMATIONS: Record<string, SpriteAnimationDef> = {
     fps: 4,
     loop: true,
   },
+
+  // Cutscene-specific animations (F54)
+  walk_slow: {
+    name: "walk_slow",
+    frames: ["walk_right", "walk_right_b"],
+    fps: 6, // slower than normal walk (10fps) for a casual stroll
+    loop: true,
+  },
+  peek: {
+    name: "peek",
+    frames: ["idle_right", "idle_left"],
+    fps: 2, // slow toggle for "looking around suspiciously"
+    loop: true,
+  },
 };
 
 // ---------------------------------------------------------------------------

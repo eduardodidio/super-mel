@@ -1,0 +1,21 @@
+graph LR
+    A[Mel reaches Goal] --> B[1.5s celebration]
+    B --> C{Cutscene starts}
+    C --> D[Mel walks to bush]
+    D --> E["Behind bush: remove cape"]
+    E --> F[Emerge without cape]
+    F --> G[Walk to house]
+    G --> H[Door opens]
+    H --> I[Enter house]
+    I --> J[Hug Rafa]
+    J --> K[Fade to black]
+    K --> L[Level Clear Screen]
+
+    C -->|Skip after 1s| L
+    D -->|Skip| L
+    E -->|Skip| L
+    F -->|Skip| L
+    G -->|Skip| L
+    H -->|Skip| L
+    I -->|Skip| L
+    J -->|Skip| L
