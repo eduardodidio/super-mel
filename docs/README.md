@@ -38,6 +38,7 @@ Diagramas vivos mantidos em sincronia com o codigo. Dois por feature: arquitetur
 | F28 -- Moedas + Drop | [architecture](diagrams/F28-architecture.mmd) | [journey](diagrams/F28-journey.mmd) |
 | F29 -- Sprites Completos | [architecture](diagrams/F29-architecture.mmd) | [journey](diagrams/F29-journey.mmd) |
 | F30 -- README & Docs | [architecture](diagrams/F30-architecture.mmd) | [journey](diagrams/F30-journey.mmd) |
+| F51 -- Fix Sprite Size Consistency | [architecture](diagrams/F51-architecture.mmd) | [journey](diagrams/F51-journey.mmd) |
 
 ## Task Manifests
 
@@ -65,6 +66,7 @@ Diretorio de tasks por feature em [`tasks/features/`](../tasks/features/).
 | [F28 -- Moedas Vermelhas Drop](../tasks/features/F28-moedas-vermelhas-drop/) | Sistema de moedas vermelhas |
 | [F29 -- Sprites Completos Mel](../tasks/features/F29-sprites-completos-mel/) | Sprites completos da Mel |
 | [F30 -- README & Docs Arquitetura](../tasks/features/F30-readme-docs-arquitetura/) | Documentacao, README, indice de docs |
+| [F51 -- Fix Sprite Size Consistency](../tasks/features/F51-fix-sprite-size-consistency/) | Correcao escala normalizada de sprites, mapeamento sprites faltantes |
 
 ## Guias
 

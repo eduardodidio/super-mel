@@ -1,0 +1,21 @@
+%% F51 — Fix Sprite Size Consistency — User Journey
+%% BPMN-style flow showing sprite rendering per frame
+
+flowchart LR
+    START((Frame Start)) --> LOAD{Sprites<br/>loaded?}
+    LOAD -->|No| SKIP[Skip rendering]
+    LOAD -->|Yes| ANIM[Get animName<br/>from StateMachine]
+    ANIM --> TEX[getFrame: resolve<br/>texture for frame]
+    TEX --> SCALE[getFrameNormalizedScale:<br/>scaleX = sourceW / 168<br/>scaleY = sourceH / 168]
+    SCALE --> MULT[Multiply by<br/>SPRITE_HEIGHT=2]
+    MULT --> LERP[Lerp from<br/>previous scale]
+    LERP --> FLIP{Facing<br/>right?}
+    FLIP -->|Yes| POS_R[scale.x = +smoothW]
+    FLIP -->|No| POS_L[scale.x = -smoothW]
+    POS_R --> ANCHOR[position.y =<br/>smoothH/2 - 0.15]
+    POS_L --> ANCHOR
+    ANCHOR --> RENDER((Render<br/>Frame))
+
+    style START fill:#4caf50,color:#fff
+    style RENDER fill:#4caf50,color:#fff
+    style SKIP fill:#f44336,color:#fff
