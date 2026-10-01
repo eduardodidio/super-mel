@@ -22,6 +22,7 @@ const SPRITE_HEIGHT = 2;
 
 export interface MelHandle {
   stompBounce: () => void;
+  springBounce: (force: number) => void;
 }
 
 interface MelProps {
@@ -100,6 +101,14 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
         true,
       );
       // Reset jump state so Mel can re-jump
+      jumping.current = false;
+      doubleJumpUsed.current = false;
+    },
+    springBounce(force: number) {
+      if (!rigidBodyRef.current) return;
+      const vel = rigidBodyRef.current.linvel();
+      rigidBodyRef.current.setLinvel({ x: vel.x, y: force, z: 0 }, true);
+      // Reset jump state so Mel can double-jump after spring bounce
       jumping.current = false;
       doubleJumpUsed.current = false;
     },

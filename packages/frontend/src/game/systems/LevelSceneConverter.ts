@@ -12,6 +12,26 @@ export interface SceneEnemyData {
   y: number;
 }
 
+export interface SceneSpringData {
+  x: number;
+  y: number;
+  bounceForce: number;
+}
+
+export interface SceneMovingPlatformData {
+  x: number;
+  y: number;
+  direction: "horizontal" | "vertical";
+  speed: number;
+  range: number;
+}
+
+export interface SceneSpikesData {
+  x: number;
+  y: number;
+  facing: "up" | "down" | "left" | "right";
+}
+
 export interface SceneObjects {
   /** All blocks from the grid (non-empty cells) */
   blocks: BlockData[];
@@ -33,6 +53,12 @@ export interface SceneObjects {
   bones: { x: number; y: number; id: string }[];
   /** Sign entities with text and optional icon */
   signs: { x: number; y: number; text: string; icon?: string }[];
+  /** Springs that bounce the player */
+  springs: SceneSpringData[];
+  /** Moving platforms (horizontal/vertical) */
+  movingPlatforms: SceneMovingPlatformData[];
+  /** Spike hazards */
+  spikes: SceneSpikesData[];
   /** All remaining entities not handled above */
   otherEntities: EntityData[];
   /** Map of "x,y" -> customAssetId for custom blocks (Galeria do Rafa) */
@@ -62,6 +88,9 @@ export function levelToSceneObjects(level: LevelDataV2): SceneObjects {
   const enemies: SceneEnemyData[] = [];
   const bones: SceneObjects["bones"] = [];
   const signs: SceneObjects["signs"] = [];
+  const springs: SceneSpringData[] = [];
+  const movingPlatforms: SceneMovingPlatformData[] = [];
+  const spikes: SceneSpikesData[] = [];
   const otherEntities: EntityData[] = [];
   const customBlockAssets = new Map<string, string>();
 
@@ -141,6 +170,29 @@ export function levelToSceneObjects(level: LevelDataV2): SceneObjects {
           (entity.props?.customAssetId as string) ?? ""
         );
         break;
+      case "spring":
+        springs.push({
+          x: entity.x,
+          y: entity.y,
+          bounceForce: (entity.props?.bounceForce as number) ?? 18,
+        });
+        break;
+      case "moving_platform":
+        movingPlatforms.push({
+          x: entity.x,
+          y: entity.y,
+          direction: (entity.props?.direction as "horizontal" | "vertical") ?? "horizontal",
+          speed: (entity.props?.speed as number) ?? 3,
+          range: (entity.props?.range as number) ?? 4,
+        });
+        break;
+      case "spikes":
+        spikes.push({
+          x: entity.x,
+          y: entity.y,
+          facing: (entity.props?.facing as "up" | "down" | "left" | "right") ?? "up",
+        });
+        break;
       default:
         // future entity types
         otherEntities.push(entity);
@@ -159,6 +211,9 @@ export function levelToSceneObjects(level: LevelDataV2): SceneObjects {
     enemies,
     bones,
     signs,
+    springs,
+    movingPlatforms,
+    spikes,
     otherEntities,
     customBlockAssets,
     customAssets: level.customAssets ?? [],
