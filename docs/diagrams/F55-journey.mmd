@@ -1,0 +1,27 @@
+flowchart LR
+    START([Player starts game]) --> FOREST[Forest Biome]
+
+    FOREST --> BG1["Mountain parallax\nbehind procedural decor"]
+    BG1 --> RUN[Player runs right]
+    RUN --> SCROLL["Parallax scrolls\nat 0.2% player speed"]
+
+    SCROLL --> TRANS1{Biome\ntransition\nzone?}
+    TRANS1 -- No --> RUN
+
+    TRANS1 -- Yes --> FADE1["Cross-fade:\nmountains -> desert\nopacity interpolation"]
+    FADE1 --> DESERT[Desert Biome]
+    DESERT --> BG2["Desert parallax\nbehind procedural decor"]
+    BG2 --> RUN2[Player runs right]
+
+    RUN2 --> TRANS2{Biome\ntransition\nzone?}
+    TRANS2 -- No --> RUN2
+    TRANS2 -- Yes --> FADE2["Cross-fade:\ndesert -> mountains\nopacity interpolation"]
+    FADE2 --> NIGHT[Night Biome]
+    NIGHT --> BG3["Mountain parallax\n+ stars overlay"]
+    BG3 --> CONTINUE["Continue cycling\nthrough biomes..."]
+
+    style BG1 fill:#4a9,stroke:#333,color:#fff
+    style BG2 fill:#c84,stroke:#333,color:#fff
+    style BG3 fill:#448,stroke:#333,color:#fff
+    style FADE1 fill:#fa4,stroke:#333
+    style FADE2 fill:#fa4,stroke:#333

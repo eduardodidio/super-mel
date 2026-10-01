@@ -147,6 +147,7 @@ super-mel/
 - **F51** — Fix Sprite Size Consistency: corrigido bug onde Mel aparecia gigante em animacoes como lie_down/death/hurt_heavy. Escala agora normalizada pelo frameSize do manifest (224x168) em vez de altura fixa. Sprites faltantes (crouch/fly/look_up) mapeados para poses existentes. Transicoes suavizadas com lerp e pes ancorados ao collider.
 - **F53** — Double Jump: substituiu a mecanica de voo (fly) por pulo duplo. Pressionar Space duas vezes no ar executa um segundo pulo (DOUBLE_JUMP_FORCE = 9). StaminaBar removida do HUD, toggle "Voo Infinito" removido do Modo Assistido. Missao infinita "Voe 5s" substituida por "Faca 10 pulos duplos". Efeito de poeira no pulo duplo. Stomp bounce reseta o pulo duplo.
 - **F54** — Identidade Secreta da Mel: cutscene cinematica ao final de cada fase onde Mel volta para casa, esconde a capa de heroina atras de uma moita, e abraca seu dono Rafa (estilo Perry o Ornitorrinco). Cutscene pulavel (qualquer tecla/toque apos 1s). Sistema generico de cutscene reutilizavel (CutsceneEngine). Novo personagem: Rafa (dono da Mel, voxel-style).
+- **F55** — Parallax Image Background: imagem de fundo parallax com montanhas (default) e deserto. Camada mais profunda (Z=-35) atras de toda decoracao procedural (nuvens, montanhas, estrelas). Tiling horizontal infinito com scroll lento (0.2% da velocidade do jogador). Cross-fade suave entre imagens durante transicoes de bioma.
 
 ## Poderes Futuros (pos-MVP)
 

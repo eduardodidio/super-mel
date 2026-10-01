@@ -1,0 +1,57 @@
+flowchart TB
+    subgraph GameScene3D
+        direction TB
+        A[GameScene3D]
+
+        subgraph InfiniteMode["Infinite Mode"]
+            BT[BiomeTransition]
+            SK[Skybox]
+            LT[Lighting]
+            BD1[BackgroundDecor]
+        end
+
+        subgraph LevelTestMode["Level / Test Mode"]
+            BD2[BackgroundDecor]
+        end
+
+        A --> BT
+        A --> BD2
+        BT --> SK
+        BT --> LT
+        BT --> BD1
+    end
+
+    subgraph BackgroundDecor["BackgroundDecor Layers (Z depth)"]
+        direction TB
+        PIB["ParallaxImageBackground\n(Z=-35, NEW)\nmontanhas.jpg | deserto.jpg"]
+        MTN["Mountains\n(Z=-18..-26)\nprocedural boxes"]
+        CLD["Clouds\n(Z=-12..-27)\nprocedural boxes"]
+        STR["Stars\n(Z=-20..-30)\nnight/space only"]
+    end
+
+    BD1 --> PIB
+    BD1 --> MTN
+    BD1 --> CLD
+    BD1 --> STR
+    BD2 --> PIB
+    BD2 --> MTN
+    BD2 --> CLD
+    BD2 --> STR
+
+    subgraph Assets["Static Assets"]
+        IMG1["public/backgrounds/montanhas.jpg\nforest, night, ocean"]
+        IMG2["public/backgrounds/deserto.jpg\ndesert, space"]
+    end
+
+    PIB --> IMG1
+    PIB --> IMG2
+
+    subgraph CrossFade["Biome Transition"]
+        CF1["Current plane opacity = 1-t"]
+        CF2["Next plane opacity = t"]
+    end
+
+    PIB -.-> CrossFade
+
+    style PIB fill:#4a9,stroke:#333,color:#fff
+    style CrossFade fill:#fa4,stroke:#333

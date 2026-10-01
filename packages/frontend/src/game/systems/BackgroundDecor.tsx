@@ -2,6 +2,7 @@ import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { BackgroundTheme } from "@super-mel/shared";
+import { ParallaxImageBackground } from "./ParallaxImageBackground";
 
 interface BackgroundDecorProps {
   theme: BackgroundTheme;
@@ -182,6 +183,14 @@ export function BackgroundDecor({ theme, playerXRef, nextTheme, transitionFactor
 
   return (
     <>
+      {/* Parallax image background (deepest layer) */}
+      <ParallaxImageBackground
+        theme={theme}
+        playerXRef={playerXRef}
+        nextTheme={nextTheme}
+        transitionFactor={transitionFactor}
+      />
+
       {/* Clouds */}
       <group ref={cloudsRef}>
         {clouds.map((c, i) => (

@@ -1,0 +1,41 @@
+{
+  "decision_id": "D-F55-20261001T140000Z",
+  "timestamp": "2026-10-01T14:00:00Z",
+  "type": "feature_start",
+  "context_summary": "F55 adds parallax image backgrounds (mountains default, desert available) behind the existing procedural BackgroundDecor. Single-layer images placed at deep Z, scrolling with reduced parallax factor. Low risk, purely visual, no gameplay impact.",
+  "options_considered": [
+    {
+      "option": "A",
+      "description": "Add a ParallaxBackground component that renders the image as a textured plane at deep Z behind BackgroundDecor, integrated with BiomeTransition for theme switching.",
+      "pros": [
+        "Simple implementation — one new component, minimal changes to existing code",
+        "Leverages existing theme/biome system for automatic switching",
+        "Images tile/repeat horizontally for infinite scrolling",
+        "Mountains default works well with current forest theme"
+      ],
+      "cons": [
+        "Single-layer parallax (no multi-layer depth) — limited depth illusion",
+        "Image assets add ~130KB to bundle"
+      ]
+    },
+    {
+      "option": "B",
+      "description": "Replace BackgroundDecor entirely with image-based parallax layers (remove procedural mountains/clouds).",
+      "pros": [
+        "Cleaner visual consistency — no mixing of procedural and image styles"
+      ],
+      "cons": [
+        "Larger scope — need images for all 5 themes",
+        "Loses procedural cloud animation and biome transition interpolation",
+        "Higher risk of visual regression"
+      ]
+    }
+  ],
+  "decision": "A",
+  "rationale": "Option A is low-risk and additive. The parallax image sits behind everything as a sky fill, complementing the existing procedural decor. The user explicitly said to keep procedural elements in front. Single feature, 2-3 tasks, can ship in 1-2 waves.",
+  "actions": [
+    { "action": "spawn-architect", "feature": "F55" }
+  ],
+  "status": "executed",
+  "governance": null
+}
