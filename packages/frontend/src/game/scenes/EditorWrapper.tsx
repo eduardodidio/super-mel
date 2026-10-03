@@ -16,6 +16,11 @@ interface EditorBlock {
   z: number;
 }
 
+const MIN_WIDTH = 16;
+const MAX_WIDTH = 200;
+const MIN_HEIGHT = 8;
+const MAX_HEIGHT = 40;
+
 export function EditorWrapper() {
   const scene = useGameState((s) => s.scene);
   const setScene = useGameState((s) => s.setScene);
@@ -31,8 +36,14 @@ export function EditorWrapper() {
   const [enemySubtype, setEnemySubtype] = useState<EnemySubtype>("vacuum");
   const [currentZ, setCurrentZ] = useState(0);
 
+  // Level dimensions (F56-T05)
+  const [levelWidth, setLevelWidth] = useState(32);
+  const [levelHeight, setLevelHeight] = useState(16);
+
   // Camera state (F56-T02)
   const [cameraPos, setCameraPos] = useState({ x: 15, y: 6, z: 25 });
+  // Hover position for test-from-cursor (F56-T04)
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const [spawnPoint, setSpawnPoint] = useState({ x: 2, y: 2 });
   const [levelName, setLevelName] = useState("");
 
@@ -65,6 +76,29 @@ export function EditorWrapper() {
       setDataChangedSinceClear(true);
     }
   }, [levelCleared]);
+
+  // F56-T05: Resize level with out-of-bounds confirmation
+  const handleResizeLevel = useCallback((newWidth: number, newHeight: number) => {
+    const w = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
+    const h = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, newHeight));
+
+    // Check if blocks or entities would be removed
+    const blocksOutside = blocks.filter(b => b.x >= w || b.y >= h);
+    const entitiesOutside = entities.filter(e => e.x >= w || e.y >= h);
+
+    if (blocksOutside.length > 0 || entitiesOutside.length > 0) {
+      const confirmed = window.confirm(
+        `Reduzir vai remover ${blocksOutside.length} blocos e ${entitiesOutside.length} entidades fora dos limites. Continuar?`
+      );
+      if (!confirmed) return;
+      setBlocks(prev => prev.filter(b => b.x < w && b.y < h));
+      setEntities(prev => prev.filter(e => e.x < w && e.y < h));
+    }
+
+    setLevelWidth(w);
+    setLevelHeight(h);
+    markDataChanged();
+  }, [blocks, entities, markDataChanged]);
 
   const handlePlaceBlock = useCallback((x: number, y: number) => {
     // Determine the actual block type to place
@@ -198,15 +232,9 @@ export function EditorWrapper() {
   }, []);
 
   const buildLevelDataV2 = useCallback((): LevelDataV2 => {
-    // Determine grid dimensions from blocks
-    let maxX = 32;
-    let maxY = 16;
-    for (const b of blocks) {
-      if (b.x >= maxX) maxX = b.x + 1;
-      if (b.y >= maxY) maxY = b.y + 1;
-    }
-    const width = Math.max(32, maxX);
-    const height = Math.max(16, maxY);
+    // F56-T05: Use explicit level dimensions
+    const width = levelWidth;
+    const height = levelHeight;
 
     // Build grid as 2D array
     const grid: BlockCell[][] = [];
@@ -234,7 +262,7 @@ export function EditorWrapper() {
       theme,
       customAssets: customAssets.length > 0 ? customAssets : undefined,
     };
-  }, [blocks, entities, theme, customAssets]);
+  }, [blocks, entities, theme, customAssets, levelWidth, levelHeight]);
 
   const startLevel = useGameState((s) => s.startLevel);
 
@@ -251,6 +279,26 @@ export function EditorWrapper() {
       setScene("playing");
     }
   }, [buildLevelDataV2, setScene, startLevel]);
+
+  // F56-T04: Test from cursor — spawn Mel at hovered position
+  const handleTestFromCursor = useCallback(() => {
+    if (!hoverPos) return;
+    const data = buildLevelDataV2();
+    // Override spawn entity in the COPY (don't mutate editor state)
+    const testData = {
+      ...data,
+      entities: data.entities.map(e =>
+        e.type === "spawn" ? { ...e, x: hoverPos.x, y: hoverPos.y } : e
+      ),
+    };
+    const hasGoal = testData.entities.some((e) => e.type === "goal");
+    if (hasGoal) {
+      startLevel(`editor-test-${Date.now()}`, testData);
+    } else {
+      sessionStorage.setItem("supermel_test_level", JSON.stringify(testData));
+      setScene("playing");
+    }
+  }, [hoverPos, buildLevelDataV2, startLevel, setScene]);
 
   // F46: Save draft (no publish)
   const handleSave = useCallback(async () => {
@@ -372,10 +420,14 @@ export function EditorWrapper() {
           onPlaceEntity={handlePlaceEntity}
           onRemoveEntity={handleRemoveEntity}
           theme={theme}
+          enemySubtype={enemySubtype}
           customAssets={customAssets}
           selectedCustomAssetId={selectedCustomAssetId}
           cameraPos={cameraPos}
           onCameraChange={setCameraPos}
+          levelWidth={levelWidth}
+          levelHeight={levelHeight}
+          onHoverChange={setHoverPos}
         />
       </Canvas>
 
@@ -390,6 +442,8 @@ export function EditorWrapper() {
         entities={entities}
         spawnPoint={spawnPoint}
         onTest={handleTest}
+        onTestFromCursor={handleTestFromCursor}
+        hoverPos={hoverPos}
         onSave={handleSave}
         onPublish={handlePublish}
         onBack={() => setScene("menu")}
@@ -408,6 +462,9 @@ export function EditorWrapper() {
         levelCleared={effectiveCleared}
         levelCode={levelCode}
         savedLevelId={savedLevelId}
+        levelWidth={levelWidth}
+        levelHeight={levelHeight}
+        onResizeLevel={handleResizeLevel}
       />
 
       {showImageUploader && (

@@ -8,6 +8,9 @@ import { Goal } from "../entities/Goal";
 import { Checkpoint } from "../entities/Checkpoint";
 import { Bone } from "../entities/Bone";
 import { Sign } from "../entities/Sign";
+import { Spring } from "../entities/Spring";
+import { MovingPlatform } from "../entities/MovingPlatform";
+import { Spikes } from "../entities/Spikes";
 import { DroppedCoin } from "../entities/DroppedCoin";
 import { CameraRig } from "../systems/CameraRig";
 import { ChunkRenderer, type ChunkRendererHandle } from "../systems/ChunkRenderer";
@@ -118,6 +121,9 @@ export function GameScene3D({ testMode = false, levelData }: GameScene3DProps) {
   const checkpointEntities = sceneObjects?.checkpoints ?? [];
   const boneEntities = sceneObjects?.bones ?? [];
   const signEntities = sceneObjects?.signs ?? [];
+  const springEntities = sceneObjects?.springs ?? [];
+  const movingPlatformEntities = sceneObjects?.movingPlatforms ?? [];
+  const spikesEntities = sceneObjects?.spikes ?? [];
   const spawnPoint = sceneObjects?.spawnPoint ?? { x: 2, y: 5 };
 
   // Warn if level has no goal
@@ -384,6 +390,11 @@ export function GameScene3D({ testMode = false, levelData }: GameScene3DProps) {
     shake(0.08, 0.12);
   }, [addBone, shake]);
 
+  const handleSpringBounce = useCallback((force: number) => {
+    melRef.current?.springBounce(force);
+    shake(0.06, 0.1);
+  }, [shake]);
+
   const handlePositionUpdate = useCallback((x: number, y: number) => {
     melTracker.current.position.set(x, y, 0);
     playerPosRef.current.x = x;
@@ -647,6 +658,37 @@ export function GameScene3D({ testMode = false, levelData }: GameScene3DProps) {
           position={[s.x, s.y, 0]}
           text={s.text}
           icon={s.icon}
+        />
+      ))}
+
+      {/* Springs */}
+      {springEntities.map((s, i) => (
+        <Spring
+          key={`spring-${s.x}-${s.y}-${i}`}
+          position={[s.x, s.y, 0]}
+          bounceForce={s.bounceForce}
+          onBounce={handleSpringBounce}
+        />
+      ))}
+
+      {/* Moving Platforms */}
+      {movingPlatformEntities.map((mp, i) => (
+        <MovingPlatform
+          key={`platform-${mp.x}-${mp.y}-${i}`}
+          position={[mp.x, mp.y, 0]}
+          direction={mp.direction}
+          speed={mp.speed}
+          range={mp.range}
+        />
+      ))}
+
+      {/* Spikes */}
+      {spikesEntities.map((sp, i) => (
+        <Spikes
+          key={`spikes-${sp.x}-${sp.y}-${i}`}
+          position={[sp.x, sp.y, 0]}
+          facing={sp.facing}
+          onDamage={handleDamage}
         />
       ))}
 

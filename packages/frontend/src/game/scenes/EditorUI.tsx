@@ -102,6 +102,13 @@ interface EditorUIProps {
   levelCleared: boolean;
   levelCode: string | null;
   savedLevelId: string | null;
+  // Level dimensions (F56-T05)
+  levelWidth: number;
+  levelHeight: number;
+  onResizeLevel: (width: number, height: number) => void;
+  // Test from cursor (F56-T04)
+  onTestFromCursor: () => void;
+  hoverPos: { x: number; y: number } | null;
 }
 
 export function EditorUI({
@@ -133,6 +140,11 @@ export function EditorUI({
   levelCleared,
   levelCode,
   savedLevelId,
+  levelWidth,
+  levelHeight,
+  onResizeLevel,
+  onTestFromCursor,
+  hoverPos,
 }: EditorUIProps) {
   const theme = useGameState((s) => s.theme);
   const setTheme = useGameState((s) => s.setTheme);
@@ -328,6 +340,26 @@ export function EditorUI({
           </button>
         </div>
 
+        {/* F56-T05: Level dimension controls */}
+        <div style={styles.zControls}>
+          <label style={{ fontSize: "10px", color: "#888" }}>W:</label>
+          <input
+            type="number"
+            min={16} max={200}
+            value={levelWidth}
+            onChange={(e) => onResizeLevel(Number(e.target.value), levelHeight)}
+            style={{ ...styles.smallBtn, width: 50, textAlign: "center" as const }}
+          />
+          <label style={{ fontSize: "10px", color: "#888" }}>H:</label>
+          <input
+            type="number"
+            min={8} max={40}
+            value={levelHeight}
+            onChange={(e) => onResizeLevel(levelWidth, Number(e.target.value))}
+            style={{ ...styles.smallBtn, width: 50, textAlign: "center" as const }}
+          />
+        </div>
+
         {/* F46: Level name input */}
         <input
           type="text"
@@ -348,6 +380,19 @@ export function EditorUI({
           </button>
           <button style={{ ...styles.actionBtn, background: "#4a8a4a" }} onClick={onTest}>
             TESTAR
+          </button>
+          <button
+            style={{
+              ...styles.actionBtn,
+              background: hoverPos ? "#6a8a4a" : "#555",
+              opacity: hoverPos ? 1 : 0.5,
+              cursor: hoverPos ? "pointer" : "not-allowed",
+            }}
+            onClick={onTestFromCursor}
+            disabled={!hoverPos}
+            title={hoverPos ? `Testar de (${hoverPos.x}, ${hoverPos.y})` : "Passe o mouse no grid"}
+          >
+            DAQUI
           </button>
           <button style={{ ...styles.actionBtn, background: "#4a4aaa" }} onClick={onSave}>
             SALVAR

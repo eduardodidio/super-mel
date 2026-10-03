@@ -33,6 +33,7 @@ interface EditorSceneProps {
   onPlaceEntity: (entity: EntityData) => void;
   onRemoveEntity: (x: number, y: number) => void;
   theme: BackgroundTheme;
+  enemySubtype: string;
   // Custom assets (Galeria do Rafa)
   customAssets: CustomAsset[];
   selectedCustomAssetId: string | null;
@@ -41,6 +42,8 @@ interface EditorSceneProps {
   onCameraChange: (pos: { x: number; y: number; z: number }) => void;
   levelWidth?: number;
   levelHeight?: number;
+  // Hover tracking (F56-T04: test-from-cursor)
+  onHoverChange?: (pos: { x: number; y: number } | null) => void;
 }
 
 // --- Tool classification helpers ---
@@ -68,6 +71,7 @@ function entityToolToType(tool: EditorTool): EntityType | null {
     entity_goal: "goal",
     entity_bone: "bone",
     entity_sign: "sign",
+    entity_enemy: "enemy",
   };
   return map[tool] ?? null;
 }
@@ -145,6 +149,7 @@ function getHoverColor(selectedTool: EditorTool): string {
   if (selectedTool === "entity_goal") return "#FF8800";
   if (selectedTool === "entity_bone") return "#F5F5DC";
   if (selectedTool === "entity_sign") return "#A0522D";
+  if (selectedTool === "entity_enemy") return "#CC2222";
   if (selectedTool === "custom_block") return "#CC88FF";
   if (selectedTool === "custom_sign") return "#8B5A2B";
   return "#ffffff";
@@ -173,12 +178,14 @@ export function EditorScene3D({
   onSetSpawn,
   onPlaceEntity,
   onRemoveEntity,
+  enemySubtype,
   customAssets,
   selectedCustomAssetId,
   cameraPos,
   onCameraChange,
   levelWidth = 32,
   levelHeight = 16,
+  onHoverChange,
 }: EditorSceneProps) {
   const { camera, raycaster, pointer, gl } = useThree();
   const gridPlaneRef = useRef<THREE.Mesh>(null);
@@ -391,9 +398,14 @@ export function EditorScene3D({
         entity.props = { text: signText };
       }
 
+      // Special case: enemy entity includes subtype prop
+      if (entityType === "enemy") {
+        entity.props = { subtype: enemySubtype };
+      }
+
       onPlaceEntity(entity);
     }
-  }, [selectedTool, selectedCustomAssetId, itemBlockContent, signText, onPlaceBlock, onRemoveBlock, onSetSpawn, onPlaceEntity, onRemoveEntity]);
+  }, [selectedTool, selectedCustomAssetId, itemBlockContent, signText, enemySubtype, onPlaceBlock, onRemoveBlock, onSetSpawn, onPlaceEntity, onRemoveEntity]);
 
   const onPointerDown = useCallback(() => {
     isDragging.current = true;
@@ -405,10 +417,11 @@ export function EditorScene3D({
   const onPointerMove = useCallback(() => {
     const pos = getGridPos();
     setHoverPos(pos);
+    onHoverChange?.(pos);
     if (isDragging.current && pos) {
       handleAction(pos);
     }
-  }, [getGridPos, handleAction]);
+  }, [getGridPos, handleAction, onHoverChange]);
 
   const onPointerUp = useCallback(() => {
     isDragging.current = false;
