@@ -1,0 +1,97 @@
+flowchart TB
+    subgraph EditorWrapper["EditorWrapper (State Hub)"]
+        direction TB
+        STATE["State:\nblocks[], entities[]\nselectedTool, enemySubtype\ncameraPos, levelWidth, levelHeight\nlevelName, currentZ, customAssets"]
+        SAVE["saveEditorState()"]
+        RESTORE["restoreEditorState()"]
+        BUILD["buildLevelDataV2()"]
+        RESIZE["handleResize(w, h)\nMin 16x8 / Max 200x40"]
+    end
+
+    subgraph EditorUI["EditorUI (Palette + Toolbar)"]
+        direction TB
+        subgraph Palette["Left Palette Tabs"]
+            TAB_B["BLOCOS"]
+            TAB_I["ITENS"]
+            TAB_E["ESPECIAIS"]
+            TAB_EN["INIMIGOS (new)"]
+            TAB_IMG["IMG"]
+        end
+        subgraph TopBar["Top Bar"]
+            ZCTRL["Z Controls"]
+            DIM["Width / Height Inputs"]
+            NAME["Level Name"]
+            ACTIONS["TESTAR | DAQUI | SALVAR | PUBLICAR | VOLTAR"]
+            CAMINFO["Camera Info Display"]
+        end
+        subgraph EnemyUI["Enemy Subtype Selector"]
+            ENS["Aspirador (A) | Pombo (P) | Abelha (B)"]
+        end
+        TAB_EN --> ENS
+    end
+
+    subgraph EditorScene3D["EditorScene3D (3D Viewport)"]
+        direction TB
+        subgraph CameraCtrl["Camera Controls"]
+            KBD["WASD / Arrow Keys = Pan"]
+            SCROLL["Scroll Wheel = Zoom"]
+            MDRAG["Middle-Click Drag = Fine Pan"]
+            CLAMP["Clamped to Level Bounds"]
+        end
+        CLICKPLANE["Click Plane + Raycaster"]
+        RENDER["Block / Entity Rendering\n(enemy markers with subtype letter)"]
+        HOVER["Hover Position Tracking"]
+    end
+
+    subgraph SessionStorage["sessionStorage (Persistence)"]
+        EDSTATE["EDITOR_STATE_KEY\nblocks, entities, camera, dims,\ntool, Z, name, assets"]
+        TESTCLR["supermel_editor_test_cleared"]
+        TESTLVL["supermel_test_level"]
+    end
+
+    subgraph TestFlow["Test Play Flow"]
+        LVLDATA["LevelDataV2"]
+        GAME["GameScene3D"]
+    end
+
+    %% EditorWrapper -> EditorScene3D
+    STATE -->|"blocks, entities,\ncamera, dimensions"| RENDER
+    STATE -->|"selectedTool,\nenemySubtype"| CLICKPLANE
+
+    %% EditorScene3D -> EditorWrapper
+    HOVER -->|"hover position"| STATE
+    CameraCtrl -->|"camera changes"| STATE
+
+    %% EditorWrapper -> EditorUI
+    STATE -->|"all display state"| Palette
+    STATE -->|"camera pos, dims"| TopBar
+
+    %% EditorUI -> EditorWrapper
+    ENS -->|"tool + subtype selection"| STATE
+    DIM -->|"resize request"| RESIZE
+    ACTIONS -->|"test / save / publish"| STATE
+
+    %% State preservation cycle
+    SAVE -->|"serialize before test"| EDSTATE
+    EDSTATE -->|"restore on mount"| RESTORE
+
+    %% Test flow
+    STATE --> BUILD
+    BUILD --> LVLDATA
+    LVLDATA --> TESTLVL
+    TESTLVL --> GAME
+    GAME -->|"return to editor"| RESTORE
+
+    %% Test-from-cursor
+    HOVER -->|"cursor position"| ACTIONS
+    ACTIONS -->|"DAQUI: spawn override"| TESTLVL
+
+    %% Resize flow
+    RESIZE -->|"confirm if shrinking\n(blocks out of bounds)"| CLICKPLANE
+    RESIZE -->|"update grid size"| RENDER
+
+    style EditorWrapper fill:#2d5016,stroke:#4a8029,color:#fff
+    style EditorUI fill:#16344a,stroke:#2968a0,color:#fff
+    style EditorScene3D fill:#4a3416,stroke:#8a6029,color:#fff
+    style SessionStorage fill:#4a1650,stroke:#8a29a0,color:#fff
+    style TestFlow fill:#4a1616,stroke:#8a2929,color:#fff

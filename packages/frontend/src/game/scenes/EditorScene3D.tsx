@@ -3,6 +3,7 @@ import { useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { BlockType, BackgroundTheme, EntityData, EntityType, CustomAsset } from "@super-mel/shared";
 import type { EditorTool } from "./EditorUI";
+import type { SelectionRect, SelectionMode } from "../editor/useEditorSelection";
 import { getBlockMaterials, getCustomBlockMaterials } from "../systems/BlockTextures3D";
 
 // --- Camera constants ---
@@ -44,6 +45,26 @@ interface EditorSceneProps {
   levelHeight?: number;
   // Hover tracking (F56-T04: test-from-cursor)
   onHoverChange?: (pos: { x: number; y: number } | null) => void;
+  // Mechanical element properties (F58)
+  movingPlatformDirection?: "horizontal" | "vertical";
+  movingPlatformSpeed?: number;
+  movingPlatformRange?: number;
+  spikesFacing?: "up" | "down" | "left" | "right";
+  // Selection system (F57)
+  selectionRect: SelectionRect | null;
+  selectionMode: SelectionMode;
+  ghostBlocks: EditorBlock[] | null;
+  ghostEntities: EntityData[] | null;
+  onStartSelect: (x: number, y: number) => void;
+  onUpdateSelect: (x: number, y: number) => void;
+  onEndSelect: () => void;
+  onStartMove: (x: number, y: number) => void;
+  onUpdateMovePosition: (x: number, y: number) => void;
+  onCommitMove: () => void;
+  onCancelMove: () => void;
+  onDeselect: () => void;
+  onPastePositionUpdate?: (x: number, y: number) => void;
+  onCommitPaste?: () => void;
 }
 
 // --- Tool classification helpers ---
@@ -72,6 +93,9 @@ function entityToolToType(tool: EditorTool): EntityType | null {
     entity_bone: "bone",
     entity_sign: "sign",
     entity_enemy: "enemy",
+    entity_spring: "spring",
+    entity_moving_platform: "moving_platform",
+    entity_spikes: "spikes",
   };
   return map[tool] ?? null;
 }
@@ -87,15 +111,23 @@ const ENTITY_VISUALS: Record<string, { color: string; emissive: string; shape: "
   sign: { color: "#8B5A2B", emissive: "#8B5A2B", shape: "box", scale: 0.3 },
   bone: { color: "#FFFFFF", emissive: "#CCCCCC", shape: "box", scale: 0.3 },
   enemy: { color: "#FF0000", emissive: "#FF0000", shape: "box", scale: 0.5 },
+  spring: { color: "#CC2222", emissive: "#CC2222", shape: "box", scale: 0.4 },
+  moving_platform: { color: "#5577AA", emissive: "#5577AA", shape: "box", scale: 0.5 },
+  spikes: { color: "#666666", emissive: "#FF4400", shape: "diamond", scale: 0.35 },
 };
 
 interface EntityMarkerProps {
   entity: EntityData;
   currentZ: number;
+  isSelected?: boolean;
+  isBeingMoved?: boolean;
 }
 
-function EntityMarker({ entity, currentZ }: EntityMarkerProps) {
+function EntityMarker({ entity, currentZ, isSelected, isBeingMoved }: EntityMarkerProps) {
   const visual = ENTITY_VISUALS[entity.type] ?? { color: "#888", emissive: "#888", shape: "sphere", scale: 0.3 };
+  const emissiveIntensity = isSelected && !isBeingMoved ? 1.2 : 0.6;
+  const emissiveColor = isSelected && !isBeingMoved ? "#00CCFF" : visual.emissive;
+  const opacity = isBeingMoved ? 0.3 : 0.8;
 
   return (
     <group position={[entity.x, entity.y, currentZ]}>
@@ -104,10 +136,10 @@ function EntityMarker({ entity, currentZ }: EntityMarkerProps) {
           <sphereGeometry args={[visual.scale, 8, 8]} />
           <meshStandardMaterial
             color={visual.color}
-            emissive={visual.emissive}
-            emissiveIntensity={0.6}
+            emissive={emissiveColor}
+            emissiveIntensity={emissiveIntensity}
             transparent
-            opacity={0.8}
+            opacity={opacity}
           />
         </mesh>
       ) : visual.shape === "diamond" ? (
@@ -115,10 +147,10 @@ function EntityMarker({ entity, currentZ }: EntityMarkerProps) {
           <boxGeometry args={[visual.scale, visual.scale, visual.scale]} />
           <meshStandardMaterial
             color={visual.color}
-            emissive={visual.emissive}
-            emissiveIntensity={0.6}
+            emissive={emissiveColor}
+            emissiveIntensity={emissiveIntensity}
             transparent
-            opacity={0.8}
+            opacity={opacity}
           />
         </mesh>
       ) : (
@@ -126,10 +158,10 @@ function EntityMarker({ entity, currentZ }: EntityMarkerProps) {
           <boxGeometry args={[visual.scale, visual.scale, visual.scale]} />
           <meshStandardMaterial
             color={visual.color}
-            emissive={visual.emissive}
-            emissiveIntensity={0.6}
+            emissive={emissiveColor}
+            emissiveIntensity={emissiveIntensity}
             transparent
-            opacity={0.8}
+            opacity={opacity}
           />
         </mesh>
       )}
@@ -140,6 +172,7 @@ function EntityMarker({ entity, currentZ }: EntityMarkerProps) {
 // --- Hover color helper ---
 
 function getHoverColor(selectedTool: EditorTool): string {
+  if (selectedTool === "select") return "#00CCFF";
   if (selectedTool === "eraser") return "#ff0000";
   if (selectedTool === "entity_spawn") return "#00ff00";
   if (selectedTool === "entity_coin") return "#FFD700";
@@ -152,6 +185,9 @@ function getHoverColor(selectedTool: EditorTool): string {
   if (selectedTool === "entity_enemy") return "#CC2222";
   if (selectedTool === "custom_block") return "#CC88FF";
   if (selectedTool === "custom_sign") return "#8B5A2B";
+  if (selectedTool === "entity_spring") return "#CC2222";
+  if (selectedTool === "entity_moving_platform") return "#5577AA";
+  if (selectedTool === "entity_spikes") return "#FF6600";
   return "#ffffff";
 }
 
@@ -186,6 +222,25 @@ export function EditorScene3D({
   levelWidth = 32,
   levelHeight = 16,
   onHoverChange,
+  movingPlatformDirection = "horizontal",
+  movingPlatformSpeed = 3,
+  movingPlatformRange = 4,
+  spikesFacing = "up",
+  // Selection system (F57)
+  selectionRect,
+  selectionMode,
+  ghostBlocks,
+  ghostEntities,
+  onStartSelect,
+  onUpdateSelect,
+  onEndSelect,
+  onStartMove,
+  onUpdateMovePosition,
+  onCommitMove,
+  onCancelMove,
+  onDeselect,
+  onPastePositionUpdate,
+  onCommitPaste,
 }: EditorSceneProps) {
   const { camera, raycaster, pointer, gl } = useThree();
   const gridPlaneRef = useRef<THREE.Mesh>(null);
@@ -403,30 +458,90 @@ export function EditorScene3D({
         entity.props = { subtype: enemySubtype };
       }
 
+      // Moving platform: attach direction/speed/range props (F58)
+      if (entityType === "moving_platform") {
+        entity.props = {
+          direction: movingPlatformDirection,
+          speed: movingPlatformSpeed,
+          range: movingPlatformRange,
+        };
+      }
+
+      // Spikes: attach facing prop (F58)
+      if (entityType === "spikes") {
+        entity.props = { facing: spikesFacing };
+      }
+
       onPlaceEntity(entity);
     }
-  }, [selectedTool, selectedCustomAssetId, itemBlockContent, signText, enemySubtype, onPlaceBlock, onRemoveBlock, onSetSpawn, onPlaceEntity, onRemoveEntity]);
+  }, [selectedTool, selectedCustomAssetId, itemBlockContent, signText, enemySubtype, movingPlatformDirection, movingPlatformSpeed, movingPlatformRange, spikesFacing, onPlaceBlock, onRemoveBlock, onSetSpawn, onPlaceEntity, onRemoveEntity]);
 
   const onPointerDown = useCallback(() => {
+    const pos = getGridPos();
+    if (!pos) return;
+
+    if (selectedTool === "select") {
+      // Check if clicking inside existing selection (start move)
+      if (selectionRect && selectionMode === "selected" &&
+          pos.x >= selectionRect.x1 && pos.x <= selectionRect.x2 &&
+          pos.y >= selectionRect.y1 && pos.y <= selectionRect.y2) {
+        onStartMove(pos.x, pos.y);
+      } else if (selectionMode === "pasting") {
+        // Commit paste on click
+        onCommitPaste?.();
+      } else {
+        // Click outside existing selection deselects, then start new
+        if (selectionRect && selectionMode === "selected") {
+          onDeselect();
+        }
+        // Start new selection drag
+        onStartSelect(pos.x, pos.y);
+      }
+      return;
+    }
+
+    // Existing behavior for other tools
     isDragging.current = true;
     lastPlaced.current = "";
-    const pos = getGridPos();
-    if (pos) handleAction(pos);
-  }, [getGridPos, handleAction]);
+    handleAction(pos);
+  }, [getGridPos, handleAction, selectedTool, selectionRect, selectionMode, onStartSelect, onStartMove, onDeselect, onCommitPaste]);
 
   const onPointerMove = useCallback(() => {
     const pos = getGridPos();
     setHoverPos(pos);
     onHoverChange?.(pos);
+
+    if (selectedTool === "select" && pos) {
+      if (selectionMode === "selecting") {
+        onUpdateSelect(pos.x, pos.y);
+      } else if (selectionMode === "moving") {
+        onUpdateMovePosition(pos.x, pos.y);
+      } else if (selectionMode === "pasting" && onPastePositionUpdate) {
+        onPastePositionUpdate(pos.x, pos.y);
+      }
+      return;
+    }
+
+    // Existing behavior for other tools
     if (isDragging.current && pos) {
       handleAction(pos);
     }
-  }, [getGridPos, handleAction, onHoverChange]);
+  }, [getGridPos, handleAction, onHoverChange, selectedTool, selectionMode, onUpdateSelect, onUpdateMovePosition, onPastePositionUpdate]);
 
   const onPointerUp = useCallback(() => {
+    if (selectedTool === "select") {
+      if (selectionMode === "selecting") {
+        onEndSelect();
+      } else if (selectionMode === "moving") {
+        onCommitMove();
+      }
+      return;
+    }
+
+    // Existing behavior for other tools
     isDragging.current = false;
     lastPlaced.current = "";
-  }, []);
+  }, [selectedTool, selectionMode, onEndSelect, onCommitMove]);
 
   return (
     <>
@@ -450,6 +565,15 @@ export function EditorScene3D({
       {blocks.map((b) => {
         const isCurrentLayer = b.z === currentZ;
 
+        // Check if block is within selection rect (F57)
+        const isBlockSelected = !!(selectionRect &&
+          b.z === currentZ &&
+          b.x >= selectionRect.x1 && b.x <= selectionRect.x2 &&
+          b.y >= selectionRect.y1 && b.y <= selectionRect.y2);
+
+        // F57-T07: Dim blocks being moved (they are "picked up")
+        const isBeingMoved = selectionMode === "moving" && isBlockSelected;
+
         // For custom blocks, look up the custom asset texture
         let materials: THREE.MeshStandardMaterial[];
         if (b.type === "custom") {
@@ -469,8 +593,8 @@ export function EditorScene3D({
           <mesh
             key={`${b.x},${b.y},${b.z}`}
             position={[b.x, b.y, b.z]}
-            castShadow={isCurrentLayer}
-            receiveShadow={isCurrentLayer}
+            castShadow={isCurrentLayer && !isBeingMoved}
+            receiveShadow={isCurrentLayer && !isBeingMoved}
           >
             <boxGeometry args={[0.95, 0.95, 0.95]} />
             {isCurrentLayer ? (
@@ -478,8 +602,10 @@ export function EditorScene3D({
                 color={materials[0].color}
                 map={materials[0].map}
                 roughness={materials[0].roughness}
-                emissive={materials[0].emissive}
-                emissiveIntensity={materials[0].emissiveIntensity}
+                emissive={isBlockSelected && !isBeingMoved ? "#00CCFF" : materials[0].emissive}
+                emissiveIntensity={isBlockSelected && !isBeingMoved ? 0.4 : materials[0].emissiveIntensity}
+                transparent={isBeingMoved}
+                opacity={isBeingMoved ? 0.3 : 1}
               />
             ) : (
               <meshStandardMaterial
@@ -496,9 +622,21 @@ export function EditorScene3D({
       {/* Entity markers */}
       {entities
         .filter((e) => e.type !== "spawn" && e.type !== "custom_block_asset") // spawn has its own marker, custom_block_asset is invisible
-        .map((e, i) => (
-          <EntityMarker key={`entity-${e.type}-${e.x}-${e.y}-${i}`} entity={e} currentZ={currentZ} />
-        ))}
+        .map((e, i) => {
+          const isEntitySelected = !!(selectionRect &&
+            e.x >= selectionRect.x1 && e.x <= selectionRect.x2 &&
+            e.y >= selectionRect.y1 && e.y <= selectionRect.y2);
+          const isEntityBeingMoved = selectionMode === "moving" && isEntitySelected;
+          return (
+            <EntityMarker
+              key={`entity-${e.type}-${e.x}-${e.y}-${i}`}
+              entity={e}
+              currentZ={currentZ}
+              isSelected={isEntitySelected}
+              isBeingMoved={isEntityBeingMoved}
+            />
+          );
+        })}
 
       {/* Spawn point marker */}
       <group position={[spawnPoint.x, spawnPoint.y, currentZ]}>
@@ -524,6 +662,33 @@ export function EditorScene3D({
         </mesh>
       </group>
 
+      {/* Selection rectangle overlay (F57) */}
+      {selectionRect && <SelectionOverlay rect={selectionRect} currentZ={currentZ} />}
+
+      {/* Ghost preview blocks for paste/move (F57) */}
+      {ghostBlocks && ghostBlocks.map((b, i) => (
+        <mesh key={`ghost-${i}`} position={[b.x, b.y, currentZ]}>
+          <boxGeometry args={[0.95, 0.95, 0.95]} />
+          <meshStandardMaterial
+            color="#00CCFF"
+            transparent
+            opacity={0.3}
+            wireframe
+          />
+        </mesh>
+      ))}
+      {ghostEntities && ghostEntities.map((e, i) => (
+        <mesh key={`ghost-entity-${i}`} position={[e.x, e.y, currentZ]}>
+          <sphereGeometry args={[0.3, 6, 6]} />
+          <meshStandardMaterial
+            color="#00CCFF"
+            transparent
+            opacity={0.3}
+            wireframe
+          />
+        </mesh>
+      ))}
+
       {/* Hover preview */}
       {hoverPos && (
         <mesh position={[hoverPos.x, hoverPos.y, currentZ]}>
@@ -537,6 +702,48 @@ export function EditorScene3D({
         </mesh>
       )}
     </>
+  );
+}
+
+// --- Selection rectangle overlay (F57) ---
+
+function SelectionOverlay({ rect, currentZ }: { rect: SelectionRect; currentZ: number }) {
+  const width = rect.x2 - rect.x1 + 1;
+  const height = rect.y2 - rect.y1 + 1;
+  const centerX = rect.x1 + (width - 1) / 2;
+  const centerY = rect.y1 + (height - 1) / 2;
+  const lineRef = useRef<THREE.LineSegments>(null);
+
+  // lineDashedMaterial requires computeLineDistances for dashes to render
+  useEffect(() => {
+    if (lineRef.current) {
+      lineRef.current.computeLineDistances();
+    }
+  }, [width, height]);
+
+  return (
+    <group position={[centerX, centerY, currentZ + 0.01]}>
+      {/* Dashed rectangle outline */}
+      <lineSegments ref={lineRef}>
+        <edgesGeometry args={[new THREE.BoxGeometry(width, height, 0.02)]} />
+        <lineDashedMaterial
+          color="#00CCFF"
+          dashSize={0.3}
+          gapSize={0.15}
+          linewidth={1}
+        />
+      </lineSegments>
+      {/* Semi-transparent fill */}
+      <mesh>
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial
+          color="#00CCFF"
+          transparent
+          opacity={0.08}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </group>
   );
 }
 

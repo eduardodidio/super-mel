@@ -1,6 +1,6 @@
 # F57: Editor QoL -- Undo/Redo + Selection + Copy/Paste
 
-**Status:** planned
+**Status:** done
 **Created:** 2026-10-01
 **Backlog:** B-08
 

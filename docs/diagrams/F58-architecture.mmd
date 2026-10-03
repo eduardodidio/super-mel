@@ -1,0 +1,98 @@
+flowchart TB
+    subgraph SharedTypes["Shared Types (types.ts)"]
+        ET["EntityType union\n+ 'spring' | 'moving_platform' | 'spikes'"]
+        PROPS_S["Spring props\n{ bounceForce?: number }"]
+        PROPS_MP["MovingPlatform props\n{ direction, speed?, range? }"]
+        PROPS_SP["Spikes props\n{ facing?: up|down|left|right }"]
+    end
+
+    subgraph LevelSceneConverter["LevelSceneConverter"]
+        PARSE["Parse entities\nswitch(entity.type)"]
+        ARR_S["springs[]"]
+        ARR_MP["movingPlatforms[]"]
+        ARR_SP["spikes[]"]
+        PARSE --> ARR_S
+        PARSE --> ARR_MP
+        PARSE --> ARR_SP
+    end
+
+    subgraph GameScene3D["GameScene3D (Rendering)"]
+        direction TB
+        SCENE["SceneContent"]
+        SPRING_C["Spring.tsx"]
+        MP_C["MovingPlatform.tsx"]
+        SPIKES_C["Spikes.tsx"]
+        SCENE --> SPRING_C
+        SCENE --> MP_C
+        SCENE --> SPIKES_C
+    end
+
+    subgraph SpringPhysics["Spring Entity"]
+        S_BODY["RigidBody(fixed)"]
+        S_SENSOR["Sensor Collider"]
+        S_IMPULSE["On contact:\nmelRef.springBounce(force)"]
+        S_ANIM["Squash/stretch\nanimation"]
+        S_BODY --> S_SENSOR
+        S_SENSOR --> S_IMPULSE
+        S_IMPULSE --> S_ANIM
+    end
+
+    subgraph MPPhysics["MovingPlatform Entity"]
+        MP_BODY["RigidBody(kinematicPosition)"]
+        MP_OSCILLATE["useFrame: oscillate\nhorizontal or vertical"]
+        MP_RIDE["Mel rides via\nphysics contact"]
+        MP_BODY --> MP_OSCILLATE
+        MP_OSCILLATE --> MP_RIDE
+    end
+
+    subgraph SpikesPhysics["Spikes Entity"]
+        SP_BODY["RigidBody(fixed)"]
+        SP_SENSOR["Sensor Collider"]
+        SP_DAMAGE["On contact:\nhandleDamage()\n1 heart"]
+        SP_FACING["Rotated by\nfacing prop"]
+        SP_BODY --> SP_SENSOR
+        SP_SENSOR --> SP_DAMAGE
+        SP_BODY --> SP_FACING
+    end
+
+    subgraph Editor["Editor (MECA Tab)"]
+        direction TB
+        MECA_TAB["EditorUI: MECA palette tab"]
+        TOOLS["EditorTool:\nentity_spring\nentity_moving_platform\nentity_spikes"]
+        PROP_UI["Property Inputs:\nMP: direction, speed, range\nSpikes: facing"]
+        MARKERS["EditorScene3D:\nEntity markers + visuals"]
+        MECA_TAB --> TOOLS
+        TOOLS --> PROP_UI
+        TOOLS --> MARKERS
+    end
+
+    %% Data flow: types -> converter -> scene -> components
+    ET --> PARSE
+    PROPS_S --> ARR_S
+    PROPS_MP --> ARR_MP
+    PROPS_SP --> ARR_SP
+
+    ARR_S --> SPRING_C
+    ARR_MP --> MP_C
+    ARR_SP --> SPIKES_C
+
+    SPRING_C --> SpringPhysics
+    MP_C --> MPPhysics
+    SPIKES_C --> SpikesPhysics
+
+    %% Editor -> LevelData -> Converter
+    MARKERS -->|"buildLevelDataV2()"| PARSE
+
+    %% Mel interactions
+    MEL["Mel.tsx\n+ springBounce(force)"]
+    S_IMPULSE -->|"set Y velocity"| MEL
+    SP_DAMAGE -->|"handleDamage"| MEL
+    MP_RIDE -->|"rides on top"| MEL
+
+    style SharedTypes fill:#16344a,stroke:#2968a0,color:#fff
+    style LevelSceneConverter fill:#2d5016,stroke:#4a8029,color:#fff
+    style GameScene3D fill:#4a3416,stroke:#8a6029,color:#fff
+    style SpringPhysics fill:#4a8029,stroke:#2d5016,color:#fff
+    style MPPhysics fill:#2968a0,stroke:#16344a,color:#fff
+    style SpikesPhysics fill:#8a2929,stroke:#4a1616,color:#fff
+    style Editor fill:#4a1650,stroke:#8a29a0,color:#fff

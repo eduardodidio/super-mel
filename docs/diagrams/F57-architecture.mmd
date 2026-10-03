@@ -1,0 +1,96 @@
+flowchart TB
+    subgraph EditorWrapper["EditorWrapper (Orchestrator)"]
+        direction TB
+        STATE["State:\nblocks[], entities[]\nspawnPoint, selectedTool\ncurrentZ, markDataChanged()"]
+        subgraph HistoryHook["useEditorHistory (max 50)"]
+            UNDO_STACK["undoStack: EditorSnapshot[]"]
+            REDO_STACK["redoStack: EditorSnapshot[]"]
+            PUSH["pushSnapshot(snapshot)\n- deep clone state\n- clear redo stack\n- trim oldest if >50"]
+            UNDO_FN["undo(currentState)\n- pop undo stack\n- push current to redo\n- return restored"]
+            REDO_FN["redo(currentState)\n- pop redo stack\n- push current to undo\n- return restored"]
+            HIST_STATE["canUndo, canRedo\nundoCount, redoCount"]
+        end
+        subgraph SelectionHook["useEditorSelection"]
+            SEL_MODE["mode: idle | selecting\n| selected | pasting | moving"]
+            SEL_RECT["rect: SelectionRect | null\n{x1, y1, x2, y2}"]
+            CLIPBOARD["clipboard: EditorClipboard\n{blocks[], entities[]\nwidth, height}\n(relative positions)"]
+            GHOST["ghostOrigin: {x, y} | null"]
+            SEL_API["startSelect / updateSelect / endSelect\ndeselect\ncopySelection\nstartPaste / commitPaste\nstartMove / commitMove\ngetSelectedContent\nshouldConfirmDelete"]
+        end
+        subgraph Shortcuts["Keyboard Shortcuts"]
+            KS1["Ctrl+Z -> undo"]
+            KS2["Ctrl+Shift+Z / Ctrl+Y -> redo"]
+            KS3["Ctrl+C -> copySelection"]
+            KS4["Ctrl+V -> startPaste"]
+            KS5["Delete / Backspace -> delete selection"]
+            KS6["Escape -> deselect / cancelPaste"]
+        end
+    end
+
+    subgraph EditorUI["EditorUI (Toolbar + Palette)"]
+        direction TB
+        subgraph Toolbar["Toolbar Buttons"]
+            UNDO_BTN["DESFAZER btn\n(disabled if !canUndo)"]
+            REDO_BTN["REFAZER btn\n(disabled if !canRedo)"]
+        end
+        subgraph PaletteBar["Palette (always visible)"]
+            SEL_BTN["SEL btn\n(toggles select tool)"]
+        end
+        subgraph InfoBar["Bottom Bar"]
+            HINTS["Shortcut hints:\nCtrl+Z/Y, Ctrl+C/V\nDel, Esc"]
+            SEL_INFO["Selection info:\nN blocks, M entities"]
+        end
+    end
+
+    subgraph EditorScene3D["EditorScene3D (3D Viewport)"]
+        direction TB
+        GRID["Grid + Block Rendering"]
+        SEL_OVERLAY["Selection Rectangle Overlay\n(dashed wireframe box)"]
+        HIGHLIGHTS["Block Highlights\n(brighter selected blocks)"]
+        GHOST_PREVIEW["Ghost Preview\n(semi-transparent blocks\nfollowing cursor during\npaste / move)"]
+        POINTER["Pointer Interactions:\n- drag to create rect (selecting)\n- click outside to deselect\n- drag inside to move\n- click to commit paste"]
+    end
+
+    %% History hook -> UI
+    HIST_STATE -->|"canUndo"| UNDO_BTN
+    HIST_STATE -->|"canRedo"| REDO_BTN
+
+    %% UI -> History hook
+    UNDO_BTN -->|"onClick -> undo()"| UNDO_FN
+    REDO_BTN -->|"onClick -> redo()"| REDO_FN
+
+    %% Selection hook -> Scene
+    SEL_RECT -->|"rect bounds"| SEL_OVERLAY
+    SEL_RECT -->|"filter blocks in rect"| HIGHLIGHTS
+    GHOST -->|"ghostOrigin + clipboard"| GHOST_PREVIEW
+    SEL_MODE -->|"determines pointer behavior"| POINTER
+
+    %% Selection hook -> UI
+    SEL_MODE -->|"mode, hasSelection"| SEL_INFO
+    CLIPBOARD -->|"hasClipboard"| HINTS
+
+    %% UI -> Selection hook
+    SEL_BTN -->|"tool = select"| SEL_MODE
+
+    %% Scene -> Selection hook
+    POINTER -->|"drag events"| SEL_API
+
+    %% Data flow: mutations
+    STATE -->|"snapshot before mutation"| PUSH
+    UNDO_FN -->|"restored snapshot"| STATE
+    REDO_FN -->|"restored snapshot"| STATE
+    SEL_API -->|"commitPaste / commitMove\n-> merge into state\n-> markDataChanged()"| STATE
+
+    %% Shortcuts -> hooks
+    Shortcuts -->|"keyboard events"| HistoryHook
+    Shortcuts -->|"keyboard events"| SelectionHook
+
+    style EditorWrapper fill:#2d5016,stroke:#4a8029,color:#fff
+    style HistoryHook fill:#1a3a0e,stroke:#3a7020,color:#fff
+    style SelectionHook fill:#1a3a0e,stroke:#3a7020,color:#fff
+    style Shortcuts fill:#1a3a0e,stroke:#3a7020,color:#fff
+    style EditorUI fill:#16344a,stroke:#2968a0,color:#fff
+    style Toolbar fill:#0e2236,stroke:#1d4a7a,color:#fff
+    style PaletteBar fill:#0e2236,stroke:#1d4a7a,color:#fff
+    style InfoBar fill:#0e2236,stroke:#1d4a7a,color:#fff
+    style EditorScene3D fill:#4a3416,stroke:#8a6029,color:#fff

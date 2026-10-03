@@ -1,6 +1,6 @@
 # Feature F58 -- Novos Elementos de Fase: Mola + Plataforma Movel + Espinhos
 
-**Status:** planned
+**Status:** done
 **Created:** 2026-10-01
 **Backlog:** B-09 (lote 1 -- 3 elementos que mais mudam o level design)
 

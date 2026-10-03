@@ -8,6 +8,8 @@ export type EditorTool =
   // Block tools (existing)
   | Exclude<BlockType, "empty">
   | "eraser"
+  // Selection tool (F57)
+  | "select"
   // Entity tools (new)
   | "entity_coin"
   | "entity_heart"
@@ -19,6 +21,10 @@ export type EditorTool =
   | "entity_sign"
   // Enemy tools (F56)
   | "entity_enemy"
+  // Mechanical element tools (F58)
+  | "entity_spring"
+  | "entity_moving_platform"
+  | "entity_spikes"
   // Custom tools (Galeria do Rafa)
   | "custom_block"
   | "custom_sign";
@@ -51,6 +57,12 @@ const SPECIAL_PALETTE: { tool: EditorTool; label: string; color: string; symbol:
   { tool: "entity_sign", label: "Placa", color: "#A0522D", symbol: "!" },
 ];
 
+const MECA_PALETTE: { tool: EditorTool; label: string; color: string; symbol: string }[] = [
+  { tool: "entity_spring", label: "Mola", color: "#CC2222", symbol: "S" },
+  { tool: "entity_moving_platform", label: "Plataf", color: "#5577AA", symbol: "=" },
+  { tool: "entity_spikes", label: "Espinh", color: "#666666", symbol: "^" },
+];
+
 const ENEMY_PALETTE: { subtype: EnemySubtype; label: string; symbol: string }[] = [
   { subtype: "vacuum", label: "Aspirador", symbol: "A" },
   { subtype: "pigeon", label: "Pombo", symbol: "P" },
@@ -59,7 +71,7 @@ const ENEMY_PALETTE: { subtype: EnemySubtype; label: string; symbol: string }[] 
 
 const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
 
-type PaletteTab = "blocos" | "itens" | "especiais" | "inimigos" | "custom";
+type PaletteTab = "blocos" | "itens" | "especiais" | "inimigos" | "meca" | "custom";
 
 interface EditorBlock {
   type: Exclude<BlockType, "empty">;
@@ -109,6 +121,20 @@ interface EditorUIProps {
   // Test from cursor (F56-T04)
   onTestFromCursor: () => void;
   hoverPos: { x: number; y: number } | null;
+  // Mechanical element properties (F58)
+  movingPlatformDirection: "horizontal" | "vertical";
+  movingPlatformSpeed: number;
+  movingPlatformRange: number;
+  spikesFacing: "up" | "down" | "left" | "right";
+  onMovingPlatformDirectionChange: (dir: "horizontal" | "vertical") => void;
+  onMovingPlatformSpeedChange: (speed: number) => void;
+  onMovingPlatformRangeChange: (range: number) => void;
+  onSpikesFacingChange: (facing: "up" | "down" | "left" | "right") => void;
+  // Undo/redo (F57-T03)
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 export function EditorUI({
@@ -145,6 +171,18 @@ export function EditorUI({
   onResizeLevel,
   onTestFromCursor,
   hoverPos,
+  movingPlatformDirection,
+  movingPlatformSpeed,
+  movingPlatformRange,
+  spikesFacing,
+  onMovingPlatformDirectionChange,
+  onMovingPlatformSpeedChange,
+  onMovingPlatformRangeChange,
+  onSpikesFacingChange,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }: EditorUIProps) {
   const theme = useGameState((s) => s.theme);
   const setTheme = useGameState((s) => s.setTheme);
@@ -162,12 +200,13 @@ export function EditorUI({
       <div style={styles.palette}>
         {/* Tab bar */}
         <div style={styles.tabBar}>
-          {(["blocos", "itens", "especiais", "inimigos", "custom"] as PaletteTab[]).map((tab) => {
+          {(["blocos", "itens", "especiais", "inimigos", "meca", "custom"] as PaletteTab[]).map((tab) => {
             const tabLabels: Record<PaletteTab, string> = {
               blocos: "BLOCOS",
               itens: "ITENS",
               especiais: "ESPECIAIS",
               inimigos: "INIM",
+              meca: "MECA",
               custom: "IMG",
             };
             return (
@@ -184,6 +223,20 @@ export function EditorUI({
             );
           })}
         </div>
+
+        {/* Select tool -- always visible (F57) */}
+        <button
+          style={{
+            ...styles.paletteBtn,
+            borderColor: selectedTool === "select" ? "#fff" : "#555",
+            backgroundColor: "#336699",
+          }}
+          onClick={() => onSelectTool("select")}
+          title="Selecionar (S)"
+        >
+          SEL
+        </button>
+        <div style={styles.divider} />
 
         {/* Tab content: BLOCOS */}
         {activeTab === "blocos" && (
@@ -311,6 +364,80 @@ export function EditorUI({
           </>
         )}
 
+        {/* Tab content: MECA (Mecanismos F58) */}
+        {activeTab === "meca" && (
+          <>
+            {MECA_PALETTE.map((item) => (
+              <button
+                key={item.tool}
+                style={{
+                  ...styles.paletteBtn,
+                  borderColor: selectedTool === item.tool ? "#fff" : "#555",
+                  backgroundColor: item.color,
+                }}
+                onClick={() => onSelectTool(item.tool)}
+                title={item.label}
+              >
+                {item.symbol}
+              </button>
+            ))}
+
+            {/* Moving Platform properties */}
+            {selectedTool === "entity_moving_platform" && (
+              <div style={styles.contentDropdown}>
+                <label style={styles.dropdownLabel}>Direcao:</label>
+                <select
+                  style={styles.dropdownSelect}
+                  value={movingPlatformDirection}
+                  onChange={(e) => onMovingPlatformDirectionChange(e.target.value as "horizontal" | "vertical")}
+                >
+                  <option value="horizontal">Horizontal</option>
+                  <option value="vertical">Vertical</option>
+                </select>
+                <label style={styles.dropdownLabel}>Veloc:</label>
+                <select
+                  style={styles.dropdownSelect}
+                  value={String(movingPlatformSpeed)}
+                  onChange={(e) => onMovingPlatformSpeedChange(Number(e.target.value))}
+                >
+                  <option value="1">Lenta (1)</option>
+                  <option value="2">Media (2)</option>
+                  <option value="3">Normal (3)</option>
+                  <option value="5">Rapida (5)</option>
+                </select>
+                <label style={styles.dropdownLabel}>Alcance:</label>
+                <select
+                  style={styles.dropdownSelect}
+                  value={String(movingPlatformRange)}
+                  onChange={(e) => onMovingPlatformRangeChange(Number(e.target.value))}
+                >
+                  <option value="2">Curto (2)</option>
+                  <option value="4">Normal (4)</option>
+                  <option value="6">Longo (6)</option>
+                  <option value="8">Extra (8)</option>
+                </select>
+              </div>
+            )}
+
+            {/* Spikes facing direction */}
+            {selectedTool === "entity_spikes" && (
+              <div style={styles.contentDropdown}>
+                <label style={styles.dropdownLabel}>Direcao:</label>
+                <select
+                  style={styles.dropdownSelect}
+                  value={spikesFacing}
+                  onChange={(e) => onSpikesFacingChange(e.target.value as "up" | "down" | "left" | "right")}
+                >
+                  <option value="up">Cima</option>
+                  <option value="down">Baixo</option>
+                  <option value="left">Esquerda</option>
+                  <option value="right">Direita</option>
+                </select>
+              </div>
+            )}
+          </>
+        )}
+
         {/* Tab content: CUSTOM (Galeria do Rafa) */}
         {activeTab === "custom" && (
           <CustomAssetPalette
@@ -375,6 +502,32 @@ export function EditorUI({
         </div>
 
         <div style={styles.actions}>
+          <button
+            style={{
+              ...styles.actionBtn,
+              background: canUndo ? "#5a5a7a" : "#333",
+              opacity: canUndo ? 1 : 0.4,
+              cursor: canUndo ? "pointer" : "not-allowed",
+            }}
+            onClick={onUndo}
+            disabled={!canUndo}
+            title="Desfazer (Ctrl+Z)"
+          >
+            DESFAZER
+          </button>
+          <button
+            style={{
+              ...styles.actionBtn,
+              background: canRedo ? "#5a5a7a" : "#333",
+              opacity: canRedo ? 1 : 0.4,
+              cursor: canRedo ? "pointer" : "not-allowed",
+            }}
+            onClick={onRedo}
+            disabled={!canRedo}
+            title="Refazer (Ctrl+Shift+Z)"
+          >
+            REFAZER
+          </button>
           <button style={styles.actionBtn} onClick={cycleTheme}>
             BG: {theme.toUpperCase()}
           </button>
@@ -418,6 +571,11 @@ export function EditorUI({
 
       {/* F46: Clear check status + code display */}
       <div style={styles.bottomBar}>
+        {selectedTool === "select" && (
+          <span style={{ fontSize: "10px", color: "#666", fontFamily: "monospace" }}>
+            Ctrl+C copiar | Ctrl+V colar | Del deletar | Esc cancelar
+          </span>
+        )}
         {!levelCleared && (
           <span style={styles.clearCheckMsg}>
             Zere a fase para publicar (TESTAR com Meta)

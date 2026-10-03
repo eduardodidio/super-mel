@@ -1,0 +1,85 @@
+flowchart TB
+    subgraph UndoRedo["1. Undo / Redo Flow"]
+        direction LR
+        UR1([Editing level]) --> UR2["Place block\n(pushSnapshot before)"]
+        UR2 --> UR3["Block appears on grid"]
+        UR3 --> UR4{"Undo?"}
+        UR4 -->|"Ctrl+Z"| UR5["Pop undo stack\nPush current to redo"]
+        UR5 --> UR6["Block removed\n(state restored)"]
+        UR6 --> UR7{"Redo?"}
+        UR7 -->|"Ctrl+Shift+Z\nor Ctrl+Y"| UR8["Pop redo stack\nPush current to undo"]
+        UR8 --> UR9["Block reappears"]
+        UR7 -->|"New action"| UR10["Redo stack cleared"]
+        UR4 -->|"No"| UR11["Continue editing"]
+    end
+
+    subgraph SelectRect["2. Selection Flow"]
+        direction LR
+        SR1([Editing level]) --> SR2["Click SEL button\n(or already in select tool)"]
+        SR2 --> SR3["mode = idle"]
+        SR3 --> SR4["Click + drag\non grid"]
+        SR4 --> SR5["mode = selecting\nDashed rect overlay\nfollows cursor"]
+        SR5 --> SR6["Release mouse"]
+        SR6 --> SR7{"Drag area > 0?"}
+        SR7 -->|"Yes"| SR8["mode = selected\nBlocks highlighted"]
+        SR7 -->|"No (click)"| SR9["mode = idle\nDeselected"]
+        SR8 --> SR10{"Click outside?"}
+        SR10 -->|"Yes"| SR11["Deselect\nmode = idle"]
+        SR10 -->|"No"| SR12["Keep selection"]
+    end
+
+    subgraph CopyPaste["3. Copy / Paste Flow"]
+        direction LR
+        CP1([Blocks selected\nmode = selected]) --> CP2["Ctrl+C"]
+        CP2 --> CP3["copySelection()\nBlocks stored with\nrelative positions\nin clipboard"]
+        CP3 --> CP4["Ctrl+V"]
+        CP4 --> CP5["mode = pasting\nGhost preview appears"]
+        CP5 --> CP6["Move cursor\nghost follows"]
+        CP6 --> CP7{"Action?"}
+        CP7 -->|"Click"| CP8["commitPaste()\nBlocks merged into state\npushSnapshot before\nmarkDataChanged()"]
+        CP7 -->|"Escape"| CP9["cancelPaste()\nmode = selected\nghost removed"]
+        CP8 --> CP10["New blocks placed\nat cursor position"]
+    end
+
+    subgraph DragMove["4. Drag-Move Flow"]
+        direction LR
+        DM1([Blocks selected\nmode = selected]) --> DM2["Drag inside\nselection rect"]
+        DM2 --> DM3["mode = moving\nGhost preview shows\nnew position"]
+        DM3 --> DM4["Drag to destination"]
+        DM4 --> DM5{"Release?"}
+        DM5 -->|"Release mouse"| DM6["commitMove()\npushSnapshot before\n- remove originals\n- place at new pos\n- rect follows"]
+        DM5 -->|"Escape"| DM7["cancelMove()\nmode = selected\nblocks stay in place"]
+        DM6 --> DM8["Blocks moved\nSelection rect updated\nmarkDataChanged()"]
+    end
+
+    subgraph DeleteSel["5. Delete Selection Flow"]
+        direction LR
+        DS1([Blocks selected\nmode = selected]) --> DS2["Press Delete\nor Backspace"]
+        DS2 --> DS3{"Count > 20?"}
+        DS3 -->|"Yes"| DS4["Confirm dialog:\nRemover N elementos?"]
+        DS4 -->|"Confirm"| DS5["pushSnapshot()\nRemove blocks + entities\nin rect"]
+        DS4 -->|"Cancel"| DS6["Keep selection\nno change"]
+        DS3 -->|"No"| DS5
+        DS5 --> DS7["Blocks removed\nDeselect\nmarkDataChanged()"]
+    end
+
+    subgraph CancelEsc["6. Cancel / Escape Flow"]
+        direction LR
+        CE1([Any selection mode]) --> CE2["Press Escape"]
+        CE2 --> CE3{"Current mode?"}
+        CE3 -->|"pasting"| CE4["cancelPaste()\nRemove ghost"]
+        CE3 -->|"moving"| CE5["cancelMove()\nRestore position"]
+        CE3 -->|"selected"| CE6["deselect()\nClear rect"]
+        CE3 -->|"selecting"| CE7["deselect()\nCancel drag"]
+        CE4 --> CE8["mode = selected"]
+        CE5 --> CE8
+        CE6 --> CE9["mode = idle"]
+        CE7 --> CE9
+    end
+
+    style UndoRedo fill:#2d5016,stroke:#4a8029,color:#fff
+    style SelectRect fill:#16344a,stroke:#2968a0,color:#fff
+    style CopyPaste fill:#4a3416,stroke:#8a6029,color:#fff
+    style DragMove fill:#4a1650,stroke:#8a29a0,color:#fff
+    style DeleteSel fill:#4a1616,stroke:#8a2929,color:#fff
+    style CancelEsc fill:#2d4a4a,stroke:#4a8a8a,color:#fff

@@ -1,6 +1,6 @@
 # F56: Editor Mario Maker -- Enemies + Camera 3D + Play-test from Cursor
 
-**Status:** planned
+**Status:** done
 **Created:** 2026-10-01
 **Backlog:** B-07 (extension) + B-08 (partial)
 

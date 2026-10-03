@@ -1,0 +1,58 @@
+flowchart TB
+    subgraph PlayerJourney["Player Journey (Gameplay)"]
+        direction LR
+        P1([Load Level]) --> P2["LevelSceneConverter\nparses entities"]
+        P2 --> P3["Springs, Platforms,\nSpikes rendered"]
+        P3 --> P4{"Encounter\nelement"}
+
+        P4 -->|Spring| P5["Step on Spring"]
+        P5 --> P6["Spring squash animation"]
+        P6 --> P7["Mel launched upward\n(force=18 > jump=10)"]
+        P7 --> P8["Reach high platform\nor collectibles"]
+
+        P4 -->|"Moving Platform"| P9["Stand on platform"]
+        P9 --> P10["Platform oscillates\n(horizontal or vertical)"]
+        P10 --> P11["Mel rides along"]
+        P11 --> P12["Cross gap or\nreach new area"]
+
+        P4 -->|Spikes| P13{"Touch\nspikes?"}
+        P13 -->|"Avoid"| P14["Jump over / around"]
+        P14 --> P15["Continue safely"]
+        P13 -->|"Hit"| P16["Take 1 heart damage"]
+        P16 --> P17["Invincibility frames"]
+        P17 --> P18["Continue with\nreduced health"]
+    end
+
+    subgraph EditorJourney["Editor Journey (Level Creation)"]
+        direction LR
+        E1([Open Editor]) --> E2["Select MECA tab"]
+        E2 --> E3{"Choose element"}
+
+        E3 -->|Spring| E4S["Select Spring tool"]
+        E4S --> E5S["Click grid to place"]
+        E5S --> E6S["Spring marker appears\n(green box)"]
+
+        E3 -->|"Moving Platform"| E4M["Select Platform tool"]
+        E4M --> E4MP["Set properties:\ndirection, speed, range"]
+        E4MP --> E5M["Click grid to place"]
+        E5M --> E6M["Platform marker appears\n(blue box)"]
+
+        E3 -->|Spikes| E4K["Select Spikes tool"]
+        E4K --> E4KP["Set facing:\nup/down/left/right"]
+        E4KP --> E5K["Click grid to place"]
+        E5K --> E6K["Spikes marker appears\n(red box)"]
+
+        E6S --> E7{"More elements?"}
+        E6M --> E7
+        E6K --> E7
+        E7 -->|Yes| E3
+        E7 -->|No| E8["Click TESTAR"]
+        E8 --> E9["Play level with\nnew elements active"]
+        E9 --> E10{"Satisfied?"}
+        E10 -->|No| E11["Return to editor\nadjust placement"]
+        E11 --> E3
+        E10 -->|Yes| E12["SALVAR + PUBLICAR"]
+    end
+
+    style PlayerJourney fill:#2d5016,stroke:#4a8029,color:#fff
+    style EditorJourney fill:#16344a,stroke:#2968a0,color:#fff

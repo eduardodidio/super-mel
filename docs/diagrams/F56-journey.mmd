@@ -1,0 +1,71 @@
+flowchart TB
+    subgraph EnemyPlacement["1. Enemy Placement Flow"]
+        direction LR
+        EP1([Open Editor]) --> EP2["Select INIMIGOS tab"]
+        EP2 --> EP3{"Choose subtype"}
+        EP3 -->|Aspirador| EP4A["Tool: entity_enemy\nsubtype: vacuum"]
+        EP3 -->|Pombo| EP4B["Tool: entity_enemy\nsubtype: pigeon"]
+        EP3 -->|Abelha| EP4C["Tool: entity_enemy\nsubtype: bee"]
+        EP4A --> EP5["Click on grid"]
+        EP4B --> EP5
+        EP4C --> EP5
+        EP5 --> EP6["Enemy entity placed\n(red box + letter marker)"]
+        EP6 --> EP7{"More enemies?"}
+        EP7 -->|Yes| EP3
+        EP7 -->|No| EP8["Test or Save"]
+    end
+
+    subgraph CameraNav["2. Camera Navigation Flow"]
+        direction LR
+        CN1([Start editing]) --> CN2{"Navigate"}
+        CN2 -->|"WASD keys"| CN3["Pan camera\n(clamped to level)"]
+        CN2 -->|"Scroll wheel"| CN4["Zoom in/out"]
+        CN2 -->|"Middle-drag"| CN5["Fine pan control"]
+        CN3 --> CN6["Camera info updates\nin top bar"]
+        CN4 --> CN6
+        CN5 --> CN6
+        CN6 --> CN7["Place blocks/entities\nat new camera position"]
+    end
+
+    subgraph TestFromCursor["3. Test-from-Cursor Flow"]
+        direction LR
+        TC1([Editing level]) --> TC2["Hover over\ntarget position"]
+        TC2 --> TC3["Click DAQUI button"]
+        TC3 --> TC4["State saved to\nsessionStorage"]
+        TC4 --> TC5["Game starts:\nMel spawns at\ncursor position"]
+        TC5 --> TC6{"Play test"}
+        TC6 -->|"Die or clear"| TC7["Return to editor"]
+        TC7 --> TC8["State restored\nfrom sessionStorage"]
+        TC8 --> TC9["Continue editing\n(all state preserved)"]
+    end
+
+    subgraph LevelResize["4. Level Resize Flow"]
+        direction LR
+        LR1([Editing level]) --> LR2["Change W/H\nin top bar"]
+        LR2 --> LR3{"Shrinking?"}
+        LR3 -->|"No (expanding)"| LR5["Grid and click plane\nresize immediately"]
+        LR3 -->|"Yes"| LR4{"Blocks out\nof bounds?"}
+        LR4 -->|"No"| LR5
+        LR4 -->|"Yes"| LR4B["Confirm removal\nof out-of-bounds blocks"]
+        LR4B --> LR5
+        LR5 --> LR6["Place blocks in\nnew area"]
+    end
+
+    subgraph EditTestCycle["5. Edit-Test-Edit Cycle"]
+        direction LR
+        ET1([Edit level]) --> ET2["Click TESTAR"]
+        ET2 --> ET3["saveEditorState()\nto sessionStorage"]
+        ET3 --> ET4["buildLevelDataV2()"]
+        ET4 --> ET5["GameScene3D loads level"]
+        ET5 --> ET6{"Outcome"}
+        ET6 -->|"Die"| ET7["Return to editor"]
+        ET6 -->|"Clear"| ET7
+        ET7 --> ET8["restoreEditorState()\nfrom sessionStorage"]
+        ET8 --> ET9["Resume editing\nblocks + entities +\ncamera + tool intact"]
+    end
+
+    style EnemyPlacement fill:#2d5016,stroke:#4a8029,color:#fff
+    style CameraNav fill:#16344a,stroke:#2968a0,color:#fff
+    style TestFromCursor fill:#4a3416,stroke:#8a6029,color:#fff
+    style LevelResize fill:#4a1650,stroke:#8a29a0,color:#fff
+    style EditTestCycle fill:#4a1616,stroke:#8a2929,color:#fff
