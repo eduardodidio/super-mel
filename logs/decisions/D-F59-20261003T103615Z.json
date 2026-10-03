@@ -1,0 +1,29 @@
+{
+  "decision_id": "D-F59-20261003T103615Z",
+  "timestamp": "2026-10-03T10:36:15Z",
+  "type": "feature_start",
+  "context_summary": "F59 is a batch of 5 independent bugfixes/polish items reported by the user: (1) Parallax background ends as player advances — mesh is static at origin, needs to follow camera; (2) Mel gets stuck on invisible colliders — non-solid blocks (leaf, water) create sensor colliders that interfere with ground detection; (3) Mobile touch controls appear but don't respond — only onTouchStart/End handlers, no onPointerDown/Up fallback; (4) Mobile browser header stays visible — missing viewport-fit=cover and 100dvh; (5) PWA install fails — service worker health check 404s on static deploy. All 5 are independent and can be parallelized in a single Wave.",
+  "options_considered": [
+    {
+      "option": "A",
+      "description": "Plan all 5 fixes as independent tasks in a single Wave 0 for maximum parallelism. Each fix touches different files with zero overlap.",
+      "pros": [
+        "All 5 fixes are completely independent — no shared state or file conflicts",
+        "Single Wave means fastest possible execution",
+        "Each fix is small and well-scoped with clear root cause already identified",
+        "Addresses critical mobile UX issues that block real user adoption"
+      ],
+      "cons": [
+        "5 parallel agents require more resources",
+        "No incremental testing between fixes (but they're independent so this is fine)"
+      ]
+    }
+  ],
+  "decision": "A",
+  "rationale": "All 5 fixes are independent with no file overlap. Parallax touches ParallaxImageBackground.tsx, colliders touch Block.tsx/Mel.tsx, touch controls touch TouchControls3D.tsx, fullscreen touches index.html/CSS, and PWA touches sw.js/manifest.json. A single Wave 0 with all 5 tasks maximizes throughput. Root causes are already identified from investigation, making each fix well-scoped.",
+  "actions": [
+    { "action": "spawn-architect", "feature": "F59" }
+  ],
+  "status": "executed",
+  "governance": null
+}

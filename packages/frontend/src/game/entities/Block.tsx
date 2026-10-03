@@ -93,6 +93,16 @@ export function Block({ type, position, isBackground = false, activated = false 
     );
   }
 
+  const needsPhysics = props.solid || props.dangerous;
+
+  if (!needsPhysics) {
+    return (
+      <mesh position={position} castShadow receiveShadow material={materials}>
+        <boxGeometry args={[1, 1, 1]} />
+      </mesh>
+    );
+  }
+
   return (
     <RigidBody
       type="fixed"
@@ -100,7 +110,7 @@ export function Block({ type, position, isBackground = false, activated = false 
       colliders="cuboid"
       name={`block-${type}`}
       userData={{ blockType: type, destructible: props.destructible, dangerous: props.dangerous }}
-      sensor={!props.solid && !props.dangerous}
+      sensor={!props.solid && props.dangerous}
     >
       <mesh castShadow receiveShadow material={materials}>
         <boxGeometry args={[1, 1, 1]} />

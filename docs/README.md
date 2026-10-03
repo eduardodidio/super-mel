@@ -41,6 +41,7 @@ Diagramas vivos mantidos em sincronia com o codigo. Dois por feature: arquitetur
 | F51 -- Fix Sprite Size Consistency | [architecture](diagrams/F51-architecture.mmd) | [journey](diagrams/F51-journey.mmd) |
 | F54 -- Identidade Secreta da Mel | [architecture](diagrams/F54-architecture.mmd) | [journey](diagrams/F54-journey.mmd) |
 | F55 -- Parallax Image Background | [architecture](diagrams/F55-architecture.mmd) | [journey](diagrams/F55-journey.mmd) |
+| F59 -- Mobile + Polish Fixes | [architecture](diagrams/F59-architecture.mmd) | [journey](diagrams/F59-journey.mmd) |
 
 ## Task Manifests
 
@@ -71,6 +72,7 @@ Diretorio de tasks por feature em [`tasks/features/`](../tasks/features/).
 | [F51 -- Fix Sprite Size Consistency](../tasks/features/F51-fix-sprite-size-consistency/) | Correcao escala normalizada de sprites, mapeamento sprites faltantes |
 | [F54 -- Identidade Secreta da Mel](../tasks/features/F54-identidade-secreta-mel/) | Cutscene end-of-level: Mel esconde a capa, abraca Rafa (Perry style) |
 | [F55 -- Parallax Image Background](../tasks/features/F55-parallax-image-background/) | Imagem de fundo parallax (montanhas/deserto) atras da decoracao procedural |
+| [F59 -- Mobile + Polish Fixes](../tasks/features/F59-mobile-polish-fixes/) | Parallax infinito, colisores invisiveis, touch mobile, fullscreen, PWA install |
 
 ## Guias
 

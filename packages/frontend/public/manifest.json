@@ -3,7 +3,7 @@
   "short_name": "Super Mel",
   "description": "A Yorkshire Micro Heroina e sua Bola do Infinito",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "landscape",
   "theme_color": "#1a1a2e",
   "background_color": "#1a1a2e",

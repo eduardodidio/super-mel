@@ -1,0 +1,46 @@
+flowchart TB
+    subgraph "F59 — Mobile + Polish Fixes"
+        direction TB
+
+        subgraph T01["T01: Parallax Infinito"]
+            PIB[ParallaxImageBackground.tsx]
+            PIB --> |"useFrame: reposition mesh.x = player.x"| MESH[Plane Mesh 200u]
+            PIB --> |"texture.offset.x = px * 0.002"| TEX[Texture UV Offset]
+        end
+
+        subgraph T02["T02: Fix Colisores Invisiveis"]
+            BLK[Block.tsx]
+            BLK --> |"solid=false && dangerous=false"| NOMESH[No RigidBody - visual only]
+            BLK --> |"dangerous=true"| SENSOR[RigidBody sensor=true]
+            BLK --> |"solid=true"| SOLID[RigidBody collider]
+            MEL[Mel.tsx] --> |"castRay ground detect"| SOLID
+        end
+
+        subgraph T03["T03: Touch Controls"]
+            TC[TouchControls3D.tsx]
+            TC --> |"onPointerDown/Up"| INPUT[Game Input State]
+            TC --> |"onPointerLeave/Cancel"| RELEASE[Auto-release]
+            TC --> |"opacity + scale"| FEEDBACK[Visual Feedback]
+        end
+
+        subgraph T04["T04: Fullscreen Mobile"]
+            HTML[index.html]
+            HTML --> |"viewport-fit=cover"| VP[Viewport Meta]
+            HTML --> |"100dvh + fallback"| CSS[Root CSS]
+            APP[App.tsx] --> |"requestFullscreen on first tap"| FS[Fullscreen API]
+            APP --> |"orientation.lock landscape"| ORI[Screen Orientation]
+        end
+
+        subgraph T05["T05: PWA Install"]
+            SW[sw.js]
+            SW --> |"remove /api/health fetch"| ACT[SW Activation]
+            MAN[manifest.json] --> |"theme_color + icons"| INST[Install Eligibility]
+            HOOK[usePWAInstall.ts] --> |"beforeinstallprompt + debug logs"| PROMPT[Install Prompt]
+        end
+    end
+
+    style T01 fill:#2d5016,stroke:#4a8029
+    style T02 fill:#4a1616,stroke:#8a2929
+    style T03 fill:#16344a,stroke:#2968a0
+    style T04 fill:#4a3416,stroke:#8a6029
+    style T05 fill:#341650,stroke:#6029a0

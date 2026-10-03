@@ -49,7 +49,8 @@ pnpm dev
 - **Seta Cima** — Olhar pra cima (camera sobe)
 - **Espaco** — Pular (pressionar 2x no ar = pulo duplo)
 - **Z** — Atacar (Bola do Infinito)
-- **Mobile:** D-pad 4 direcoes + A (pular/pulo duplo) + B (atacar)
+- **X** — Latir (bark — stun inimigos)
+- **Mobile:** D-pad 4 direcoes + A (pular/pulo duplo) + B (atacar) + C (latir)
 
 ## Arquitetura
 
@@ -148,6 +149,7 @@ super-mel/
 - **F53** — Double Jump: substituiu a mecanica de voo (fly) por pulo duplo. Pressionar Space duas vezes no ar executa um segundo pulo (DOUBLE_JUMP_FORCE = 9). StaminaBar removida do HUD, toggle "Voo Infinito" removido do Modo Assistido. Missao infinita "Voe 5s" substituida por "Faca 10 pulos duplos". Efeito de poeira no pulo duplo. Stomp bounce reseta o pulo duplo.
 - **F54** — Identidade Secreta da Mel: cutscene cinematica ao final de cada fase onde Mel volta para casa, esconde a capa de heroina atras de uma moita, e abraca seu dono Rafa (estilo Perry o Ornitorrinco). Cutscene pulavel (qualquer tecla/toque apos 1s). Sistema generico de cutscene reutilizavel (CutsceneEngine). Novo personagem: Rafa (dono da Mel, voxel-style).
 - **F55** — Parallax Image Background: imagem de fundo parallax com montanhas (default) e deserto. Camada mais profunda (Z=-35) atras de toda decoracao procedural (nuvens, montanhas, estrelas). Tiling horizontal infinito com scroll lento (0.2% da velocidade do jogador). Cross-fade suave entre imagens durante transicoes de bioma.
+- **F59** — Mobile + Polish Fixes: 5 correcoes criticas — (1) parallax background agora infinito de verdade (mesh segue o jogador), (2) colisores invisiveis removidos de blocos nao-solidos (leaf/water), (3) controles touch mobile funcionais com Pointer Events + feedback visual, (4) fullscreen mobile com viewport-fit=cover e Fullscreen API, (5) PWA install corrigido (health check removido do SW, debug logging).
 
 ## Poderes Futuros (pos-MVP)
 

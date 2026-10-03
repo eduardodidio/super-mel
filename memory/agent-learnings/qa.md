@@ -18,3 +18,11 @@
 - **Check `resetGame()` carefully for new state fields.** New state fields (like `coins`) must be explicitly reset in `resetGame()`. If a developer adds `coins` to state but forgets to reset it, coins would persist across game restarts within the same session. In F24 this was done correctly (`coins: 0` in resetGame, `totalCoins` intentionally preserved).
 - **Verify key uniqueness across entity types in shared rendering containers.** ChunkRenderer renders blocks, hearts, and coins in the same flat array. Each type needs a distinct key prefix (`h-` for hearts, `c-` for coins, bare coordinates for blocks) to avoid React key collisions.
 - **For localStorage-persisted values, verify the full lifecycle:** initialization with fallback, persistence on mutation, correct reset behavior (session vs lifetime), and try/catch around both read and write (private browsing can throw).
+
+## F59 -- Mobile + Polish Fixes
+
+- **Always check the doc-review gate early in QA.** README.md and docs/README.md updates are mandatory per project rules but are easily overlooked because they are not code changes. Include doc-gate validation as the first check in QA workflow.
+- **Verify vendor-prefixed CSS properties pass TypeScript compilation.** Properties like `WebkitTouchCallout` and `WebkitUserSelect` are valid in React's CSSProperties type but could fail in stricter type checking setups. Running `tsc --noEmit` catches this.
+- **For mobile-specific fixes, verify the platform gate mechanism.** Each mobile-only feature should have a clear conditional (user-agent check, `ontouchstart` detection, `matchMedia` query) that prevents it from activating on desktop. Check all gates in a single pass.
+- **When reviewing physics collider changes, trace the full chain:** block properties -> needsPhysics decision -> RigidBody presence -> sensor flag -> ray cast filter flags. Missing any link can hide a regression.
+- **When manifest.json display mode changes, grep for all `display-mode` media queries** to verify they match the new mode. In F59 this was correctly handled but is a common source of subtle bugs.

@@ -12,7 +12,7 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// Activate: clean old caches, ping health endpoint, claim clients
+// Activate: clean old caches and claim clients
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
@@ -24,11 +24,7 @@ self.addEventListener("activate", (event) => {
             .map((key) => caches.delete(key))
         )
       )
-      .then(() => {
-        // Fire-and-forget wake-up ping
-        fetch("/api/health").catch(() => {});
-        return self.clients.claim();
-      })
+      .then(() => self.clients.claim())
   );
 });
 
@@ -48,8 +44,6 @@ self.addEventListener("fetch", (event) => {
         .then((response) => {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          // Fire-and-forget wake-up ping on navigation
-          fetch("/api/health").catch(() => {});
           return response;
         })
         .catch(() => caches.match(event.request))

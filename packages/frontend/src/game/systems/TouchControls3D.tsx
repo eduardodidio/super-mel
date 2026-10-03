@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Controls } from "../hooks/useControls";
 import { useGameState, type GameScene } from "../hooks/useGameState";
 
@@ -9,37 +9,64 @@ interface TouchControls3DProps {
 
 export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const [pressed, setPressed] = useState<Record<string, boolean>>({});
   const gamepadConnected = useGameState((s) => s.gamepadConnected);
 
   useEffect(() => {
     setIsMobile("ontouchstart" in window || navigator.maxTouchPoints > 0);
   }, []);
 
+  const handlePress = useCallback(
+    (key: keyof Controls, value: boolean) => (e: React.PointerEvent | React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (controlsRef.current) controlsRef.current[key] = value;
+      setPressed((prev) => ({ ...prev, [key]: value }));
+      // Track touch input type
+      if (value) {
+        const state = useGameState.getState();
+        if (state.lastInputType !== "touch") {
+          state.setLastInputType("touch");
+        }
+      }
+    },
+    [controlsRef],
+  );
+
+  const handleRelease = useCallback(
+    (key: keyof Controls) => () => {
+      if (controlsRef.current) controlsRef.current[key] = false;
+      setPressed((prev) => ({ ...prev, [key]: false }));
+    },
+    [controlsRef],
+  );
+
+  const preventContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+  }, []);
+
   if (!isMobile || scene !== "playing" || gamepadConnected) return null;
 
-  const set = (key: keyof Controls, value: boolean) => (e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (controlsRef.current) controlsRef.current[key] = value;
-    // Track touch input type
-    if (value) {
-      const state = useGameState.getState();
-      if (state.lastInputType !== "touch") {
-        state.setLastInputType("touch");
-      }
-    }
-  };
+  const btnStyle = (key: string, base: React.CSSProperties): React.CSSProperties => ({
+    ...base,
+    opacity: pressed[key] ? 0.6 : 0.85,
+    transform: pressed[key] ? "scale(0.9)" : "scale(1)",
+    transition: "opacity 0.1s, transform 0.1s",
+  });
 
   return (
-    <div style={styles.container}>
-      {/* D-pad left side — 4-direction cross */}
+    <div style={styles.container} onContextMenu={preventContextMenu}>
+      {/* D-pad left side -- 4-direction cross */}
       <div style={styles.dpad}>
         <div style={styles.dpadRow}>
           <div style={styles.dpadSpacer} />
           <button
-            style={styles.dpadBtn}
-            onTouchStart={set("up", true)}
-            onTouchEnd={set("up", false)}
+            style={btnStyle("up", styles.dpadBtn)}
+            onPointerDown={handlePress("up", true)}
+            onPointerUp={handlePress("up", false)}
+            onPointerLeave={handleRelease("up")}
+            onPointerCancel={handleRelease("up")}
+            onContextMenu={preventContextMenu}
           >
             &#9650;
           </button>
@@ -47,17 +74,23 @@ export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
         </div>
         <div style={styles.dpadRow}>
           <button
-            style={styles.dpadBtn}
-            onTouchStart={set("left", true)}
-            onTouchEnd={set("left", false)}
+            style={btnStyle("left", styles.dpadBtn)}
+            onPointerDown={handlePress("left", true)}
+            onPointerUp={handlePress("left", false)}
+            onPointerLeave={handleRelease("left")}
+            onPointerCancel={handleRelease("left")}
+            onContextMenu={preventContextMenu}
           >
             &#9664;
           </button>
           <div style={styles.dpadCenter} />
           <button
-            style={styles.dpadBtn}
-            onTouchStart={set("right", true)}
-            onTouchEnd={set("right", false)}
+            style={btnStyle("right", styles.dpadBtn)}
+            onPointerDown={handlePress("right", true)}
+            onPointerUp={handlePress("right", false)}
+            onPointerLeave={handleRelease("right")}
+            onPointerCancel={handleRelease("right")}
+            onContextMenu={preventContextMenu}
           >
             &#9654;
           </button>
@@ -65,9 +98,12 @@ export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
         <div style={styles.dpadRow}>
           <div style={styles.dpadSpacer} />
           <button
-            style={styles.dpadBtn}
-            onTouchStart={set("down", true)}
-            onTouchEnd={set("down", false)}
+            style={btnStyle("down", styles.dpadBtn)}
+            onPointerDown={handlePress("down", true)}
+            onPointerUp={handlePress("down", false)}
+            onPointerLeave={handleRelease("down")}
+            onPointerCancel={handleRelease("down")}
+            onContextMenu={preventContextMenu}
           >
             &#9660;
           </button>
@@ -78,23 +114,32 @@ export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
       {/* Action buttons right side */}
       <div style={styles.actions}>
         <button
-          style={styles.btnC}
-          onTouchStart={set("bark", true)}
-          onTouchEnd={set("bark", false)}
+          style={btnStyle("bark", styles.btnC)}
+          onPointerDown={handlePress("bark", true)}
+          onPointerUp={handlePress("bark", false)}
+          onPointerLeave={handleRelease("bark")}
+          onPointerCancel={handleRelease("bark")}
+          onContextMenu={preventContextMenu}
         >
           C
         </button>
         <button
-          style={styles.btnB}
-          onTouchStart={set("shoot", true)}
-          onTouchEnd={set("shoot", false)}
+          style={btnStyle("shoot", styles.btnB)}
+          onPointerDown={handlePress("shoot", true)}
+          onPointerUp={handlePress("shoot", false)}
+          onPointerLeave={handleRelease("shoot")}
+          onPointerCancel={handleRelease("shoot")}
+          onContextMenu={preventContextMenu}
         >
           B
         </button>
         <button
-          style={styles.btnA}
-          onTouchStart={set("jump", true)}
-          onTouchEnd={set("jump", false)}
+          style={btnStyle("jump", styles.btnA)}
+          onPointerDown={handlePress("jump", true)}
+          onPointerUp={handlePress("jump", false)}
+          onPointerLeave={handleRelease("jump")}
+          onPointerCancel={handleRelease("jump")}
+          onContextMenu={preventContextMenu}
         >
           A
         </button>
@@ -112,10 +157,12 @@ const btnBase: React.CSSProperties = {
   fontFamily: "monospace",
   fontWeight: "bold",
   cursor: "pointer",
-  touchAction: "none",
+  touchAction: "manipulation",
   userSelect: "none",
   WebkitUserSelect: "none",
+  WebkitTouchCallout: "none",
   outline: "none",
+  opacity: 0.85,
 };
 
 const styles: Record<string, React.CSSProperties> = {
@@ -129,6 +176,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "0 16px",
     pointerEvents: "auto",
     zIndex: 20,
+    touchAction: "none",
+    userSelect: "none",
   },
   dpad: {
     display: "flex",

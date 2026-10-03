@@ -42,6 +42,7 @@ export function ParallaxImageBackground({
   const currentTexture = allTextures[currentIdx];
   const nextTexture = allTextures[nextIdx];
 
+  const groupRef = useRef<THREE.Group>(null);
   const currentMatRef = useRef<THREE.MeshBasicMaterial>(null);
   const nextMatRef = useRef<THREE.MeshBasicMaterial>(null);
 
@@ -61,6 +62,10 @@ export function ParallaxImageBackground({
     const px = playerXRef.current?.x ?? 0;
     const offset = px * PARALLAX_FACTOR;
 
+    if (groupRef.current) {
+      groupRef.current.position.x = px;
+    }
+
     if (currentMatRef.current) {
       currentMatRef.current.map!.offset.x = offset;
       currentMatRef.current.opacity = transitioning ? 1 - transitionFactor : 1;
@@ -72,8 +77,7 @@ export function ParallaxImageBackground({
   });
 
   return (
-    <>
-      {/* Current theme background */}
+    <group ref={groupRef}>
       <mesh position={[0, PLANE_Y, PLANE_Z]}>
         <planeGeometry args={[PLANE_WIDTH, PLANE_HEIGHT]} />
         <meshBasicMaterial
@@ -85,7 +89,6 @@ export function ParallaxImageBackground({
         />
       </mesh>
 
-      {/* Next theme background (only during cross-fade) */}
       {transitioning && (
         <mesh position={[0, PLANE_Y, PLANE_Z - 0.1]}>
           <planeGeometry args={[PLANE_WIDTH, PLANE_HEIGHT]} />
@@ -99,6 +102,6 @@ export function ParallaxImageBackground({
           />
         </mesh>
       )}
-    </>
+    </group>
   );
 }

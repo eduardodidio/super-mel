@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#1a1a2e" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,8 +13,22 @@
     <title>Super Mel</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { background: #1a1a2e; overflow: hidden; }
-      #root { width: 100vw; height: 100vh; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        background: #1a1a2e;
+      }
+      #root {
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        box-sizing: border-box;
+        padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+      }
     </style>
   </head>
   <body>

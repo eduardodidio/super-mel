@@ -1,0 +1,46 @@
+flowchart LR
+    subgraph "Mobile User Journey — Super Mel"
+        direction LR
+
+        subgraph Discovery["1. Discovery"]
+            OPEN[User opens site on mobile]
+            OPEN --> LOAD[Game loads]
+            LOAD --> SW_REG[SW registers in background]
+        end
+
+        subgraph Install["2. PWA Install"]
+            SW_REG --> PROMPT{Install prompt available?}
+            PROMPT -->|Yes| MENU[User taps Install in menu]
+            MENU --> NATIVE[Browser install dialog]
+            NATIVE --> HOME[App on home screen]
+            PROMPT -->|No| PLAY_BROWSER[Play in browser]
+        end
+
+        subgraph Fullscreen["3. Fullscreen Experience"]
+            HOME --> LAUNCH[Launch from home screen]
+            LAUNCH --> FS_AUTO[Fullscreen - no browser chrome]
+            PLAY_BROWSER --> FIRST_TAP[First tap/interaction]
+            FIRST_TAP --> FS_API[requestFullscreen triggers]
+            FS_API --> FS_AUTO
+        end
+
+        subgraph Gameplay["4. Gameplay"]
+            FS_AUTO --> ORIENT[Landscape orientation lock]
+            ORIENT --> CONTROLS[Touch controls appear]
+            CONTROLS --> DPAD[D-pad: move]
+            CONTROLS --> BTNA[A: jump]
+            CONTROLS --> BTNB[B: attack]
+            CONTROLS --> BTNC[C: bark]
+            DPAD --> PLAY[Player plays level]
+            BTNA --> PLAY
+            BTNB --> PLAY
+            BTNC --> PLAY
+            PLAY --> SCROLL[Parallax scrolls infinitely]
+            PLAY --> SMOOTH[Mel moves without invisible walls]
+        end
+    end
+
+    style Discovery fill:#1a3a5c,stroke:#2968a0
+    style Install fill:#341650,stroke:#6029a0
+    style Fullscreen fill:#4a3416,stroke:#8a6029
+    style Gameplay fill:#2d5016,stroke:#4a8029
