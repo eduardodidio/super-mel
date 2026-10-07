@@ -126,11 +126,13 @@ export function GameScene3D({ testMode = false, levelData, controlsRef }: GameSc
   const spikesEntities = sceneObjects?.spikes ?? [];
   const spawnPoint = sceneObjects?.spawnPoint ?? { x: 2, y: 5 };
 
-  // Warn if level has no goal
-  if (levelData && goalEntities.length === 0) {
-    // eslint-disable-next-line no-console
-    console.warn("Level has no goal entity");
-  }
+  // Warn once if level has no goal (useEffect avoids spam on every render)
+  useEffect(() => {
+    if (levelData && goalEntities.length === 0) {
+      // eslint-disable-next-line no-console
+      console.warn("Level has no goal entity");
+    }
+  }, [levelData, goalEntities.length]);
 
   // Respawn point: last checkpoint or spawn point
   const respawnPoint = lastCheckpoint || spawnPoint;

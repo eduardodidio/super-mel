@@ -1,5 +1,5 @@
 import { useRef, useEffect, forwardRef, useImperativeHandle } from "react";
-import { RigidBody, CuboidCollider, type RapierRigidBody, useRapier } from "@react-three/rapier";
+import { RigidBody, CuboidCollider, BallCollider, type RapierRigidBody, useRapier } from "@react-three/rapier";
 import * as THREE from "three";
 import type { Controls } from "../hooks/useControls";
 import { useGameFrame } from "../hooks/useGameFrame";
@@ -138,14 +138,14 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
 
     const hit = world.castRay(
       { origin: rayOrigin, dir: rayDir } as any,
-      0.3,
+      0.4,
       true,
       undefined,
       undefined,
       undefined,
       rb,
     );
-    grounded.current = hit !== null && Math.abs(vel.y) < 1;
+    grounded.current = hit !== null;
 
     if (wasGrounded && !grounded.current && !jumping.current) {
       coyoteTimer.current = COYOTE_TIME;
@@ -161,7 +161,9 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
 
     let newVelX = vel.x;
     if (targetVelX !== 0) {
-      newVelX = THREE.MathUtils.lerp(vel.x, targetVelX, MOVE_ACCEL * delta / (Math.abs(vel.x) + 1));
+      const changingDirection = (vel.x > 0.5 && targetVelX < 0) || (vel.x < -0.5 && targetVelX > 0);
+      const accel = changingDirection ? MOVE_ACCEL * 2 : MOVE_ACCEL;
+      newVelX = THREE.MathUtils.lerp(vel.x, targetVelX, Math.min(1, accel * delta));
       facingRight.current = targetVelX > 0;
     } else {
       if (Math.abs(vel.x) > 0.1) {
@@ -378,7 +380,9 @@ export const Mel = forwardRef<MelHandle, MelProps>(function Mel({
       name="mel"
       friction={0}
     >
-      <CuboidCollider args={[0.3, 0.45, 0.25]} />
+      {/* Compound collider: cuboid body + ball feet for smooth ground sliding */}
+      <CuboidCollider args={[0.3, 0.25, 0.25]} position={[0, 0.1, 0]} />
+      <BallCollider args={[0.3]} position={[0, -0.2, 0]} />
       {/* Sprite billboard */}
       <mesh ref={spriteRef} position={[0, 0.3, 0]} scale={[SPRITE_HEIGHT, SPRITE_HEIGHT, 1]}>
         <planeGeometry args={[1, 1]} />

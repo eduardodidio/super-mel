@@ -97,7 +97,12 @@ export function Block({ type, position, isBackground = false, activated = false 
 
   if (!needsPhysics) {
     return (
-      <mesh position={position} castShadow receiveShadow material={materials}>
+      <mesh
+        position={position}
+        castShadow
+        receiveShadow
+        ref={(mesh: THREE.Mesh | null) => { if (mesh) mesh.material = materials; }}
+      >
         <boxGeometry args={[1, 1, 1]} />
       </mesh>
     );
@@ -112,7 +117,11 @@ export function Block({ type, position, isBackground = false, activated = false 
       userData={{ blockType: type, destructible: props.destructible, dangerous: props.dangerous }}
       sensor={!props.solid && props.dangerous}
     >
-      <mesh castShadow receiveShadow material={materials}>
+      <mesh
+        castShadow
+        receiveShadow
+        ref={(mesh: THREE.Mesh | null) => { if (mesh) mesh.material = materials; }}
+      >
         <boxGeometry args={[1, 1, 1]} />
       </mesh>
     </RigidBody>

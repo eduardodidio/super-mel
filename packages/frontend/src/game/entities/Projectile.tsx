@@ -245,6 +245,7 @@ export function Projectile({
         <mesh ref={meshRef} castShadow>
           <planeGeometry args={[1, 0.75]} />
           <meshStandardMaterial
+            color="#ffaa00"
             transparent
             alphaTest={0.1}
             emissive="#ffaa00"

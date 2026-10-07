@@ -80,6 +80,7 @@ export function DroppedCoin({ id, position, velocity, playerPosRef, onCollect, o
       <planeGeometry args={[COIN_WIDTH, COIN_HEIGHT]} />
       <meshStandardMaterial
         map={texture}
+        color="#FFD700"
         side={THREE.DoubleSide}
         emissive="#8B0000"
         emissiveIntensity={0.4}

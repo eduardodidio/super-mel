@@ -195,6 +195,8 @@ const FALLBACK_SPRITE = "idle_right";
 const textureCache = new Map<string, THREE.Texture>();
 let spriteManifest: SpriteManifest | null = null;
 const loader = new THREE.TextureLoader();
+let manifestWarnShown = false;
+let missingSpritesWarnShown = false;
 
 function configureTexture(texture: THREE.Texture): THREE.Texture {
   texture.magFilter = THREE.NearestFilter;
@@ -259,7 +261,12 @@ export function loadSprites(): Promise<void> {
   const manifestPromise = fetch(`${SPRITE_BASE_PATH}manifest.json`)
     .then((res) => res.json())
     .then((data: SpriteManifest) => { spriteManifest = data; })
-    .catch((err) => { console.warn("[SpriteAnimator] Failed to load manifest.json:", err); });
+    .catch((err) => {
+      if (!manifestWarnShown) {
+        manifestWarnShown = true;
+        console.warn("[SpriteAnimator] Failed to load manifest.json:", err);
+      }
+    });
 
   const promises = names.map((name) => {
     return new Promise<void>((resolve) => {
@@ -290,7 +297,8 @@ export function loadSprites(): Promise<void> {
         }
       }
     }
-    if (missing.length > 0) {
+    if (missing.length > 0 && !missingSpritesWarnShown) {
+      missingSpritesWarnShown = true;
       console.warn(`[SpriteAnimator] ${missing.length} sprites not found, using fallback: ${missing.join(", ")}`);
     }
   });

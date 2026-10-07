@@ -20,7 +20,7 @@ const BLOCK_VISUALS: Record<Exclude<BlockType, "empty">, BlockVisual> = {
   iron: { color: "#B0B0B0", roughness: 0.4, metalness: 0.6 },
   dirt: { color: "#6B4226", topColor: "#4a8a3a", roughness: 1 },
   brick: { color: "#B22222", roughness: 0.85 },
-  glass: { color: "#ADD8E6", transparent: true, opacity: 0.35, roughness: 0.1 },
+  glass: { color: "#ADD8E6", transparent: true, opacity: 0.45, roughness: 0.1, emissive: "#88bbdd", emissiveIntensity: 0.05 },
   leaf: { color: "#228B22", roughness: 1, transparent: true, opacity: 0.9 },
   water: { color: "#1E90FF", transparent: true, opacity: 0.5, roughness: 0.2, emissive: "#0a2a6a", emissiveIntensity: 0.1 },
   lava: { color: "#FF4500", emissive: "#FF4500", emissiveIntensity: 0.8, roughness: 0.3 },
