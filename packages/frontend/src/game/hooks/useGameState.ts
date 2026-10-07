@@ -282,3 +282,19 @@ export const useGameState = create<GameState>((set) => ({
     });
   },
 }));
+
+/** Shared cleanup for returning to menu/worldmap from campaign context. */
+export function cleanupCampaignState() {
+  useGameState.setState({
+    campaignLevelId: null,
+    campaignIndex: -1,
+    currentLevelData: null,
+    gameMode: "infinite" as const,
+    levelId: null,
+    levelCoins: 0,
+    levelBones: 0,
+    deaths: 0,
+    lastCheckpoint: null,
+    levelCompleting: false,
+  });
+}

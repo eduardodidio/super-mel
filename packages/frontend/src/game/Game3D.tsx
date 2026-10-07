@@ -10,7 +10,7 @@ import { LevelClearOverlay } from "./scenes/LevelClearOverlay";
 import { EditorWrapper } from "./scenes/EditorWrapper";
 import { LevelSelectOverlay } from "./scenes/LevelSelectScene3D";
 import { WorldMapScene } from "./scenes/WorldMapScene";
-import { useGameState } from "./hooks/useGameState";
+import { useGameState, cleanupCampaignState } from "./hooks/useGameState";
 import { useAssistMode } from "./hooks/useAssistMode";
 import { TouchControls3D } from "./systems/TouchControls3D";
 import { PauseOverlay } from "./systems/PauseOverlay";
@@ -282,19 +282,7 @@ export function Game3D() {
     setPaused(false);
     setPauseSubScreen("main");
     setTheme("forest");
-    // Clear stale campaign/level state so menu starts clean
-    useGameState.setState({
-      campaignLevelId: null,
-      campaignIndex: -1,
-      currentLevelData: null,
-      gameMode: "infinite",
-      levelId: null,
-      levelCoins: 0,
-      levelBones: 0,
-      deaths: 0,
-      lastCheckpoint: null,
-      levelCompleting: false,
-    });
+    cleanupCampaignState();
     setScene("menu");
   };
 

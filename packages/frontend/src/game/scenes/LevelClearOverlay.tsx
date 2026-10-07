@@ -1,4 +1,4 @@
-import { useGameState } from "../hooks/useGameState";
+import { useGameState, cleanupCampaignState } from "../hooks/useGameState";
 import { useEffect, useRef, useState } from "react";
 import type { MissionStatus } from "../systems/MissionTracker";
 import {
@@ -59,8 +59,11 @@ export function LevelClearOverlay({ missionStatus }: LevelClearOverlayProps) {
   const campaignIndex = useGameState((s) => s.campaignIndex);
   const levelBones = useGameState((s) => s.levelBones);
 
+  const isCampaign = !!campaignLevelId;
+
   // Loading state for "PROXIMA FASE" button
   const [loadingNext, setLoadingNext] = useState(false);
+  const [isLastLevel, setIsLastLevel] = useState(false);
 
   // Calculate elapsed time
   const elapsed = levelStartTime > 0
@@ -93,6 +96,15 @@ export function LevelClearOverlay({ missionStatus }: LevelClearOverlayProps) {
   const starDisplay = Array.from({ length: 3 }, (_, i) =>
     i < stars ? "\u2605" : "\u2606"
   ).join(" ");
+
+  // Check if this is the last campaign level
+  useEffect(() => {
+    if (isCampaign) {
+      loadCampaignManifest()
+        .then((m) => setIsLastLevel(campaignIndex >= m.levels.length - 1))
+        .catch(() => {});
+    }
+  }, [isCampaign, campaignIndex]);
 
   // POST score on mount + persist mission completions + save campaign progress
   useEffect(() => {
@@ -157,19 +169,7 @@ export function LevelClearOverlay({ missionStatus }: LevelClearOverlayProps) {
 
   const handleMenu = () => {
     setTheme("forest" as BackgroundTheme);
-    // Clear stale campaign/level state so menu starts clean
-    useGameState.setState({
-      campaignLevelId: null,
-      campaignIndex: -1,
-      currentLevelData: null,
-      gameMode: "infinite",
-      levelId: null,
-      levelCoins: 0,
-      levelBones: 0,
-      deaths: 0,
-      lastCheckpoint: null,
-      levelCompleting: false,
-    });
+    cleanupCampaignState();
     setScene("menu");
   };
 
@@ -205,7 +205,6 @@ export function LevelClearOverlay({ missionStatus }: LevelClearOverlayProps) {
   // Check if this was an editor test level
   const levelId = useGameState.getState().levelId;
   const isEditorTest = levelId?.startsWith("editor-test-") ?? false;
-  const isCampaign = !!campaignLevelId;
 
   const handleBackToEditor = () => {
     // Signal that the editor test was cleared
@@ -269,10 +268,10 @@ export function LevelClearOverlay({ missionStatus }: LevelClearOverlayProps) {
       )}
 
       <div style={styles.buttons}>
-        {/* Campaign: PROXIMA FASE */}
+        {/* Campaign: PROXIMA FASE / VOLTAR AO MAPA */}
         {isCampaign && (
-          <button style={styles.btn} onClick={handleNextLevel} disabled={loadingNext}>
-            {loadingNext ? "..." : "PROXIMA FASE"}
+          <button style={styles.btn} onClick={isLastLevel ? handleWorldMap : handleNextLevel} disabled={loadingNext}>
+            {loadingNext ? "..." : isLastLevel ? "VOLTAR AO MAPA" : "PROXIMA FASE"}
           </button>
         )}
 
