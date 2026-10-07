@@ -277,6 +277,7 @@ export const useGameState = create<GameState>((set) => ({
       dailyMode: false,
       dailySeed: 0,
       levelStartTime: Date.now(),
+      currentBiome: "forest" as BackgroundTheme,
       cutsceneType: null, cutsceneSkipped: false,
     });
   },

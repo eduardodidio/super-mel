@@ -188,7 +188,7 @@ export const BLOCK_PROPERTIES: Record<
   dirt:       { solid: true,  destructible: false, dangerous: false, platform: false, diggable: true  },
   brick:      { solid: true,  destructible: false, dangerous: false, platform: false, diggable: false },
   glass:      { solid: true,  destructible: true,  dangerous: false, platform: false, diggable: false },
-  leaf:       { solid: false, destructible: false, dangerous: false, platform: true,  diggable: false },
+  leaf:       { solid: true,  destructible: false, dangerous: false, platform: true,  diggable: false },
   water:      { solid: false, destructible: false, dangerous: false, platform: false, diggable: false },
   lava:       { solid: false, destructible: false, dangerous: true,  platform: false, diggable: false },
   item_block: { solid: true,  destructible: false, dangerous: false, platform: false, diggable: false },

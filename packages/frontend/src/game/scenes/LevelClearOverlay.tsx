@@ -156,10 +156,25 @@ export function LevelClearOverlay({ missionStatus }: LevelClearOverlayProps) {
   };
 
   const handleMenu = () => {
+    setTheme("forest" as BackgroundTheme);
+    // Clear stale campaign/level state so menu starts clean
+    useGameState.setState({
+      campaignLevelId: null,
+      campaignIndex: -1,
+      currentLevelData: null,
+      gameMode: "infinite",
+      levelId: null,
+      levelCoins: 0,
+      levelBones: 0,
+      deaths: 0,
+      lastCheckpoint: null,
+      levelCompleting: false,
+    });
     setScene("menu");
   };
 
   const handleWorldMap = () => {
+    setTheme("forest" as BackgroundTheme);
     setScene("worldmap");
   };
 
@@ -170,6 +185,7 @@ export function LevelClearOverlay({ missionStatus }: LevelClearOverlayProps) {
       const nextIndex = campaignIndex + 1;
       if (nextIndex >= manifest.levels.length) {
         // Last level completed -- go to world map
+        setTheme("forest" as BackgroundTheme);
         setScene("worldmap");
         return;
       }
@@ -179,6 +195,7 @@ export function LevelClearOverlay({ missionStatus }: LevelClearOverlayProps) {
       startCampaignLevel(nextLevel.id, nextIndex, levelData);
     } catch {
       // Fallback to world map on error
+      setTheme("forest" as BackgroundTheme);
       setScene("worldmap");
     } finally {
       setLoadingNext(false);
@@ -229,7 +246,7 @@ export function LevelClearOverlay({ missionStatus }: LevelClearOverlayProps) {
       {hasMissions && (
         <div style={styles.missionsContainer}>
           <h3 style={styles.missionsTitle}>MISSOES</h3>
-          {missionStatus!.map((ms, i) => (
+          {(missionStatus ?? []).map((ms, i) => (
             <div key={i} style={styles.missionRow}>
               <span style={{
                 ...styles.missionCheck,
@@ -287,10 +304,12 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: {
     width: "100%",
     height: "100%",
+    maxHeight: "100dvh",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
+    overflowY: "auto",
     background: "rgba(0,0,0,0.75)",
     fontFamily: "monospace",
     color: "#fff",

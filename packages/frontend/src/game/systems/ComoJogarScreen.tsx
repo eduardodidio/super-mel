@@ -37,7 +37,7 @@ const TOUCH_CONTROLS: ControlRow[] = [
   { action: "LATIR", key: "Botao C" },
   { action: "CAVAR", key: "Baixo + B (terra/areia)" },
   { action: "FAREJAR", key: "Segurar Baixo (1s parada)" },
-  { action: "PAUSAR", key: "(use Esc no teclado)" },
+  { action: "PAUSAR", key: "Botao II (canto superior)" },
 ];
 
 const GAMEPAD_CONTROLS: ControlRow[] = [

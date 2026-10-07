@@ -1,0 +1,51 @@
+graph TD
+    subgraph Game3D["Game3D.tsx (root)"]
+        UC["useControls() -- single instance"]
+        CR["controlsRef (Ref A)"]
+        UC --> CR
+    end
+
+    subgraph TouchControls["TouchControls3D"]
+        TC_Write["onPointerDown/Up writes to ref"]
+    end
+
+    subgraph SceneContent["SceneContent (R3F)"]
+        GS["GameScene3D"]
+        MEL["Mel entity"]
+        PM["ProjectileManager"]
+        BS["BarkSystem"]
+    end
+
+    CR -->|prop| TouchControls
+    CR -->|prop via SceneContent| GS
+    TC_Write -->|writes| CR
+    GS -->|reads| CR
+    MEL -->|reads| CR
+    PM -->|reads| CR
+    BS -->|reads| CR
+
+    subgraph MobileFixes["Mobile Additions (F60)"]
+        PB["Pause Button (top-right)"]
+        SA["Safe Area Inset"]
+        PP["Portrait Prompt"]
+        DVH["100dvh viewport"]
+    end
+
+    subgraph TransitionFixes["Transition Fixes (F60)"]
+        TR["Theme reset on MENU/MAPA"]
+        SC["Campaign state cleanup"]
+        CB["currentBiome reset"]
+    end
+
+    subgraph PhysicsFixes["Physics Fixes (F60)"]
+        LF["Leaf: solid=true (restored)"]
+        BN["Bones repositioned (1-5, 1-8)"]
+        SG["Sign text: voar->pulo duplo"]
+    end
+
+    style Game3D fill:#2a4858,color:#fff
+    style TouchControls fill:#4a6858,color:#fff
+    style SceneContent fill:#3a5868,color:#fff
+    style MobileFixes fill:#5a4858,color:#fff
+    style TransitionFixes fill:#4a5838,color:#fff
+    style PhysicsFixes fill:#6a4838,color:#fff

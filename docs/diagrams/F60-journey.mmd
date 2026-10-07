@@ -1,0 +1,39 @@
+graph LR
+    MENU["Menu"] -->|CAMPANHA| WM["WorldMap"]
+    WM -->|click level| PLAY["Playing"]
+    WM -->|VOLTAR| MENU
+
+    PLAY -->|reach goal| CUT["Cutscene<br/>(1.5s delay)"]
+    PLAY -->|death| RESP["Respawn<br/>(checkpoint/spawn)"]
+    PLAY -->|pause button<br/>or Esc| PAUSE["Pause Menu"]
+    RESP --> PLAY
+
+    PAUSE -->|continue| PLAY
+    PAUSE -->|MENU| MENU
+
+    CUT -->|complete or<br/>skip after 1s| LC["Level Clear"]
+
+    LC -->|PROXIMA FASE| PLAY2["Next Level"]
+    LC -->|REPETIR| PLAY3["Same Level"]
+    LC -->|MAPA| WM2["WorldMap<br/>(progress updated)"]
+    LC -->|MENU| MENU2["Menu<br/>(state cleaned)"]
+
+    PLAY2 --> PLAY
+    PLAY3 --> PLAY
+    WM2 --> WM
+
+    subgraph F60_Fixes["F60 Fixes Applied"]
+        FIX1["Theme reset on MAPA/MENU"]
+        FIX2["Campaign state cleanup"]
+        FIX3["Touch controls work<br/>(single controlsRef)"]
+        FIX4["Pause button on mobile"]
+        FIX5["Leaf blocks solid<br/>(platforms work)"]
+    end
+
+    style MENU fill:#4a4a8a,color:#fff
+    style WM fill:#5a6a3a,color:#fff
+    style PLAY fill:#3a7a3a,color:#fff
+    style CUT fill:#7a5a3a,color:#fff
+    style LC fill:#6a4a6a,color:#fff
+    style PAUSE fill:#6a6a3a,color:#fff
+    style F60_Fixes fill:#2a2a4a,color:#aaa,stroke:#666

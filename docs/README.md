@@ -45,6 +45,7 @@ Diagramas vivos mantidos em sincronia com o codigo. Dois por feature: arquitetur
 | F57 -- Editor QoL (Undo/Redo + Selection) | [architecture](diagrams/F57-architecture.mmd) | [journey](diagrams/F57-journey.mmd) |
 | F58 -- Novos Elementos de Fase | [architecture](diagrams/F58-architecture.mmd) | [journey](diagrams/F58-journey.mmd) |
 | F59 -- Mobile + Polish Fixes | [architecture](diagrams/F59-architecture.mmd) | [journey](diagrams/F59-journey.mmd) |
+| F60 -- Campaign QA & Polish | [architecture](diagrams/F60-architecture.mmd) | [journey](diagrams/F60-journey.mmd) |
 
 ## Task Manifests
 
@@ -79,6 +80,7 @@ Diretorio de tasks por feature em [`tasks/features/`](../tasks/features/).
 | [F57 -- Editor QoL](../tasks/features/F57-editor-qol/) | Undo/redo (50 snapshots), rectangular selection, copy/paste, drag-move, delete selection |
 | [F58 -- Novos Elementos de Fase](../tasks/features/F58-novos-elementos-fase/) | Spring (mola), Moving Platform (plataforma movel), Spikes (espinhos) |
 | [F59 -- Mobile + Polish Fixes](../tasks/features/F59-mobile-polish-fixes/) | Parallax infinito, colisores invisiveis, touch mobile, fullscreen, PWA install |
+| [F60 -- Campaign QA & Polish](../tasks/features/F60-campaign-qa-polish/) | Fix touch mobile, botao pausa, leaf solido, theme reset, debug cleanup, safe-area, 100dvh |
 
 ## Guias
 

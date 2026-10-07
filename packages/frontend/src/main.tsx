@@ -13,7 +13,7 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker
       .register("/sw.js")
       .then((registration) => {
-        console.log("[SW] Registered:", registration.scope);
+        // SW registered successfully
       })
       .catch((error) => {
         console.warn("[SW] Registration failed:", error);

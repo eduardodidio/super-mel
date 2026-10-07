@@ -11,6 +11,7 @@ export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [pressed, setPressed] = useState<Record<string, boolean>>({});
   const gamepadConnected = useGameState((s) => s.gamepadConnected);
+  const setPaused = useGameState((s) => s.setPaused);
 
   useEffect(() => {
     setIsMobile("ontouchstart" in window || navigator.maxTouchPoints > 0);
@@ -45,6 +46,15 @@ export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
     e.preventDefault();
   }, []);
 
+  const handlePause = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setPaused(true);
+    },
+    [setPaused],
+  );
+
   if (!isMobile || scene !== "playing" || gamepadConnected) return null;
 
   const btnStyle = (key: string, base: React.CSSProperties): React.CSSProperties => ({
@@ -55,96 +65,107 @@ export function TouchControls3D({ controlsRef, scene }: TouchControls3DProps) {
   });
 
   return (
-    <div style={styles.container} onContextMenu={preventContextMenu}>
-      {/* D-pad left side -- 4-direction cross */}
-      <div style={styles.dpad}>
-        <div style={styles.dpadRow}>
-          <div style={styles.dpadSpacer} />
-          <button
-            style={btnStyle("up", styles.dpadBtn)}
-            onPointerDown={handlePress("up", true)}
-            onPointerUp={handlePress("up", false)}
-            onPointerLeave={handleRelease("up")}
-            onPointerCancel={handleRelease("up")}
-            onContextMenu={preventContextMenu}
-          >
-            &#9650;
-          </button>
-          <div style={styles.dpadSpacer} />
-        </div>
-        <div style={styles.dpadRow}>
-          <button
-            style={btnStyle("left", styles.dpadBtn)}
-            onPointerDown={handlePress("left", true)}
-            onPointerUp={handlePress("left", false)}
-            onPointerLeave={handleRelease("left")}
-            onPointerCancel={handleRelease("left")}
-            onContextMenu={preventContextMenu}
-          >
-            &#9664;
-          </button>
-          <div style={styles.dpadCenter} />
-          <button
-            style={btnStyle("right", styles.dpadBtn)}
-            onPointerDown={handlePress("right", true)}
-            onPointerUp={handlePress("right", false)}
-            onPointerLeave={handleRelease("right")}
-            onPointerCancel={handleRelease("right")}
-            onContextMenu={preventContextMenu}
-          >
-            &#9654;
-          </button>
-        </div>
-        <div style={styles.dpadRow}>
-          <div style={styles.dpadSpacer} />
-          <button
-            style={btnStyle("down", styles.dpadBtn)}
-            onPointerDown={handlePress("down", true)}
-            onPointerUp={handlePress("down", false)}
-            onPointerLeave={handleRelease("down")}
-            onPointerCancel={handleRelease("down")}
-            onContextMenu={preventContextMenu}
-          >
-            &#9660;
-          </button>
-          <div style={styles.dpadSpacer} />
-        </div>
-      </div>
+    <>
+      {/* Mobile pause button — top-right, positioned relative to viewport */}
+      <button
+        style={styles.pauseBtn}
+        onPointerDown={handlePause}
+        onContextMenu={preventContextMenu}
+      >
+        {"\u275A\u275A"}
+      </button>
 
-      {/* Action buttons right side */}
-      <div style={styles.actions}>
-        <button
-          style={btnStyle("bark", styles.btnC)}
-          onPointerDown={handlePress("bark", true)}
-          onPointerUp={handlePress("bark", false)}
-          onPointerLeave={handleRelease("bark")}
-          onPointerCancel={handleRelease("bark")}
-          onContextMenu={preventContextMenu}
-        >
-          C
-        </button>
-        <button
-          style={btnStyle("shoot", styles.btnB)}
-          onPointerDown={handlePress("shoot", true)}
-          onPointerUp={handlePress("shoot", false)}
-          onPointerLeave={handleRelease("shoot")}
-          onPointerCancel={handleRelease("shoot")}
-          onContextMenu={preventContextMenu}
-        >
-          B
-        </button>
-        <button
-          style={btnStyle("jump", styles.btnA)}
-          onPointerDown={handlePress("jump", true)}
-          onPointerUp={handlePress("jump", false)}
-          onPointerLeave={handleRelease("jump")}
-          onPointerCancel={handleRelease("jump")}
-          onContextMenu={preventContextMenu}
-        >
-          A
-        </button>
+      <div style={styles.container} onContextMenu={preventContextMenu}>
+        {/* D-pad left side -- 4-direction cross */}
+        <div style={styles.dpad}>
+          <div style={styles.dpadRow}>
+            <div style={styles.dpadSpacer} />
+            <button
+              style={btnStyle("up", styles.dpadBtn)}
+              onPointerDown={handlePress("up", true)}
+              onPointerUp={handlePress("up", false)}
+              onPointerLeave={handleRelease("up")}
+              onPointerCancel={handleRelease("up")}
+              onContextMenu={preventContextMenu}
+            >
+              &#9650;
+            </button>
+            <div style={styles.dpadSpacer} />
+          </div>
+          <div style={styles.dpadRow}>
+            <button
+              style={btnStyle("left", styles.dpadBtn)}
+              onPointerDown={handlePress("left", true)}
+              onPointerUp={handlePress("left", false)}
+              onPointerLeave={handleRelease("left")}
+              onPointerCancel={handleRelease("left")}
+              onContextMenu={preventContextMenu}
+            >
+              &#9664;
+            </button>
+            <div style={styles.dpadCenter} />
+            <button
+              style={btnStyle("right", styles.dpadBtn)}
+              onPointerDown={handlePress("right", true)}
+              onPointerUp={handlePress("right", false)}
+              onPointerLeave={handleRelease("right")}
+              onPointerCancel={handleRelease("right")}
+              onContextMenu={preventContextMenu}
+            >
+              &#9654;
+            </button>
+          </div>
+          <div style={styles.dpadRow}>
+            <div style={styles.dpadSpacer} />
+            <button
+              style={btnStyle("down", styles.dpadBtn)}
+              onPointerDown={handlePress("down", true)}
+              onPointerUp={handlePress("down", false)}
+              onPointerLeave={handleRelease("down")}
+              onPointerCancel={handleRelease("down")}
+              onContextMenu={preventContextMenu}
+            >
+              &#9660;
+            </button>
+            <div style={styles.dpadSpacer} />
+          </div>
+        </div>
+
+        {/* Action buttons right side */}
+        <div style={styles.actions}>
+          <button
+            style={btnStyle("bark", styles.btnC)}
+            onPointerDown={handlePress("bark", true)}
+            onPointerUp={handlePress("bark", false)}
+            onPointerLeave={handleRelease("bark")}
+            onPointerCancel={handleRelease("bark")}
+            onContextMenu={preventContextMenu}
+          >
+            C
+          </button>
+          <button
+            style={btnStyle("shoot", styles.btnB)}
+            onPointerDown={handlePress("shoot", true)}
+            onPointerUp={handlePress("shoot", false)}
+            onPointerLeave={handleRelease("shoot")}
+            onPointerCancel={handleRelease("shoot")}
+            onContextMenu={preventContextMenu}
+          >
+            B
+          </button>
+          <button
+            style={btnStyle("jump", styles.btnA)}
+            onPointerDown={handlePress("jump", true)}
+            onPointerUp={handlePress("jump", false)}
+            onPointerLeave={handleRelease("jump")}
+            onPointerCancel={handleRelease("jump")}
+            onContextMenu={preventContextMenu}
+          >
+            A
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -168,7 +189,7 @@ const btnBase: React.CSSProperties = {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     position: "absolute",
-    bottom: 20,
+    bottom: "max(20px, env(safe-area-inset-bottom, 20px))" as unknown as number,
     left: 0,
     width: "100%",
     display: "flex",
@@ -240,5 +261,30 @@ const styles: Record<string, React.CSSProperties> = {
     border: "2px solid rgba(218,165,32,0.4)",
     marginBottom: 30,
     fontSize: "18px",
+  },
+  pauseBtn: {
+    position: "absolute" as const,
+    top: 12,
+    right: 80,
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    background: "rgba(0,0,0,0.35)",
+    border: "1px solid rgba(255,255,255,0.2)",
+    color: "rgba(255,255,255,0.7)",
+    fontSize: "14px",
+    fontFamily: "monospace",
+    fontWeight: "bold",
+    cursor: "pointer",
+    touchAction: "manipulation",
+    userSelect: "none" as const,
+    WebkitUserSelect: "none" as const,
+    WebkitTouchCallout: "none" as const,
+    outline: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 25,
+    letterSpacing: "2px",
   },
 };

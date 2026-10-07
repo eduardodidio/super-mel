@@ -32,6 +32,70 @@ import { EndLevelCutscene } from "./scenes/EndLevelCutscene";
 
 const THEMES: BackgroundTheme[] = ["forest", "desert", "night", "space", "ocean"];
 
+/** Shows a "rotate to landscape" overlay on mobile when in portrait orientation. */
+function PortraitPrompt() {
+  const [isMobile, setIsMobile] = useState(false);
+  const [isPortrait, setIsPortrait] = useState(false);
+
+  useEffect(() => {
+    const mobile = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+    setIsMobile(mobile);
+    if (!mobile) return;
+
+    const check = () => {
+      setIsPortrait(window.innerHeight > window.innerWidth);
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  if (!isMobile || !isPortrait) return null;
+
+  return (
+    <div style={portraitStyles.overlay}>
+      <div style={portraitStyles.icon}>&#x1F504;</div>
+      <p style={portraitStyles.text}>Gire o celular para jogar</p>
+      <p style={portraitStyles.sub}>O jogo funciona melhor em modo paisagem</p>
+    </div>
+  );
+}
+
+const portraitStyles: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    background: "rgba(0,0,0,0.9)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 100,
+    fontFamily: "monospace",
+    color: "#fff",
+  },
+  icon: {
+    fontSize: "64px",
+    marginBottom: 16,
+  },
+  text: {
+    fontSize: "22px",
+    fontWeight: "bold",
+    color: "#FFD700",
+    margin: 0,
+    textAlign: "center" as const,
+  },
+  sub: {
+    fontSize: "14px",
+    color: "#aaa",
+    marginTop: 8,
+    textAlign: "center" as const,
+  },
+};
+
 function CutsceneContent() {
   const cutsceneType = useGameState((s) => s.cutsceneType);
   const endCutscene = useGameState((s) => s.endCutscene);
@@ -47,7 +111,7 @@ function CutsceneContent() {
   );
 }
 
-function SceneContent() {
+function SceneContent({ controlsRef }: { controlsRef: React.MutableRefObject<import("./hooks/useControls").Controls> }) {
   const scene = useGameState((s) => s.scene);
   const theme = useGameState((s) => s.theme);
   const testMode = useGameState((s) => s.testMode);
@@ -77,6 +141,7 @@ function SceneContent() {
           key={levelId ?? "infinite"}
           testMode={testMode}
           levelData={currentLevelData ?? undefined}
+          controlsRef={controlsRef}
         />
       )}
       {scene === "cutscene" && <CutsceneContent />}
@@ -216,6 +281,20 @@ export function Game3D() {
   const handleMainMenu = () => {
     setPaused(false);
     setPauseSubScreen("main");
+    setTheme("forest");
+    // Clear stale campaign/level state so menu starts clean
+    useGameState.setState({
+      campaignLevelId: null,
+      campaignIndex: -1,
+      currentLevelData: null,
+      gameMode: "infinite",
+      levelId: null,
+      levelCoins: 0,
+      levelBones: 0,
+      deaths: 0,
+      lastCheckpoint: null,
+      levelCompleting: false,
+    });
     setScene("menu");
   };
 
@@ -244,14 +323,14 @@ export function Game3D() {
   const physicsTimeStep = (1 / 60) * gameSpeed;
 
   return (
-    <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+    <div style={{ width: "100vw", minHeight: "100vh", height: "100dvh", position: "relative" }}>
       <Canvas
         shadows
         camera={{ position: [0, 2, 15], fov: 60 }}
         style={{ background: "#1a1a2e" }}
       >
         <Physics gravity={[0, -15, 0]} paused={paused || scene === "cutscene"} timeStep={physicsTimeStep}>
-          <SceneContent />
+          <SceneContent controlsRef={controlsRef} />
         </Physics>
       </Canvas>
 
@@ -370,6 +449,9 @@ export function Game3D() {
 
       {/* Mobile touch controls */}
       <TouchControls3D controlsRef={controlsRef} scene={scene} />
+
+      {/* Portrait orientation prompt (mobile only) */}
+      <PortraitPrompt />
     </div>
   );
 }

@@ -174,12 +174,10 @@ export function useControls(): React.MutableRefObject<Controls> {
 
     // Gamepad hot-plug events
     const onGamepadConnected = (e: GamepadEvent) => {
-      console.log("Gamepad connected:", e.gamepad.id);
       useGameState.getState().setGamepadConnected(true);
     };
 
     const onGamepadDisconnected = () => {
-      console.log("Gamepad disconnected");
       useGameState.getState().setGamepadConnected(false);
     };
 

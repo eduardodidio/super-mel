@@ -26,7 +26,7 @@ import { BiomeTransition } from "../systems/BiomeTransition";
 import { getBiomeForChunk, type BiomeState } from "../systems/BiomeManager";
 import { CHUNK_WIDTH } from "../systems/ChunkGenerator";
 import { useScreenShake } from "../systems/useScreenShake";
-import { useControls, type Controls } from "../hooks/useControls";
+import type { Controls } from "../hooks/useControls";
 import { useGameState } from "../hooks/useGameState";
 import { useAssistMode } from "../hooks/useAssistMode";
 import { generateTestLevel } from "../systems/TestLevelData";
@@ -46,6 +46,7 @@ const DROP_VELOCITY_Y = 5;
 interface GameScene3DProps {
   testMode?: boolean;
   levelData?: LevelDataV2;
+  controlsRef: React.MutableRefObject<Controls>;
 }
 
 interface DroppedCoinData {
@@ -60,9 +61,8 @@ const FROZEN_CONTROLS: Controls = {
   jump: false, shoot: false, bark: false,
 };
 
-export function GameScene3D({ testMode = false, levelData }: GameScene3DProps) {
+export function GameScene3D({ testMode = false, levelData, controlsRef }: GameScene3DProps) {
   const melTracker = useRef<THREE.Object3D>(new THREE.Object3D());
-  const controlsRef = useControls();
   const addScore = useGameState((s) => s.addScore);
   const loseLife = useGameState((s) => s.loseLife);
   const lives = useGameState((s) => s.lives);
@@ -206,7 +206,7 @@ export function GameScene3D({ testMode = false, levelData }: GameScene3DProps) {
   // Bark wave handler
   const handleBarkWave = useCallback((x: number, y: number, radius: number) => {
     // Find item_blocks in radius and log (future: enemy stun/flee)
-    console.log(`[BarkWave] at (${x.toFixed(1)}, ${y.toFixed(1)}) radius=${radius}`);
+    // BarkWave: find item_blocks in radius and stun enemies
   }, []);
 
   const handleBarkStart = useCallback(() => {
